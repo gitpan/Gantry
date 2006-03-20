@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>[% view.title %]</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!-- include a style sheet if you like:
+		<link rel="stylesheet" type="text/css" media="screen"
+			title="Default" href="[% self.css_rootp %]/default.css" />
+    -->
+    <style type='text/css'>
+#footer {
+    text-align: center;
+    font-size: .9em;
+    padding: 10px;
+    margin: 0px auto ;
+    width: 740px;
+}
+
+#float_right {
+    float: right;
+}
+
+#float_left {
+    float: left;
+}
+
+#right {
+    text-align: right;
+}
+body {
+    margin: 0;
+    background: #eee;
+    font-family: sans-serif;
+    font-size: 100%;
+}
+
+#header {
+    background: #fff;
+    margin: 0px auto 0px auto;
+    border-bottom: 1px solid #778;
+}
+
+#page {
+    background: #fff; url(/images/logos/corner.png) no-repeat bottom right;
+    width: 740px;
+    margin: 0 auto;
+    padding: 0px 0px 0px 0px;
+    border-left: 1px solid #99d;
+    border-right: 1px solid #99d;
+    border-bottom: 1px solid #99d;
+}
+#content {
+    background: #fff;
+    margin: 0px 0px 0px 0px;
+    padding: 10px 10px 10px 10px;
+    font: normal 12px/20px sans-serif;
+    /* border-right: 1px dotted #99d; */
+}
+#title {
+    clear: both;
+    border-left: 1px solid #99d;
+    border-right: 1px solid #99d;
+    border-bottom: 1px solid #99d;
+    border-top: 1px solid #99d;
+    background: #aae;
+    width: 740px;
+    margin: 0px auto 0px auto;
+    padding: 2px 0 0 0;
+    text-align: right;
+    -moz-border-radius-topright: 6px;
+}
+#nav {
+    background: #eee;
+    margin: 0px auto 0px auto;
+    padding: 0px;
+    width: 742px;
+}
+#nav ul {
+    background: #fff;
+    list-style: none;
+    border: 0;
+    margin: 0 0 0 0 ;
+    padding: 0;
+}
+#nav ul li {
+    display: block;
+    float: left;
+    text-align: center;
+    padding: 0;
+    margin: 0;
+    border-left: 1px solid #99d;
+}#nav ul li + li {
+    border-left: none;
+    display: block;
+    float: left;
+    text-align: center;
+    padding: 0;
+    margin: 0;
+}
+#nav ul li a {
+    background: #fff;
+    border-bottom: 1px solid #99d;
+    border-right: 1px solid #99d;
+    border-left: none;
+    padding: 0 8px 0 8px;
+    margin: 0 0 0px 0;
+    color: #9a9a9a;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+    font: normal 12px/20px sans-serif;
+}
+#nav ul li a:hover {
+    color: #000;
+    background: #bbe;
+}
+
+#nav a:active {
+    background: #c60;
+    color: #fff;
+}
+
+#nav li strong a {
+    background: #bbf;
+    font-weight: bold;
+    color: #000;
+}
+ 
+    </style>
+
+    </head>
+    <body id="">
+	
+	<!-- START: top nav logo (using page element style) -->
+	<!-- <div id="page"> -->
+    <!-- place logo here:
+		<img width="740" src="[% self.img_rootp %]/nav_banner3.jpg" 
+			alt="Billing Logo" />
+    -->
+	<!-- </div> -->
+	<!-- END: top nav logo -->
+
+	<!-- START: top navigation -->
+	<div id="nav">
+		<div class="lowtech">Site Navigation:</div>	
+		<ul>
+            <li><a href='[% self.app_rootp %]/'>Home</a></li>
+            <!-- Your links here.  Sample: -->
+            <!-- <li><a href='[% self.app_rootp %]/tasks'>Tasks</a></li> -->
+		</ul>
+	</div>
+	<!-- END: top navigation -->
+	
+	<br /><br /><br />
+
+	<!-- START: title bar -->
+	<div id="title">
+		<h3>[% title %]</h3>
+		<!-- form method="get" action="[% app_rootp %]/search">
+		<p>
+			<input type="text" name="searchw" value="search" size="10" />
+			<input type="submit" value="Disabled" />
+		</p>
+		</form -->
+	</div>
+	<!-- END: title bar -->
+	
+	<!-- START: page -->
+	<div id="page">
+	
+		<!-- START: content -->
+		<div id="content">
+	
+			[% content %]
+			
+			<br class="clear" />
+		</div>
+		<!-- END: content -->
+	
+	</div>
+	<!-- END: page -->
+
+	<!-- START: footer -->
+	<div id="footer">
+		[% USE Date %]
+		<p>Page generated on [% Date.format(Date.now, "%A, %B %d, %Y at %l:%M %p") %]
+		[% IF r.user; "for $r.user"; END; %]
+		<br />
+			
+        <!-- Creative commons footer
+		This site is licensed under a 
+		<a rel="license" href="http://creativecommons.org/licenses/by/2.0/">
+		Creative Commons License</a>,<br />
+		except where otherwise noted.
+		<br />
+		<a rel="license" href="http://creativecommons.org/licenses/by/2.0/">
+		<img src="/images/cc.primary.srr.gif" width="88" 
+			height="31" alt="Creative Commons License" border="0" /></a>
+        -->
+
+		</p>
+	</div>
+	<!-- END: footer -->
+	
+    </body>
+</html>

@@ -1,0 +1,43 @@
+Phil Crow Thu Feb  2 10:55:24 CST 2006
+Gantry::Utils::Model needs some more features:
+    caching (but users can always override the retrieve and construct methods)
+    place holders in SQL (or any SQL caching)
+    has_many
+        items (a method which returns a list of the associated items)
+        add_to_items
+        cascading update
+        cascading delete
+
+DONE:
+    Abstract out all references to the apache request object.  This object
+    is subject to mod_perl api changes.  Further, other systems don't have
+    this option.  What we need is a way to set config variables and have
+    them show up in the app in an engine independent way.
+        This is still not finished because there is no accessor for the
+        hostname in the engines.
+        Acutally, there is a base_server in each engine which performs
+        this task.
+
+    Requests for auth db conn info should fall back on regular db conn info if
+    auth forms aren't defined.
+        Not really tested, but the change didn't break the existing test app.
+
+    AutoCRUD should try to call form, then fallback to _form if that fails.
+
+    When all elements on a form are optional, you can't add or edit rows
+    with AutoCRUD or CRUD.
+
+    Missing template is not displaying its error correctly in MP13 engine
+    (works in CGI).
+        Headers were sent at the wrong time.  Tim fixed it.
+
+    Fix Gantry::Utils::DB, module should not export subs
+        that module was abandoned in favor of better schemes
+
+    Fix all Auth modules
+
+    Make it possible for different modules in the same app to use different
+    template engines (think TT and plain).
+        $self->content_type( 'text/plain' );  # or 'text/xml' etc.
+        $self->template_disable( 1 );
+

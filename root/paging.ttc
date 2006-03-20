@@ -1,0 +1,16 @@
+<div style="float: left">
+    [% IF view.data.page.previous_page %]
+    <a href="[% site.uri %]?page=[% view.data.page.previous_page %]">
+    << Previous
+    </a>
+    [% END %]
+</div>
+
+<div style="float: right">
+    [% IF view.data.page.next_page %]
+    <a href="[% site.uri %]?page=[% view.data.page.next_page %]">
+    Next >>
+    </a>
+    [% END %]
+</div>
+
