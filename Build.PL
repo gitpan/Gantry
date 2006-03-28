@@ -59,6 +59,7 @@ my $build = $subclass->new(
         'File::Copy::Recursive'     => 0,
         'Config::General'           => 0,
         'Hash::Merge'               => 0,
+		'HTTP::Server::Simple::CGI' => 0,
     },
     build_requires      => {
         'Test::Exception'     => 0,

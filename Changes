@@ -1,4 +1,6 @@
 This file documents the revision history for Perl extension Gantry
+3.21
+	- Updates to documentation
 3.20
 	- Added a stand alone web server, Gantry::Server
 	- Updates to documentation.

@@ -1,4 +1,4 @@
-use Test::More tests => 35;
+use Test::More tests => 36;
 
 eval "use mod_perl;";
 my $mp1 = 1 unless $@;
@@ -67,6 +67,8 @@ can_ok('Gantry::Template::TT', 'do_action', 'do_error', 'do_process' );
 
 # template default plugin
 can_ok('Gantry::Template::Default', 'do_action', 'do_error', 'do_process' );
+
+use_ok('Gantry::Server');
 
 # plugins
 use_ok('Gantry::Plugins::AutoCRUD');

@@ -42,6 +42,7 @@ lib/Gantry/Plugins/AutoCRUD.pm
 lib/Gantry/Plugins/Calendar.pm
 lib/Gantry/Plugins/CRUD.pm
 lib/Gantry/Plugins/Validate.pm
+lib/Gantry/Server.pm
 lib/Gantry/Stash.pm
 lib/Gantry/Stash/Controller.pm
 lib/Gantry/Stash/View.pm
@@ -79,7 +80,6 @@ root/paging.ttc
 root/results.tt
 root/sample_wrapper.tt
 root/search.tt
-t/01use.t
 t/02use.t
 t/03pod.t
 t/03use.t
