@@ -44,7 +44,7 @@ __END__
 
 =head1 NAME
 
-Gantry::Conf::Provider::FlatFile::Config::General -- Use Config::General to configuration your Gantry application 
+Gantry::Conf::Provider::FlatFile::Config::General -- Uses Config::General to configure your Gantry application 
 
 =head1 SYNOPSIS
 

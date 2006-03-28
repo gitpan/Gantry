@@ -1,9 +1,9 @@
 --- #YAML:1.0
 name: Gantry
-version: 3.19
+version: 3.20
 author:
   - Tim Keefer <tkeefer@gmail.com>
 Phil Crow <philcrow2000@yahoo.com>
-abstract: Web application framework for mod_perl
+abstract: Web application framework for mod_perl, cgi, etc.
 license: perl
 generated_by: Module::Build version 0.2611, without YAML.pm

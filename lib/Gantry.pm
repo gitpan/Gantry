@@ -7,7 +7,7 @@ use CGI::Simple;
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.19';
+our $VERSION = '3.20';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -59,7 +59,7 @@ sub handler : method {
         $self->declined( 1 ) if ( $self->is_status_declined( ) );
 
 	};
-	
+
 	# Return REDIRECT
     return $self->redirect_response() if ( $self->redirect );
 	
@@ -420,7 +420,7 @@ sub r {
 #-------------------------------------------------
 sub cgi {
 	my( $self, $p ) = @_;
-	
+
 	$self->{__CGI__} = $p if ( defined $p );
 	return( $self->{__CGI__} );
 } # end cgi
@@ -983,17 +983,15 @@ __END__
 
 =head1 NAME 
 
-Gantry - Web application framework for mod_perl 
+Gantry - Web application framework for mod_perl, cgi, etc.
 
 =head1 SYNOPSIS
 
  use Gantry qw/-Engine=MP13 -TemplateEngine=Default/;
  use Gantry qw/-Engine=MP13 -TemplateEngine=TT/;
+ use Gantry qw/-Engine=CGI  -TemplateEngine=TT/;
  use Gantry qw/-Engine=MP20/;
 
-
-	{{{ ADD Apache Con stuff here }}}
-	{{{ 
 =head1 DESCRIPTION
 
 Perl Web application framework for Apache/mod_perl. Object Oriented design 
@@ -1018,10 +1016,6 @@ parameters that are in the uri past the method name.
 The init is called at the begining of each request and sets values such as,
 app_rootp, img_rootp, and other application set vars.
 
-=item init_cgi
-
-Like init, but initializes for cgi
-
 =item declined 
 
 $self->declined( 1 );
@@ -1032,7 +1026,8 @@ Set and unset the declined flag
 
 $self->relocate( location );
 
-This method will relocated the user to the given location
+This method can be called from any controller will relocated 
+the user to the given location
 
 =item redirect 
 
@@ -1131,7 +1126,7 @@ Set/get for server location
 
 =item current_url
 
-    my $url_for_email = $self->current_url
+my $url_for_email = $self->current_url
 
 Get the url of the current page.  This combines protocol, base_server and
 uri to form a valid url suitable for inclusion in an email.
@@ -1148,12 +1143,6 @@ $type = $self->content_type;
 $self->content_type( 'text/html' );
 
 Set/get for reponse content-type
-
-=item make_stash
-
-
-=item stash
-
 
 =item root
 
@@ -1354,7 +1343,20 @@ Gantry::Conf->retrieve returns.
 
 =item Gantry::Stash
 
+Main stash object for Gantry
+
+=item Gantry::Utils::CDBI
+
+Class::DBI base class for Gantry applications
+
+=item Gantry::Plugins::CRUD
+
+Helper for flexible CRUD coding scheme.
+
 =item Gantry::Plugins::AutoCRUD
+
+provides a more automated approach to the 
+CRUD (Create, Retrieve, Update, Delete) support
 
 =item Gantry::Plugins::Calendar
 
@@ -1363,9 +1365,19 @@ applications and are highly customizeable.
 
 =item Gantry::Engine::MP13
 
-=item Gantry::Engine::MP19
+This module is the binding between the Gantry framework and the mod_perl API.
+This particluar module contains the mod_perl 1.0 specific bindings.
+
+See mod_perl documentation for a more detailed description for some of these
+bindings.
 
 =item Gantry::Engine::MP20
+
+This module is the binding between the Gantry framework and the mod_perl API.
+This particluar module contains the mod_perl 2.0 specific bindings.
+
+See mod_perl documentation for a more detailed description for some of these
+bindings.
 
 =item Gantry::Control
 
@@ -1402,6 +1414,16 @@ well as far as I know anyways.
 =item Gantry::Utils::Validate
 
 This module allows the validation of many common types of input.
+
+=item Gantry::Server
+
+Stand alone web server used for testing Gantry applications and for 
+quick delopment of Gantry applications. This server is not recommended
+for production use.
+
+=item Gantry::Conf
+
+Flexible configuration system for Gantry
 
 =back
 

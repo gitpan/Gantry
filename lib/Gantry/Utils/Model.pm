@@ -78,8 +78,9 @@ sub special_sql {
         push @retvals, $class->construct( \%row );
     }
 
-    return @retvals    if wantarray;
-    return $retvals[0] if ( length( @retvals ) == 1 );
+    return             unless @retvals;
+    return @retvals    if     wantarray;
+    return $retvals[0] if     ( $#retvals == 0 );
 
     #XXX this is supposed to return an iterator with a next operation
     return \@retvals;
@@ -160,30 +161,23 @@ sub search {
 
     my $where = join ' AND ', @where_frags;
 
-    my $sql   = "SELECT $cols FROM $table WHERE $where $order;";
+    my $sql   = "SELECT $cols FROM $table WHERE $where $order";
+
+    # are we paging?
+    if ( my $rows_per_page = delete $attr->{rows} ) {
+
+        my $current_page   = delete $attr->{page} || 1;
+
+        # calculate offset
+        my $offset = ( $current_page - 1 ) * $rows_per_page;
+
+        $sql .= " LIMIT $rows_per_page OFFSET $offset";
+    }
 
     return $class->special_sql( $sql );
 }
 
-sub page {
-    my $class = shift;
-
-    die "paging is not yet implemented\n";
-
-    my $attr;
-
-    # see if there is an order by clause
-    if ( ref( $_[-1] ) =~ /HASH/ ) {
-        $attr = pop @_;
-    }
-    
-    my %value_for;
-
-    # the remaining args could be a hash ref, an array ref, or a list
-    if    ( ref( $_[0] ) eq 'HASH'  ) { %value_for = %{ $_[0] }; }
-    elsif ( ref( $_[0] ) eq 'ARRAY' ) { %value_for = @{ $_[0] }; }
-    else                              { %value_for = @_;         }
-}
+sub page { shift->search( @_ ) }
 
 sub lazy_fetch {
     my $self = shift;

@@ -35,6 +35,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     fish_user
 	get_arg_hash
     get_auth_dbh
+    get_cached_config
     get_config
     get_dbh
 	header_in
@@ -47,6 +48,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 	send_http_header
     send_error_output
 	server_root	
+    set_cached_config
     set_content_type
     set_no_cache
     set_req_params
@@ -258,7 +260,7 @@ sub get_config {
     my $conf;
     my $cached   = 0;
     my $location = $self->location;
-    $conf        = $self->get_cached_conf( $instance, $location );
+    $conf        = $self->get_cached_config( $instance, $location );
 
     $cached++ if ( defined $conf );
 
@@ -270,21 +272,21 @@ sub get_config {
         }
     );
 
-    $self->set_cached_conf( $instance, $location, $conf )
+    $self->set_cached_config( $instance, $location, $conf )
             if ( not $cached and defined $conf );
 
     return $conf;
 	
 } # END get_config
 
-sub get_cached_conf {
+sub get_cached_config {
     my $self     = shift;
     my $instance = shift;
 
     return $self->r()->pnotes( "conf_$instance" );
 }
 
-sub set_cached_conf {
+sub set_cached_config {
     my $self     = shift;
     my $instance = shift;
     shift;  # ignore location, cache for one request only

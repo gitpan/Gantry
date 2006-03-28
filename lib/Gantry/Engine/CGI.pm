@@ -31,6 +31,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     fish_user
     fish_config
     get_auth_dbh
+    get_cached_config
     get_config
     get_dbh
     locations
@@ -43,6 +44,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     redirect_response
 	remote_ip
 	send_http_header
+    set_cached_config
     set_content_type
     set_no_cache
     set_req_params
@@ -113,27 +115,25 @@ sub add_location {
 #--------------------------------------------------
 sub dispatch {
 	my( $self ) = @_;
-	
+
     my @path = ( split( /\//, $ENV{PATH_INFO} ) );       	
 
 	LOOP:
-	while ( reverse ( @path ) ) {
+	while ( @path ) {
+
 		$self->{config}->{location} = join( '/', @path );
 
 		if ( defined $self->{locations}->{ $self->{config}->{location} } ) {
 			my $mod = $self->{locations}->{ $self->{config}->{location} }; 
 			
 			die "module not defined for location $self->{config}->{location}"
-				if $mod eq "";
+				unless $mod;
 		
-			eval "use $mod" if $mod;
+			eval "use $mod";
 			if ( $@ ) { die $@; }
-			
-			#$mod->cgi_run( $self->{config}, $self->{locations} );
-			$mod->handler( $self );
 
-			return; #exit;
-			#last LOOP;
+			return $mod->handler( $self );
+
 		}
 
 		pop( @path );
@@ -146,10 +146,7 @@ sub dispatch {
 	eval "use $mod" if $mod;
 	if ( $@ ) { die $@; }
 
-#	$mod->cgi_run( $self->{config}, $self->{locations} );
-	$mod->handler( $self );
-
-	return;
+	return $mod->handler( $self );
 
 } # end dispatch
 
@@ -249,7 +246,6 @@ sub declined_response {
                 . "</span>"
            )
     );
-    exit;
 } # END declined_response
 
 #-------------------------------------------------
@@ -269,16 +265,16 @@ sub engine {
 } # engine
 
 #-------------------------------------------------
-# $self->engine_init( )
+# $self->engine_init( $cgi_obj )
 #-------------------------------------------------
 sub engine_init {
     my $self    = shift;
     my $cgi_obj = shift;
 
 	$cgi_obj->{params} = parse_env();
-	
+
     $self->cgi_obj( $cgi_obj );
-    $self->cgi( CGI::Simple->new() );
+    $self->cgi( CGI::Simple->new( $cgi_obj->{params} ) );
 
     Gantry::Utils::DBConnHelper::Script->set_conn_info(
         {
@@ -369,7 +365,7 @@ sub fish_config {
 sub get_config {
     my $self     = shift;
     my $key      = shift;
-
+	
     my $instance = $self->{cgi_obj}{config}{ GantryConfInstance };
 
     return unless defined $instance;
@@ -380,7 +376,7 @@ sub get_config {
     my $cached   = 0;
     my $location = $self->location;
     
-    $conf        = $self->get_cached_conf( $instance, $location );
+    $conf        = $self->get_cached_config( $instance, $location );
 
     $cached++ if ( defined $conf );
 
@@ -394,7 +390,7 @@ sub get_config {
         }
     );
 
-    $self->set_cached_conf( $instance, $location, $conf )
+    $self->set_cached_config( $instance, $location, $conf )
             if ( not $cached and defined $conf );
 
     return $conf;
@@ -403,14 +399,14 @@ sub get_config {
 
 my %conf_cache;
 
-sub get_cached_conf {
+sub get_cached_config {
     my $self     = shift;
     my $instance = shift;
 
     return $conf_cache{ $instance };
 }
 
-sub set_cached_conf {
+sub set_cached_config {
     my $self     = shift;
     my $instance = shift;
     shift;                 # not using location, this cache good for one page
@@ -483,7 +479,6 @@ sub redirect_response {
 
     print $self->cgi->redirect( $self->header_out->{location} );
 
-    exit;
 } # END redirect_response
 
 #-------------------------------------------------
@@ -571,7 +566,6 @@ sub send_error_output {
     $self->do_error( $@ );
     print( $self->custom_error( $@ ) );
 
-    exit;
 } # END send_error_output
 
 #-------------------------------------------------
@@ -615,7 +609,7 @@ sub set_req_params {
 	
 	#my %params = $self->cgi->Vars;
 	#my %params = %CGI::Deurl::query;
-	
+
 	$self->params( $self->cgi_obj->{params} );
 
 } # END set_req_params
@@ -638,11 +632,13 @@ sub parse_env {
 
 	if ( defined $ENV{REQUEST_METHOD} 
 			&& $ENV{REQUEST_METHOD} eq "POST" ) {
-     
+
 		read STDIN , $data , $ENV{CONTENT_LENGTH} ,0;
+
      	if ( $ENV{QUERY_STRING} ) {
       		$data .= $ParamSeparator . $ENV{QUERY_STRING};
      	}
+
     } 
 	elsif ( defined $ENV{REQUEST_METHOD} 
 		&& $ENV{REQUEST_METHOD} eq "GET" ) {
@@ -655,6 +651,7 @@ sub parse_env {
     }
 
     return {} unless (defined $data and $data ne '');
+
 
     $data =~ s/\?$//;
     my $i=0;

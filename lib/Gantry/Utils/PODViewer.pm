@@ -5,18 +5,20 @@ use Gantry qw/-TemplateEngine=TT/;
 
 our @ISA = ( 'Gantry' );
 
+use lib qw( /home/gantry/perl/lib/usr/lib/perl5/site_perl/5.8.7 );
 use Gantry::Utils::HTML; 
 use Pod::POM::View::HTML;
 use Pod::POM;
 use File::Find;
+use Pod::Pdf;
 
 #-------------------------------------------------
 # $self->init( $self );
 #-------------------------------------------------
 sub init {
-	my( $self ) = @_;
+	my( $self, $r ) = @_;
 	
-	$self->SUPER::init( ); 
+	$self->SUPER::init( $r ); 
 	
 	$self->{__POD_DIR__} = $self->fish_config( 'pod_dir' );
 
@@ -31,6 +33,15 @@ sub do_main {
 	my %p = $self->get_param_hash;
 	$file ||= $p{file};
 	
+	my $module = $file;
+	
+	my $DO_PDF = 0;
+	
+	if ( $file =~ /\.pdf$/ ) {
+		$file =~ s/\.pdf$//;
+		$DO_PDF=1;
+	}
+	
 	$self->stash->view->template( 'pod.tt' );
 	$self->stash->view->title( $file );
 	
@@ -42,7 +53,26 @@ sub do_main {
 	$file = '' if $file eq $base_module;
 	$file =~ s/::/\//g;
 	$file = '/' . $file if $file;
+	
+	if ( $DO_PDF ) {
+		$self->template_disable( 1 );
+		$self->content_type( 'application/pdf' );
+		my $f = ( $self->{__POD_DIR__} . "${file}.pm" );
+		
+		my $pdf;
+		eval {
+			$pdf = pod2pdf( '--paper=usletter', $f );
+		              
+		};
+		if ( $@ ) {
+			$self->content_type( 'text/plain' );
+			return( $@ );
+		}
+		
+		return( $pdf );
 
+	}
+	
 	my $pom = $p->parse_file(
 	 ( $self->{__POD_DIR__} . "${file}.pm" ) 
 	) or die "$!";
@@ -68,6 +98,7 @@ sub do_main {
 		
 	$self->stash->view->data( {
 		base_module => $base_module,
+		module_name		=> $module,
 		files 		=> \@pm_files,
 		headings 	=> \@headings,
 		html 		=>  $d

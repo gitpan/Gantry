@@ -25,8 +25,9 @@ a set of applications and how to extend Gantry::Conf to suit your needs.
 =head1 CONFIGURING
 
 Gantry::Conf uses a central config file to control how a set of applications
-bootstrap their own configuration.  That file is parsed by Config::General 
-and looks something like this:
+bootstrap their own configuration.  By default, this file live in
+/etc/gantry.conf, but you can control that, see below.  That file is parsed
+by Config::General and looks something like this:
 
     <global>
         database_server_name ourdb.ourcompany.com
@@ -53,8 +54,8 @@ and looks something like this:
     </instance>
 
 Each application instance has a section in this file.  This allows not only
-multiple apps, but also multiple instances of the same app running on the
-same box.  The instance name must be unique and is what the app uses to
+multiple apps, but also multiple instances of the same app running in the
+same server.  The instance name must be unique and is what the app uses to
 find its conf.
 
 The core of any instance's configuration is usually the ConfigureVia
@@ -114,7 +115,7 @@ See the perldoc for your provider for the syntax your conf file must follow.
 
 =item HTTP
 
-If your conf is available through the web, via http or https you could use
+If your conf is available through the web, via http or https use
 this method to retrieve your config information from a remote system: 
 
     <instance app>
@@ -159,8 +160,8 @@ have an instance that looks like this:
     ConfigureVia HTTP Config::General http://dev.domain.com/main.conf 
   </instance> 
 
-This means that any configuration options in /etc/appoverride.conf 
-would override those found in the remote http://dev.domain.com/main.conf.  
+then any configuration options in /etc/appoverride.conf 
+will override those found in the remote http://dev.domain.com/main.conf.  
 
 =item global
 

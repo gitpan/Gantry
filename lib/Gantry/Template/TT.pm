@@ -70,6 +70,9 @@ sub do_process {
 			$self->stash->view->template( $self->template );
 		}
 		
+		return( $self->stash->view->data . $self->stash->controller->data ) 
+			if ! $self->stash->view->template();
+
 		my $page;
 		$tt{ $self->location }->process( $self->stash->view->template, 
 			{ self => $self, site => $self, view => $self->stash->view }, 

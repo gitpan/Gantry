@@ -60,7 +60,7 @@ sub pretty_date {
 
 =head1 NAME
 
-Gantry::Utils::CDBI - Class::DBI base model for Gantry
+Gantry::Utils::CDBI - Class::DBI base class for Gantry applications
 
 =head1 SYNOPSIS
 

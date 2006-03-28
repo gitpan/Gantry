@@ -1,4 +1,7 @@
 This file documents the revision history for Perl extension Gantry
+3.20
+	- Added a stand alone web server, Gantry::Server
+	- Updates to documentation.
 3.19
 	- Modified Build.PL. Now copies all files in the root folder.
     - Updated the Gantry::Conf api so you can get location level
@@ -7,7 +10,7 @@ This file documents the revision history for Perl extension Gantry
       instances in the same server can really have different conf.
 
 3.18
- 	-
+ 	- Documentation updates
 3.17
 	- tied Gantry::Conf to the framework
     - added initial Gantry::Conf code and stubs for the future 

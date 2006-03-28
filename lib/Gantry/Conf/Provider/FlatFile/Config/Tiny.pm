@@ -59,7 +59,7 @@ __END__
 
 =head1 NAME
 
-Gantry::Conf::Provider::FlatFile::Config::Tiny -- Use Config::Tiny to configuration your Gantry application 
+Gantry::Conf::Provider::FlatFile::Config::Tiny -- Uses Config::Tiny to configure your Gantry application 
 
 =head1 SYNOPSIS
 

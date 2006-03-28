@@ -25,6 +25,35 @@ a method called do_something (usually do_main is a good first choice):
 I'll store this module in /home/myhome/lib/HiWorld.pm.  I'll need
 to set that lib path with a use lib below.
 
+=head1 Stand Alone Server Deployment
+
+If you have HTTP::Server::Simple installed, you may choose to deploy
+your application through it.  This is useful for kick starting development.
+See below for more permanent means of deployment.
+
+A stand alone Gantry application is an executable script which leverages
+Gantry::Server (which in turn uses HTTP::Server::Simple.  This one
+is enough for our small demo:
+
+    #!/usr/bin/perl
+    use strict;
+
+    use Gantry::Server;
+
+    use lib '/home/myhome/lib';
+
+    use HiWorld qw{ -Engine=CGI -TemplateEngine=Default };
+
+    my $cgi = Gantry::Engine::CGI->new();
+
+    $cgi->add_location( '/', 'HiWorld' );
+
+    my $server = Gantry::Server->new();
+    # pass a port number to the above constructor if you don't want 8080.
+
+    $server->set_engine_object( $cgi );
+    $server->run();
+
 =head1 CGI Deployment
 
 To deploy this you need to choose either mod_perl or CGI.  First, I'll use
