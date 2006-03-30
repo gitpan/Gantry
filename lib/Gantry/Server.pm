@@ -7,9 +7,30 @@ use Symbol;
 
 my $engine_object;
 
+# holds the current engine cycle
+my $engine_cycles 	= 0;
+my $engine_cycle 	= 0;
+
+#sub run {
+#	my( $self, $request ) = ( shift, shift );
+	
+#	$self->SUPER::run();
+	
+#	if ( $request ) {
+#		$self->handle_request( $request );
+#	}
+	
+#}
+
+
 sub set_engine_object {
     my $self       = shift;
     $engine_object = shift;
+}
+
+sub set_engine_cycles {
+	my $self		= shift;
+	$engine_cycles	= shift;
 }
 
 sub handler {
@@ -20,8 +41,39 @@ sub handler {
     }
 }
 
+sub handle_request_test {
+    my ( $self, $request ) = @_;
+
+	$ENV{PATH_INFO} = $request if $request;
+	$ENV{SCRIPT_NAME} = "";
+
+    # divert STDOUT to another handle that stores the returned data
+    my $out_handle      = gensym;
+    my $out             = tie   *$out_handle, "Gantry::Server::Tier";
+    my $original_handle = select $out_handle;
+
+    # dispatch to the gantry engine
+    my $success_line;
+    eval {
+        $success_line = $engine_object->dispatch();
+    };
+    if ( $@ ) {
+        return( '401', $out->get_output() );
+    }
+
+    # return the result
+    my $success_code = 200;
+    if ( defined $success_line ) {
+        $success_line =~ /(\d+ .*)/;
+        $success_code = $1;
+    }
+
+	return( $success_code, $out->get_output() );
+	
+}
+
 sub handle_request {
-    my ( $self ) = @_;
+    my ( $self  ) = @_;
 
     # divert STDOUT to another handle that stores the returned data
     my $out_handle      = gensym;
@@ -57,6 +109,13 @@ EO_FAILURE_RESPONSE
     select $original_handle;
 
     print "HTTP/1.0 $success_code\n" . $out->get_output();
+	
+	# check for exit condition
+	++$engine_cycle;
+	if ( ( $engine_cycle >= $engine_cycles ) && $engine_cycles > 0 ) {
+		return;
+	}
+	
 }
 
 package Gantry::Server::Tier;

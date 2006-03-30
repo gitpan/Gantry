@@ -161,7 +161,12 @@ sub dispatch {
 sub cast_custom_error {
 	my( $self, $error_page, $die_msg ) = @_;
 
-	$self->send_http_header();
+	#$self->send_http_header();
+    print $self->cgi->header(
+            -type => 'text/html',
+            -status => '404 Declined',
+    );
+	
 	$self->print_output( $error_page );
 
 }

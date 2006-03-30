@@ -1,5 +1,9 @@
 This file documents the revision history for Perl extension Gantry
-3.21
+3.22 Thu Mar 30 12:41:36 CST 200
+	- Added test method to the Gantry server to be used for
+	  to run a test on a Gantry application
+	
+3.21 Wed Mar 29 12:41:36 CST 200
 	- Updates to documentation
 3.20
 	- Added a stand alone web server, Gantry::Server
