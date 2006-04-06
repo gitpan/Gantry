@@ -64,27 +64,33 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 # $self->new( { locations => {..}, config => {..} } );
 #--------------------------------------------------
 sub new {
-    my( $class, $config ) = ( shift, shift );
+    my( $class, $self ) = ( shift, shift );
 
-    if ( $config->{ GantryConfInstance } ) {
-        $config = $class->get_config();
+    bless $self, $class;
+
+    my $config = $self->{config};
+
+    if ( $self->{config}{ GantryConfInstance } ) {
+        $config = $self->get_config(
+                        $self->{config}{ GantryConfInstance },
+                        $self->{config}{ GantryConfFile     },
+                  );
     }
 
-    my $self  = bless( 
-		{	locations 	=> $config->{locations},
-			config 		=> $config->{config} 
-		}, $class );
-
     Gantry::Utils::DBConnHelper::Script->set_conn_info(
-        dbconn => $config->{dbconn},
-        dbuser => $config->{dbuser},
-        dbpass => $config->{dbpass},
+        {
+            dbconn => $config->{dbconn},
+            dbuser => $config->{dbuser},
+            dbpass => $config->{dbpass},
+        }
     );
 
     Gantry::Utils::DBConnHelper::Script->set_auth_conn_info(
-        auth_dbconn => $config->{auth_dbconn},
-        auth_dbuser => $config->{auth_dbuser},
-        auth_dbpass => $config->{auth_dbpass},
+        {
+            auth_dbconn => $config->{auth_dbconn},
+            auth_dbuser => $config->{auth_dbuser},
+            auth_dbpass => $config->{auth_dbpass},
+        }
     );
 
 	return $self;
@@ -161,12 +167,7 @@ sub dispatch {
 sub cast_custom_error {
 	my( $self, $error_page, $die_msg ) = @_;
 
-	#$self->send_http_header();
-    print $self->cgi->header(
-            -type => 'text/html',
-            -status => '404 Declined',
-    );
-	
+	$self->send_http_header();
 	$self->print_output( $error_page );
 
 }
@@ -281,14 +282,6 @@ sub engine_init {
     $self->cgi_obj( $cgi_obj );
     $self->cgi( CGI::Simple->new( $cgi_obj->{params} ) );
 
-    Gantry::Utils::DBConnHelper::Script->set_conn_info(
-        {
-            dbconn => $self->fish_config( 'dbconn' ),
-            dbuser => $self->fish_config( 'dbuser' ),
-            dbpass => $self->fish_config( 'dbpass' ),
-        }
-    );
-
 } # END engine_init
 
 #-------------------------------------------------
@@ -369,13 +362,11 @@ sub fish_config {
 #--------------------------------------------------
 sub get_config {
     my $self     = shift;
-    my $key      = shift;
-	
-    my $instance = $self->{cgi_obj}{config}{ GantryConfInstance };
+    my $instance = shift || $self->{cgi_obj}{config}{ GantryConfInstance };
 
     return unless defined $instance;
 
-    my $file     = $self->{cgi_obj}{config}{ GantryConfFile };
+    my $file     = shift || $self->{cgi_obj}{config}{ GantryConfFile };
 
     my $conf;
     my $cached   = 0;

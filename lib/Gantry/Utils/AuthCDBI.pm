@@ -77,6 +77,7 @@ sub original_db_Main {
     }
     if ( !$dbh ) {
 
+        $db_options->{AutoCommit} = 0;
     # $config is my config object. replace with your own settings...
         $dbh = DBI->connect_cached(
                 $r->dir_config( 'auth_dbconn' ),

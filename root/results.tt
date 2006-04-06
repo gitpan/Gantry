@@ -1,7 +1,8 @@
 [% title = view.title %]
 
 
-[% colspan = view.data.headings.size + view.data.header_options.size %]
+[% colspan = ( view.data.headings.size || 0 ) 
+	+ ( view.data.header_options.size || 0 ) %]
 <h3>[% view.data.overheading %]</h3>
 <div class="box">
        

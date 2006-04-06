@@ -39,6 +39,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     fish_path_info
     fish_uri
     fish_user
+	log_error
 	get_arg_hash
 	get_auth_dbh
     get_cached_config
@@ -69,12 +70,22 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 ############################################################
 
 #-------------------------------------------------
+# $self->log_error( error )
+#-------------------------------------------------
+sub log_error {
+    my( $self, $msg ) = @_;
+
+    $self->r->log_error( $msg );
+	
+} 
+
+#-------------------------------------------------
 # $self->cast_custom_error( error )
 #-------------------------------------------------
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
 
-    $self->r->log_error( $die_msg );
+    $self->log_error( $die_msg );
     $self->r->custom_response(
         $self->status_const( 'FORBIDDEN' ), $error_page );
 
@@ -606,6 +617,10 @@ See mod_perl docs.
 =item $self->header_out( $r, $header_key, $header_value )
 
 Change the value of a response header, or create a new one.
+
+=item $self->log_error( message )
+
+Writes message to the apache web server log
 
 =item $self->print_output( $response_page )
 

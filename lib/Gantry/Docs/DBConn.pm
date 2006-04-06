@@ -13,7 +13,7 @@ document explains how that information makes its way to the model.
 =head1 Environments (a.k.a. Engines)
 
 Gantry supports plugable engines.  Currently there are engines for CGI
-and mod_perl versions 1.3, 1.9, and 2.0.  Further, many gantry apps have
+and mod_perl versions 1.3, and 2.0.  Further, many gantry apps have
 scripts which also want to use the models.  There is now a comprehensive
 solution for all of these.
 

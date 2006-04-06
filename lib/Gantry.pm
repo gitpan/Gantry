@@ -7,7 +7,7 @@ use CGI::Simple;
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.22';
+our $VERSION = '3.24';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -69,7 +69,6 @@ sub handler : method {
 	# Call do_error and Return 
 	if( $@ ) {
 		return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
-        #return $self->send_error_output( $@ );
 	}
 
 	# set http headers
@@ -245,16 +244,6 @@ sub set_cookie {
 	return();
 	
 } # end set_cookies
-
-#-------------------------------------------------
-# $self->log_error( msg? )
-#-------------------------------------------------
-sub log_error {
-	my ( $self, $msg ) = @_;
-	
-	$self->r->log_error( ( "Gantry error: " . $msg ) ) ;
-
-} # end log_error
 
 #-------------------------------------------------
 # $self->cleanroot( $uri, $root )
@@ -1068,13 +1057,6 @@ $self->cleanup
 
 This method is called at the end of the request phase to cleanup,
 disconnect for a database, etc.
-
-=item log_error
-
-$self->log_error( 'my error message' );
-
-Calls the log_error method on the Apache Request object. The log_error methods
-writes to the Apache server's error log. See mod_perl docs.
 
 =item get_cookies
 

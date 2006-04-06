@@ -47,7 +47,7 @@ sub db_Main {
         );
         $helper->set_dbh( $dbh );
     }
-
+	
     return $dbh;
 
 } # end db_Main
@@ -72,7 +72,7 @@ sub auth_db_Main {
         my $db_options = $class->get_db_options();
 
         $db_options->{AutoCommit} = 0;
-
+		
         $auth_dbh = DBI->connect_cached(
                 $auth_conn_info->{ 'auth_dbconn' },
                 $auth_conn_info->{ 'auth_dbuser' },

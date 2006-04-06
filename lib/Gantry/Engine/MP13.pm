@@ -41,6 +41,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 	header_in
 	header_out
     is_status_declined
+	log_error
 	port
     print_output
     redirect_response
@@ -62,6 +63,15 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 # Functions                                                #
 ############################################################
 
+#-------------------------------------------------
+# $self->log_error( error )
+#-------------------------------------------------
+sub log_error {
+    my( $self, $msg ) = @_;
+
+    $self->r->log_error( $msg );
+
+}
 
 #-------------------------------------------------
 # $self->cast_custom_error( error )
@@ -594,6 +604,10 @@ See mod_perl docs.
 =item $self->header_out( $r, $header_key, $header_value )
 
 Change the value of a response header, or create a new one.
+
+=item $self->log_error( message )
+
+Writes message to the apache web server log
 
 =item $self->port
 

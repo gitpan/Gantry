@@ -1,4 +1,10 @@
 This file documents the revision history for Perl extension Gantry
+3.24 Thu Apr  6 15:12:12 CDT 2006
+	- Rearranged/Added more tests
+	
+3.23 Thu Apr  6 08:44:44 CDT 2006
+	- Fixes to the db connection methods
+	
 3.22 Thu Mar 30 12:41:36 CST 200
 	- Added test method to the Gantry server to be used for
 	  to run a test on a Gantry application

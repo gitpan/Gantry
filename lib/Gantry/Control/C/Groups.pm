@@ -43,12 +43,12 @@ use vars qw( @ISA );
 sub do_main {
 	my ( $self, $order ) = @_;
 	
+	$order ||= 1;
+
 	my $order_map = {
 		1 => 'name',
 		2 => 'ident',
 	};
-	
-	$order = 1 if ! defined $order_map->{ $order };
 	
 	# stash template and title
 	$self->stash->view->template( 'results.tt' );

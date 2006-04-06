@@ -34,7 +34,9 @@ my $AUTH_GROUP_MEMBERS = 'Gantry::Control::Model::auth_group_members';
 #-------------------------------------------------
 sub do_main {
 	my ( $self, $order ) = @_;
-		
+	
+	$order ||= 2;
+	
 	my $order_map = {
 		1 => 'active',
 		2 => 'user_id',
@@ -42,8 +44,6 @@ sub do_main {
 		4 => 'last_name, first_name',
 		5 => 'email'
 	};
-	
-	$order = 2 if ! defined $order_map->{$order};
 	
 	# stash template name and page title
 	$self->stash->view->template( 'results.tt' );
@@ -96,7 +96,7 @@ sub do_main {
 	}
 	
 	# stash view data
-	$self->stash->view->data( $retval );
+	#$self->stash->view->data( $retval );
 	
 } # end do_main  
 
