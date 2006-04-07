@@ -61,11 +61,6 @@ my @tests = qw`
     /site/users
     /site/groups
     /site/pages
-    /site/pages2
-    /site/pages
-    /site/pages
-    /site/pages
-    /site/pages
 `;
 
 my $server = Gantry::Server->new();
@@ -77,8 +72,19 @@ foreach my $location ( @tests ) {
         "expected 200, received $status for $location" );
 
     if ( $status ne '200' ) {
-        print STDERR $page . "\n\n";
+        my( $error_section ) =
+        ( $page =~ /<div\s+class=(?:\"|\')error(?:\"|\')\s*>(.*?)<\/div>/is );
+
+        if ( $error_section ) {
+            diag( $location );
+            diag( $error_section );
+        }
+        else {
+            diag( $location );
+            diag( $page );
+        }
     }
 }
+
 
 

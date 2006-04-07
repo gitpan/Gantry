@@ -1,4 +1,7 @@
 This file documents the revision history for Perl extension Gantry
+3.25 Fri Apr  7 12:53:20 CDT 2006
+	- Added Test
+
 3.24 Thu Apr  6 15:12:12 CDT 2006
 	- Rearranged/Added more tests
 	

@@ -7,7 +7,7 @@ use CGI::Simple;
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.24';
+our $VERSION = '3.25';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -91,7 +91,6 @@ sub handler : method {
 	
 	# Return OK
     return $self->success_code;
-#	return( $self->status_const( 'OK' ) );
 	
 } # end handler
 
@@ -286,10 +285,7 @@ sub import {
 			if ($@) { die qq/Couldn't load plugin "$tplugin", "$@"/ }
 					
 		}
-#		elsif ( /^-Conf=(\S+)/ ) {
-#			( $conf_instance, $conf_file ) = split( /\:/, $1 );
-#		}
-		
+	
 		else {
 			$plugin = "Gantry::Plugins::$_";
 			eval "use $plugin";
@@ -305,18 +301,7 @@ sub import {
 			die qq/Couldn't load Default template plugin, "$@"/ 
 		}
 	}	
-	
-	
-#	if ( $conf_instance ) {
-#		eval "use Gantry::Conf";
-#		if ( $@ ) { die qq`Couldn't load Gantry::Conf $@`; }
-#
-#		$CONF = Gantry::Conf->retrieve(
-#			$conf_instance,
-#			$conf_file
-#		);
-#	}
-	
+
 }
 #-------------------------------------------------
 # $site->init( $r )

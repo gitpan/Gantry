@@ -16,7 +16,8 @@ else {
     diag( "mod_perl version: " . $mod_perl::VERSION . " detected" );
     diag( "Do you want to run mod_perl $mod_perl::VERSION tests [yes]?" );
     my $p = <STDIN>;
-    $p ||= 'yes';
+    chomp( $p );
+	$p ||= 'yes';
     if ( $p =~ /^yes/i ) {
         plan qw(no_plan);
     }

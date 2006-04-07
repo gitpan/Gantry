@@ -10,6 +10,9 @@ my $mp1 = 1 unless $@;
 if ( ! $mp1 ) {
 	plan skip_all => "mod_perl1 not detected";
 }
+elsif ( $mp1 &&  $mod_perl::VERSION >= 1.99 ) {
+	plan skip_all => "mod_perl1 not detected";
+}
 else {
     diag( "" );
 	diag( "mod_perl version: " . $mod_perl::VERSION . " detected" );
