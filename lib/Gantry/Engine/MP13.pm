@@ -79,7 +79,7 @@ sub log_error {
 sub cast_custom_error {
 	my( $self, $error_page, $die_msg ) = @_;
 
-	$self->r->log_error( $die_msg );
+	$self->r->log_error( 'custom ' . $die_msg );
 	$self->r->custom_response( 
 		$self->status_const( 'FORBIDDEN' ), $error_page );
 	

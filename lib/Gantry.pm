@@ -7,7 +7,7 @@ use CGI::Simple;
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.25';
+our $VERSION = '3.26';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 

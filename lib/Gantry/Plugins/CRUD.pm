@@ -200,6 +200,7 @@ sub edit {
 	}
 	# Form looks good, make update
 	else {
+		
 		# remove submit button param
 		delete $params{submit};
 

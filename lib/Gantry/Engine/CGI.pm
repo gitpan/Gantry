@@ -668,8 +668,6 @@ sub parse_env {
       		( $name, $value ) = @res;
      	}
      	
-		next unless $value ne '';
-
      	$name =~ tr/+/ /;
      	$name =~ s/%(\w\w)/chr(hex $1)/ge;
 
