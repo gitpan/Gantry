@@ -5,7 +5,7 @@ package Gantry::Conf::Tutorial;
 #  Name        :    Gantry::Conf::Provider 
 #  Author      :    Frank Wiles <frank@revsys.com> 
 #
-#  Description :    To be completed tutorial. 
+#  Description :    How to use Gantry::Conf
 #
 #####################################################################
 

@@ -1,6 +1,8 @@
 package Gantry::Control::C::Groups;
 use strict; 
 
+use Gantry qw/-TemplateEngine=TT/;
+
 use Data::FormValidator;
 use HTML::Prototype;
 
@@ -30,8 +32,8 @@ my $crud = Gantry::Plugins::CRUD->new(
 ############################################################
 # Variables                                                #
 ############################################################
-use vars qw( @ISA );
-@ISA = ( 'Gantry' ); # Inherit the handler.
+our @ISA = ( 'Gantry' ); # Inherit the handler.
+
 
 ############################################################
 # Functions                                                #

@@ -1,4 +1,18 @@
 This file documents the revision history for Perl extension Gantry
+
+3.30 Wed May 10 13:01:44 CDT 2006
+    - Corrected bug in CGI engine which made the constructor demand a valid
+      hash as an argment.  Now an empty one is supplied by default, making
+      it work as the QuickStart doc says it should.  Thanks to Краси Беров
+      for pointing this out.
+
+3.29
+    - Restored access to dircopy from File::Copy::Recursive to
+      custom install code.
+
+3.27-8 Tue Apr 18 15:29:15 CDT 2006 - Tue Apr 18 15:45:32 CDT 2006
+    - Made failure due to absence of File::Copy::Recursive gentler.
+
 3.26 Mon Apr 17 14:25:48 CDT 2006
 	- Updates to custom error page
 

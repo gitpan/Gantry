@@ -1,6 +1,8 @@
 package Gantry::Control::C::Pages;
 use strict;
 
+use Gantry qw/-TemplateEngine=TT/;
+
 use Data::FormValidator;
 
 use Gantry::Control;

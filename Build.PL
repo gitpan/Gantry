@@ -75,8 +75,6 @@ sub _custom_code {
 
 	return( q{
 
-	use File::Copy::Recursive qw( dircopy );
- 
 	sub ACTION_code {
 		my $self = shift;
 		$self->SUPER::ACTION_code();
@@ -158,6 +156,9 @@ sub _custom_code {
 			
 			my $num;
 			eval {
+                require File::Copy::Recursive;
+                import File::Copy::Recursive 'dircopy';
+
 				$num = dircopy($blib_tmpl_dir, $tmpl_dir);
 			};
 			if ( $@ ) {

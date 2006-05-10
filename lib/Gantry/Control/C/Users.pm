@@ -1,7 +1,10 @@
 package Gantry::Control::C::Users;
 use strict; 
 
+use Gantry qw/-TemplateEngine=TT/;
+
 use Gantry::Utils::Validate;
+
 use Gantry::Control;
 use Gantry::Control::Model::auth_users;
 use Gantry::Control::Model::auth_group_members;
@@ -96,7 +99,7 @@ sub do_main {
 	}
 	
 	# stash view data
-	#$self->stash->view->data( $retval );
+	$self->stash->view->data( $retval );
 	
 } # end do_main  
 

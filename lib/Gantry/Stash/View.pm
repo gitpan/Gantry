@@ -1,3 +1,4 @@
+package Gantry::Stash::View;
 package view;
 use strict;
 

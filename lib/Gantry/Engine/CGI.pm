@@ -64,7 +64,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 # $self->new( { locations => {..}, config => {..} } );
 #--------------------------------------------------
 sub new {
-    my( $class, $self ) = ( shift, shift );
+    my( $class, $self ) = ( shift, shift || {} );
 
     bless $self, $class;
 

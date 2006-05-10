@@ -1,3 +1,4 @@
+package Gantry::Stash::View::Form;
 package form;
 
 use strict;

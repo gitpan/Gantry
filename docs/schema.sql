@@ -1,4 +1,4 @@
-create sequence "auth_users";
+create sequence "auth_users_seq";
 create table "auth_users" (
     "id"            int4 default nextval('auth_users_seq'::text) NOT NULL,
     "user_id"       int4 default currval('auth_users_seq') NOT NULL,

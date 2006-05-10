@@ -19,6 +19,8 @@
 	</div>
 	<! - - END: top nav logo -->
 
+	<br />
+
 	<!-- START: top navigation -->
 	<div id="nav">
 		<div class="lowtech">Site Navigation:</div>	
@@ -29,8 +31,6 @@
 		</ul>
 	</div>
 	<!-- END: top navigation -->
-	
-	<br /><br /><br />
 
 	<!-- START: title bar -->
 	<div id="title">

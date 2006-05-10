@@ -1,3 +1,4 @@
+package Gantry::Stash;
 package stash;
 
 use strict;

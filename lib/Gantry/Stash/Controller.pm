@@ -1,3 +1,4 @@
+package Gantry::Stash::Controller;
 package controller;
 
 #-------------------------------------------------

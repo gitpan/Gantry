@@ -32,7 +32,7 @@ your application through it.  This is useful for kick starting development.
 See below for more permanent means of deployment.
 
 A stand alone Gantry application is an executable script which leverages
-Gantry::Server (which in turn uses HTTP::Server::Simple.  This one
+Gantry::Server (which in turn uses HTTP::Server::Simple).  This one
 is enough for our small demo:
 
     #!/usr/bin/perl
@@ -48,16 +48,15 @@ is enough for our small demo:
 
     $cgi->add_location( '/', 'HiWorld' );
 
-    my $server = Gantry::Server->new();
-    # pass a port number to the above constructor if you don't want 8080.
+    my $port   = shift || 8080;
+    my $server = Gantry::Server->new( $port );
 
     $server->set_engine_object( $cgi );
     $server->run();
 
 =head1 CGI Deployment
 
-To deploy this you need to choose either mod_perl or CGI.  First, I'll use
-CGI -- see below for mod_perl.  Create the following script in a servable
+To deploy using CGI, create the following script in a servable
 cgi-bin directory (remember to make sure it is executable):
 
     #!/usr/bin/perl
@@ -79,8 +78,8 @@ Then point your browser to the script.
 
 =head1 mod_perl Deployment
 
-To use mod_perl, you must have access to modify the httpd.conf for your
-web server and to restart that server.  Here is the virtual host I created
+To use mod_perl, you must have permission to modify the httpd.conf for your
+web server and to restart it.  Here is the virtual host I created
 for the greeting application:
 
     <VirtualHost hiworld.devel.example.com>
@@ -94,7 +93,7 @@ for the greeting application:
 
     </VirtualHost>
 
-Of course, throws the real config work to hiworld.conf.  Mine assumes
+This throws the real config work to hiworld.conf.  Mine assumes
 mod_perl 1.3.  Here it is:
 
     <Perl>
@@ -126,7 +125,7 @@ Note that if other Gantry apps are running in the same server instance,
 they may fight over which template engine to use.  Generally, the
 first app to put in a use statement for its base module chooses the
 template engine.  We don't mind this since we always use TT.  Even after
-you have chosen TT, you can turn it off by adding these statements
+you have chosen TT, you can turn it off by adding statements like these
 to the top of your do_* method.
 
     $self->content_type( 'text/xml' );

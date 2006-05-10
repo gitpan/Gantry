@@ -56,7 +56,7 @@ Gantry supports these features:
 
 =item *
 
-AJAX (via HTML::Prototype or your favorite AJAX module)
+AJAX (via your favorite AJAX module)
 
 =item *
 
@@ -69,7 +69,7 @@ Gantry::Control::C::Authz, and other modules)
 
 Previous versions of this framework were named for the company that originally
 used it.  To release it into the wild, we needed a new name.  After extensive
-head scratching and much dictionary and thesaurus examination we settled
+head scratching, and much dictionary and thesaurus examination, we settled
 on Gantry.
 
 "Gantry" can mean the framework on which a rocket is built or serviced.  We

@@ -61,7 +61,7 @@ This leads to one table:
         phone  varchar
     );
 
-The application needs to show all the addresses in a single table and
+The application needs to show all the addresses in a single table,
 allow for adding new ones and editing or deleting existing ones.  To make
 it easier to accomodate Lisa's international family and friends, we won't
 do any validation of the data -- except to make sure she enters
@@ -100,12 +100,13 @@ in L<Complete Code Listings>.
 =head2 Apps::AddressBook
 
 The job of the base module is to load Gantry.  If there were any
-app specific set vars to fish out of the httpd.conf (or its equivalent
-for CGI), this would be the place to handle them (see below for
+app specific set vars to fish out of the configuration info,
+this would be the place to handle them (see below for
 an example).  The base module is also a nice home for code the other
 modules need to share.
 
-Here is our module (without its documentation and commentary interspersed):
+Here is our module (without its documentation but with commentary
+interspersed):
 
     package Apps::AddressBook;
 
@@ -142,11 +143,11 @@ For the convenience of future readers, the base module has an explicit use
 for the single controller Apps::AddressBook::Address (which we will see below).
 This is purely for documentation.
 
-Gantry.pm handles a set of standard PerlSetVars specified in httpd.conf.
-If you need to handle others, implement an init sub here and accessor
-for your set vars.  It's usually easier to dispatch to SUPER for the
-standard parameters, then handle your app specific ones.  For example,
-an init to catch an smtp host name might look like this:
+Gantry.pm handles a set of standard configuration parameters.
+If you need to handle others, implement an init sub and accessors for them.
+It's usually easier to dispatch to SUPER for the standard parameters, then
+handle your app specific ones.  For example, an init to catch an smtp host
+name might look like this:
 
     sub init {
         my ( $self ) = @_;
@@ -162,8 +163,8 @@ Using fish_conf has two advantages over a more direct approach like this:
         $self->smtp_host( $self->r->dir_config( 'smtp_host' ) || '' );
 
 First, using dir_config ties you to mod_perl.  Second, directly fishing
-from the request object prevents a more general solution, like the proposed
-Gantry::Conf scheme.
+from the request object prevents a more general solution, like
+Gantry::Conf (see Gantry::Conf::Tutorial for how to use that).
 
 =head2 Apps::AddressBook::Address
 
@@ -212,8 +213,8 @@ add becomes do_add, the name of the method to execute.  Using the do_ prefix
 has two advantages.  First, since url pieces are used directly, it keeps
 people from running non-handlers by clever url spoofing.  Second, and
 for our company more importantly, it makes it clear which methods
-are accessible and which are not when you are modifying a controller.
-If it starts with do_ it can be reached via url.
+are accessible, and which are not.  This aids us when we are modifying
+a controller.  If it starts with do_ it can be reached via url.
 
     #-----------------------------------------------------------------
     # get_model_name( )
@@ -255,9 +256,9 @@ The code begins:
 
 Gantry objects store data for one page hit.  Much of the data you
 should directly access is in the stash, which is a Gantry::Stash
-object.  It provides accessors for all the data users should change.
-If you need additional accessors feel free to add them.  Gantry objects
-are hashes whose keys are usually formed from the attribute name like this:
+object.  It provides accessors for all its data.  If you need additional
+accessors feel free to add them.  Gantry objects are hashes whose keys
+are usually formed from the attribute name like this:
 
     name      becomes    __NAME__
 
@@ -265,7 +266,7 @@ but sometimes things aren't perfect, so stick with the accessors.
 
 One of the key things in the stash is the view.  It is a
 Gantry::Stach::View object which holds data destined for the template
-as well as the name of the template.
+as well as the name of the template (which is set to 'results.tt' above).
 
         $self->stash->view->title( 'Address' );
 
@@ -326,8 +327,9 @@ array as shown here:
             );
         }
 
-For each row, we need to hold onto the id (so we can use it in links),
-then push into the rows array of the data hash we are building for results.tt.
+For each row, we need to hold onto the id (so we can use it in edit/delete
+links), then push into the rows array of the data hash we are building for
+results.tt.
 
 Each row we push is a hash with two keys: data and options.  The
 data is just the values from the model object for the column in the
@@ -382,7 +384,7 @@ to the standard form.tt:
 
 =item name
 
-the name of the form (I know XHTML does not allow form names)
+the name of the form
 
 =item row
 
@@ -430,6 +432,7 @@ That's the whole controller (save the #... where the other fields go
 =head2 Apps::AddressBook::Model::address
 
 To separate sql from the controller (and view) Gantry uses Class::DBI::Sweet
+(or any other object relational modeller with the same API)
 through its model base class Gantry::Utils::CDBI.  Each model subclasses
 that class and represents one table in the database.  These classes are
 standard Class::DBI subclasses.  Here is ours:
@@ -670,6 +673,14 @@ named root).
 
 Now all that remains is to restart the server.
 
+If you are using Gantry::Conf (which we prefer, but didn't discuss above),
+you need to set one var:
+
+    PerlSetVar GantryConfInstance addressbook
+
+Then create a config file for the set vars shown above.  See
+Gantry::Conf::Tutorial for details.
+
 If you are using CGI you need to make a script instead of adjusting apache
 locations.  Here is ours:
 
@@ -699,15 +710,50 @@ locations.  Here is ours:
 
     $cgi->dispatch();
 
-    if ( $cgi->{config}{debug} ) {
-        foreach ( sort { $a cmp $b } keys %ENV ) {
-            print "$_ $ENV{$_}<br />\n";
+If you are using Gantry::Conf with CGI, use the single config hash key:
+
+    my $cgi = Gantry::Engine::CGI->new( {
+        config => {
+            GantryConfInstance => 'address',
         }
-    }
+        # locations as above
+    } );
 
-=head1 What Are All These Roots
+If you want to deploy the app as a stand alone server (most useful
+during testing), change the above cgi script to this:
 
-XXX
+    #!/usr/bin/perl
+
+    use Gantry::Server;
+
+    use lib '/home/me/Apps-AddressBook/lib';
+
+    use Apps::AddressBook qw{ -Engine=CGI -TemplateEngine=TT };
+    use Gantry::Engine::CGI;
+
+    my $cgi = Gantry::Engine::CGI->new( {
+        config => {
+            dbconn => 'dbi:Pg:dbname=address',
+            dbuser => 'apache',
+            template_wrapper => 'wrapper.tt',
+            root => '/home/me/Apps-AddressBook/html:',
+                    '/home/me/srcgantry/root',
+        },
+        locations => {
+            '/' => 'Apps::AddressBook',
+            '/address' => 'Apps::AddressBook::Address',
+        },
+    } );
+
+    my $port = shift || 8080;
+    my $server = Gantry::Server->new( $port );
+
+    $server->set_engine_object( $cgi );
+    $server->run();
+
+That is, trade use CGI::Carp for use Gantry::Server and C<<$cgi->dispatch>>
+for the last four lines shown above.  Running the script will start a
+server on port 8080 (or whatever port was supplied on the command line).
 
 =head1 Using Bigtop
 
@@ -722,6 +768,10 @@ for Bigtop.
 Bigtop uses its own little language to describe web applications.  The language
 is designed for simplicity of structure.  There are basically only two
 constructs: semi-colon terminated statements and brace delimited blocks.
+
+[ Since this tutorial was writtern Bigtop has acquired tentmaker: a browser
+delivered editor.  Using it saves typing.  See Bigtop::Docs::TentMaker
+for details. ]
 
 To show how to use Bigtop, I'll walk through the above example again, this
 time using bigtop.
@@ -763,6 +813,8 @@ with statements:
         template_engine TT;
 
 There are other engines, notably: CGI and MP20 for mod_perl 2.0.
+If you don't want Template Toolkit, you can choose 'Default' as
+the template engine.  Then you are on your own.
 
 The rest of the config section has a list of the things you want to generate
 and who should do the generating.
@@ -830,7 +882,7 @@ sub-blocks.  Folded in vim it looks like this:
     app Apps::AddressBook {
         authors `Phil Crow`;
         email   `philcrow2000@yahoo.com`;
-    +--- 8 lines: set_vars {------------------------------------------------
+    +--- 8 lines: config {------------------------------------------------
         sequence address_seq        {}
     +--- 34 lines: table    address {----------------------------------------
     +--- 18 lines: controller Address {--------------------------------------
@@ -844,9 +896,9 @@ The four blocks are:
 
 =over 4
 
-=item set_vars
+=item config
 
-listing PerlSetVar statements for httpd.conf
+listing configuration variables and their values
 
 =item sequence
 
@@ -854,7 +906,8 @@ defining an SQL sequence named address_seq
 
 =item table
 
-defining an SQL table named address and its Model
+defining an SQL table named address, its Model, and how its columns look
+on-screen
 
 =item controller
 
@@ -864,14 +917,14 @@ defining the controller named Apps::AddressBook::Address
 
 Details follow.
 
-=head3 set vars
+=head3 config
 
-There are several set vars needed to make the app work, as we saw in
+There are several config parameters needed to make the app work, as we saw in
 the hand written section above.  Here we specify these in a block
 
     app Apps::AddressBook {
         #...
-        set_vars {
+        config {
             dbconn    `dbi:Pg:dbname=address`          => no_accessor;
             dbuser    apache                           => no_accessor;
             dbpass    not_telling                      => no_accessor;
@@ -881,8 +934,8 @@ the hand written section above.  Here we specify these in a block
         }
 
 Using the no_accessor option prevents bigtop from making an accessor
-and a statement in the init method for the PerlSetVar.
-For the set vars shown here, those accessors would be the same as the
+and a statement in the init method for the variable.
+For the variables shown here, those accessors would be the same as the
 ones provided by Gantry.pm, so we don't need them.
 
 =head3 sequence
@@ -921,7 +974,7 @@ The other fields have simpler is statements, but use additional statements.
             html_form_type text;
         }
 
-The label is what the user sees when the field is on screen.  This is
+The label is what the user sees when the field is on-screen.  This is
 a table column label and the label next the input box on the add/edit form.
 The html_form_type text yields an input element on the form of type text.
 Not all types are supported by the Gantry templates, but bigtop doesn't care.
@@ -936,8 +989,8 @@ appear in many places, not just in the database table.
 
 =head3 controller
 
-Each controller works with one table.  Once generation is complete, you
-can safely add additional tables' models to the controller.  But, many
+Usually, each controller works with one table.  Once generation is complete,
+you can safely add additional tables' models to the controller.  But, many
 times the standard one-table/one-controller paradigm is sufficient,
 as in the case of the address book:
 
@@ -963,7 +1016,13 @@ the tail of the controller's Location url
 
 =item uses
 
-a comma separated list of modules used by the controller
+a comma separated list of modules used by the controller.  You could
+also declare the controller as being type AutoCRUD and leave
+Gantry::Plugins::AutoCRUD out of the uses list:
+
+            controller Address is AutoCRUD {
+                # as before with no uses statement
+            }
 
 =item text_description
 
@@ -1006,7 +1065,7 @@ row_options appear at the right side of each row.
             legend     => `$self->path_info =~ /edit/i ? 'Edit' : 'Add'`;
     }
 
-Even though XHTML forms are no longer allowed to use form_name, we use
+The form name becomes the name attribute of the form.  We use
 it to support our legacy calendar popups.
 
 You can either list fields you want to include on your form, or list
@@ -1036,10 +1095,10 @@ indentation):
     MANIFEST.SKIP
     README         in need of heavy editing
     docs/
-       address.bigtop - the original bigtop file
-       httpd.conf     - an excerpt ready for inclusion in httpd.conf
-                        for your mod_perl enabled apache
-       schema.sql     - ready for use with psql (or your database's tool)
+       address.bigtop  - the original bigtop file
+       httpd.conf      - an excerpt ready for inclusion in httpd.conf
+                         for your mod_perl enabled apache
+       schema.postgres - ready for use with psql
     html/
        wrapper.tt     - a simple site look
     lib/
@@ -1064,7 +1123,8 @@ your customized code as needed; while AddressBook::GEN::Address and
 AddressBook::Model::GEN::address are generated each time you run
 bigtop.  If you need to do something other than what the generated code does, 
 simply redefine the behavior in the non-generated code stubs and that will be
-used. Do not edit the GEN modules, instead only add code to the stubs as needed.
+used. Do not edit the GEN modules, instead only add code to the stubs as
+needed.
 
 =head2 Revisions
 
@@ -1106,7 +1166,8 @@ The other address fields also receive this treatment.
 =head3 Constraining things
 
 No data in the sample address book is validated (because Lisa has
-too many friends living in too many places for meaningful validation).
+too many friends and relatives living in too many places for meaningful
+validation).
 
 But, if you want validation, you can include it like so:
 
@@ -1118,8 +1179,9 @@ But, if you want validation, you can include it like so:
         html_form_constraint `qr{^\d{5}$}`;
     }
 
-The constraint must be a valid Perl regex.  You could call a sub which
-returns a regex.  If your controller has a uses statement:
+The constraint could be a valid Perl regex.  You could also call a sub which
+returns a regex.  If you include a uses statement in your controller like
+this:
 
     uses Data::FormValidator::Constraints => `qw(:closures)`;
 
@@ -1397,7 +1459,7 @@ There are other documents you might also want to read.
 
 =over 4
 
-=item Gantry::Docs::CatQuest
+=item Gantry::Docs::FAQ
 
 categorized questions and answers explaining how to do common tasks
 
