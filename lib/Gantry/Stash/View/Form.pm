@@ -48,39 +48,46 @@ Gantry::Stash::View::Form - Stash object for the view's form
 
 =head1 SYNOPSIS
 
+    $self->stash->view->form( { } );
+
 =head1 DESCRIPTION
 
-=head1 FUNCTIONS
-
-=over 4
+This module manages the form contents for Gantry::Plugins::AutoCRUD and
+Gantry::Plugins::CRUD, see their docs for details of what goes into the hash.
 
 =head1 METHODS
 
 =over 4
 
-=item template
+=item new
 
-=item data
+Pass in a proper hash suitable for use by one of the crud plugins.  It
+will be blessed into this class.
 
-=item title
+=item results
 
-=head1 MODULES
+Used by add/edit templates to track form validation violations.
 
-=over 4
+=item error_text
 
-=item Gantry::Stash::View::Form
+Not currently used.
+
+=item message
+
+Used by some templates for question text to present to the user.
 
 =back
 
 =head1 SEE ALSO
 
-Gantry(3), Gantry::Stash(3)
+Gantry::Plugins::AutoCRUD(3), Gantry(3), Gantry::Stash(3)
 
 =head1 LIMITATIONS
 
 =head1 AUTHOR
 
 Phil Crow <pcrow@sunflowerbroadband.com>
+
 Tim Keefer <tkeefer@gmail.com>
 
 =head1 COPYRIGHT and LICENSE

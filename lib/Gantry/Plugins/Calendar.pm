@@ -435,6 +435,16 @@ and then closes the popup window.
 The other functions are not directly useful to normal callers
 but here is a complete list.
 
+=head2 Method you call
+
+=over 4
+
+=item calendar_month_js
+
+See above.
+
+=back
+
 =head2 Methods called by global handler
 
 =over 4
@@ -454,6 +464,8 @@ Might not work, not tested.  Meant to display a whole year at a time.
 =back
 
 =head2 Functions used internatlly
+
+=over 4
 
 =item @month = _calendar_month( $r, $root, $month, $year, $select, \&function, @param )
 

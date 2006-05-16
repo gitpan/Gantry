@@ -1,5 +1,10 @@
 This file documents the revision history for Perl extension Gantry
 
+3.31
+	- Doc updates to Gantry.pm, Tutorial and FAQ
+    - Added support for DBIx::Class.  (AutoCRUD still only works for ORMs
+      with Class::DBI's API.)
+
 3.30 Wed May 10 13:01:44 CDT 2006
     - Corrected bug in CGI engine which made the constructor demand a valid
       hash as an argment.  Now an empty one is supplied by default, making

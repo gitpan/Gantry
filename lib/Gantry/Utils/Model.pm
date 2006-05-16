@@ -549,6 +549,10 @@ contain an order_by key.  Its value is used to fill in the blank
 Returns a list of objects one each for every row that matched the search
 criterion.
 
+=item page
+
+A synonymn for search to better match the Class::DBI::Sweet API.
+
 =item lazy_fetch
 
 Instance method.  Call with the column name you want to fetch.  Returns
@@ -607,6 +611,16 @@ Class or instance method.  Call with a column name and a value.  Returns
 the value quoted for SQL as if it were stored in the column of an object.
 Even if you call this as an instance method, the instance values are not
 used.
+
+=item get_db_options
+
+Subclasses are welcome to override this with a meaningful routine.
+The one here returns an empty hash reference.  Yours should provide
+data given as extra options to DBI during connection.
+
+=item stringify_self
+
+Returns the id of the row.
 
 =back
 

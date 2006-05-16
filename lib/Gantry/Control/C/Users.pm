@@ -322,6 +322,26 @@ The passwords are ecrypted by the crypt(3) function in perl.
     "email"         varchar
   );
 
+=head1 METHODS
+
+Most of the methods are mapped to urls.
+
+=over 4
+
+=item do_add
+
+=item do_delete
+
+=item do_edit
+
+=item do_main
+
+=item redirect_to_main
+
+Decides where to go after a button press.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control(3), Gantry(3)

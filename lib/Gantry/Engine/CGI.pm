@@ -787,14 +787,50 @@ Adds a configuration item to the cgi object
 
 Adds a location to the cgi object
 
+=item $self->parse_env
+
+Used internally.  Destroys posted form data.
+
+Places all query string and form parameters into a hash, which it returns
+by reference.
+
+=back
+
 =head1 METHODS MIXED into the SITE OBJECT
+
+=over 4
+
+=item $self->apache_param_hash
+
+Returns the hash reference of form and query string params.
+
+=item $self->apache_request
+
+This method does nothing.  It is here to conform the engine api.  mod_perl
+engines return their apache request object in response to this method.
 
 =item $self->base_server
 
 Returns the physical server this connection came in 
 on (main server or vhost):
 
-=item dispatch_location
+=item $self->cast_custom_error
+
+Delivers error output to the browser.
+
+=item $self->cgi_obj
+
+Dual accessor for the CGI::Simple object.
+
+=item $self->config
+
+Dual accessor for updating the config hash in the CGI engine object.
+
+=item $self->declined_response
+
+Returns the proper numerical code for DECLINED response.
+
+=item $self->dispatch_location
 
 The uri tail specific to this request.  Returns:
 
@@ -802,32 +838,40 @@ The uri tail specific to this request.  Returns:
 
 Note that this a two element list.
 
-=item engine
+=item $self->engine
 
 Returns the name for the engine
 
-=item fish_config
+=item engine_init
+
+For use during site object init, by Gantry.pm.
+
+=item err_header_out
+
+Does nothing, but meet the engine API.
+
+=item $self->fish_config
 
 Pass this method the name of a conf parameter you need.  Returns the
 value for the parameter.
 
-=item fish_location
+=item $self->fish_location
 
 Returns the location for the current request.
 
-=item fish_method
+=item $self->fish_method
 
 Returns the HTTP method of the current request.
 
-=item fish_path_info
+=item $self->fish_path_info
 
 Returns the path info for the current request.
 
-=item fish_uri
+=item $self->fish_uri
 
 Returns the uri for the current request.
 
-=item fish_user
+=item $self->fish_user
 
 Returns the currently logged-in user.
 
@@ -837,12 +881,22 @@ returns a hash of url arguments.
 
 /some/where?arg1=don&arg2=johnson
 
-=item get_config
+=item $self->get_auth_dbh
+
+Returns the auth db handle (if there is one).
+
+=item $self->get_cached_config
+
+You should normally call get_config instead of this.
+
+Used internally to store the config hash for a full page hit cycle.
+
+=item $self->get_config
 
 If you are using Gantry::Conf, this will return the config hash reference
 for the current location.
 
-=item get_cached_conf/set_cached_conf
+=item $self-> get_cached_conf/set_cached_conf
 
 These cache the Gantry::Conf config hash in a lexical hash.  Override them if
 you want more persistent caching.  These are instance methods.  get
@@ -850,9 +904,26 @@ receives the invoking object, the name of the GantryConfInstance,
 and the current location (for ease of use, its also in the invocant).
 set receives those plus the conf hash it should cache.
 
+=item $self->get_dbh
+
+Returns the db handle (if there is one).
+
+=item $self->header_in
+
+Does nothing but meet the engine API.  mod_perl engines use this.
+
 =item $self->header_out( $header_key, $header_value )
 
 Change the value of a response header, or create a new one.
+
+=item $self->is_status_declined
+
+Returns true if the current status is DECLINED, or false otherwise.
+
+=item $self->locations
+
+Dual accessor for the locations hash passed to the constructor
+or built up with add_location.
 
 =item $self->remote_ip
 
@@ -862,16 +933,59 @@ Returns the IP address for the remote user
 
 Returns port number in which the request came in on.
 
+=item $self->print_output
+
+Prints whatever you pass to it.
+
+=item $self->redirect_response
+
+Prints a redirection to the current header_out location.
+
+=item $self->send_error_output
+
+Prints an error header and passes the value of $@ to custom_error.
+
+=item $self->send_http_header
+
+Prints the header for the current content_type.
+
 =item $self->server_root
 
 Returns the value set by the top-level ServerRoot directive
+
+=item $self->set_cached_config
+
+For internal use only.  Stores the conf hash from Gantry::Conf so it
+doesn't have to be refetched during a single page hit.
+
+=item $self->set_content_type
+
+You should use the dual accessor content_type supplied by Gantry.pm.
+
+This method does nothing except meet the API.  mod_perl engines use this
+to move the content type from the site object to the request object.
+
+=item $self->set_no_cache
+
+You should use the dual accessor no_cache supplied by Gantry.pm instead
+of this.
+
+Transfers the no_cache flag from the site object to the cgi object.
+
+=item $self->set_req_params
+
+Used by Gantry during site object init to transfer params from the cgi
+engine object to the site object.
 
 =item $self->status_const( 'OK | DECLINED | REDIRECT' )
 
 Get or set the reply status for the client request. The Apache::Constants 
 module provide mnemonic names for the status codes.
 
-=over 4
+=item $self->success_code
+
+Does nothing but meet the engine API.  mod_perl engines use it to report
+the numerical success code.
 
 =back
 

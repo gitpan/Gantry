@@ -57,6 +57,23 @@ inherit the import method from this module.  It allows your callers to pass
 a hash reference of database connection info in their use statement, instead
 of calling set_conn_info.  This only works for the Script helper.
 
+=head1 METHODS of this class
+
+=over 4
+
+=item set_subclass
+
+Your subclass MUST call this method at compile time passing in the
+fully qualified name of your subclass.
+
+=item get_subclass
+
+Returns the name of the subclass providing the actual connection information.
+Used by any one that wants to ask the subclass for connection info.  The
+prime example is Gantry::Utils::ModelHelper.
+
+=back
+
 =head1 Required METHODS
 
 Your module needs to implement the methods below.  Failure to implement them
@@ -120,6 +137,8 @@ Gantry auth, you must use the methods below.
 (Note the symmetry between these methods and the ones above.  These
 simply have auth_ inserted into their names.)
 
+=over 4
+
 =item get_auth_dbh
 
 (required by Gantry::Utils::AuthCDBI and Gantry::Utils::AuthModel)
@@ -161,6 +180,8 @@ It is perfectly reasonable to use the same database -- or even database handle
 -- for both the auth and regular connections.  But, you need to provide
 the methods above so that Gantry can find them.
 
+=back
+
 =head1 A METHOD for SUBCLASSES
 
 This module does supply a useful import method which you can inherit.
@@ -195,6 +216,8 @@ The import method does not help with authentication connection info.
 Gantry::Util::DBConnHelper::Script has two other methods for use by
 scripts, constructors, init methods or the like.
 
+=over 4
+
 =item set_conn_info
 
 Not implemented by mod_perl helpers.
@@ -208,6 +231,8 @@ Not implemented by mod_perl helpers.
 
 Receives a hash reference of connection info which it should store for
 later retrieval via get_conn_info.
+
+=back
 
 =head1 AUTHOR
 

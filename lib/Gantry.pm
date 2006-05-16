@@ -7,7 +7,7 @@ use CGI::Simple;
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.30';
+our $VERSION = '3.31';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -844,13 +844,6 @@ sub custom_error {
 	$request_dump =~ s/(?:^|\n)(\s+)/&trim( $1 )/ge;
 	$request_dump =~ s/</&lt;/g;
 
-	sub trim {
-		my $spaces = $1;
-
-		my $new_sp = " " x int( length($spaces) / 4 );
-		return( "\n$new_sp" );
-	}
-
 	my $page = $self->_error_page();
 	
 	$page =~ s/##DIE_MESSAGE##/$die_msg/sg;
@@ -864,6 +857,13 @@ sub custom_error {
 	
 
 } # end custom_error
+
+sub trim {
+	my $spaces = $1;
+
+	my $new_sp = " " x int( length($spaces) / 4 );
+	return( "\n$new_sp" );
+}
 
 #-------------------------------------------------
 # $self->_error_page()
@@ -968,10 +968,13 @@ Gantry - Web application framework for mod_perl, cgi, etc.
 
 =head1 DESCRIPTION
 
+Note, if you want to know how to use Gantry, you should probably start
+by reading L<Gantry::Docs::QuickStart> or L<Gantry::Docs::Tutorial>.
+
 Perl Web application framework for Apache/mod_perl. Object Oriented design 
-for a pragmatic, modular approach to URL dispatching.  Supports MVC and 
-initiates rapid development. This project offers an orgainized coding 
-scheme for web applications.
+for a pragmatic, modular approach to URL dispatching.  Supports MVC
+(or VC, MC, C, take your pick) and initiates rapid development. This
+project offers an orgainized coding scheme for web applications.
 
 =head1 METHODS
 
@@ -992,61 +995,66 @@ app_rootp, img_rootp, and other application set vars.
 
 =item declined 
 
-$self->declined( 1 );
+ $self->declined( 1 );
 
 Set and unset the declined flag
 
 =item relocate
 
-$self->relocate( location );
+ $self->relocate( location );
 
 This method can be called from any controller will relocated 
 the user to the given location
 
 =item redirect 
 
-$self->redirect( 1 );
+ $self->redirect( 1 );
 
 Set and unset the redirect flag
 
 =item no_cache
 
-$self->no_cache( 1 );
+ $self->no_cache( 1 );
 
 Set and unset the no cache flag. This directive informs Apache to
 either send the the no_cache header or not. 
 
 =item template_disable 
 
-$self->template_disable( 1 );
+ $self->template_disable( 1 );
 
 Set and unset the template disable flag. 
 
 =item method
 
-$self->method;
-$self->method( $r->method );
+ $self->method;
+ $self->method( $r->method );
 
 Set/get the apache request method, either 'POST' or 'GET'
 
 =item cleanroot
 
-$self->cleanroot( uri, root );
+ $self->cleanroot( uri, root );
 
 Splits the URI and returns and array of the individual path
 locations.
 
 =item cleanup
 
-$self->cleanup
+ $self->cleanup
 
 This method is called at the end of the request phase to cleanup,
 disconnect for a database, etc.
 
+=item custom_error
+
+Generates an error page.  Feel free to override this to change the
+appearance of the error page.
+
 =item get_cookies
 
-$hash_ref_of_cookies = $self->get_cookies();
-$cookie_value = $self->get_cookies( 'key_of_cookie' );
+ $hash_ref_of_cookies = $self->get_cookies();
+ $cookie_value = $self->get_cookies( 'key_of_cookie' );
 
 If called without any parameters, this method will return a reference  
 to a hash of all cookie data. Otherwise, by passing a key to this
@@ -1054,67 +1062,70 @@ method then the value for the requested cookie is returned.
 
 =item set_cookie
 
-$self->set_cookie( { 
-  name => cookie name,
-  value => cookie value,
-  expire => cookie expires,
-  path => cookie path,
-  domain => cookie domain,
-  secure => [0/1] cookie secure,
-} )
+ $self->set_cookie( { 
+    name => cookie name,
+    value => cookie value,
+    expire => cookie expires,
+    path => cookie path,
+    domain => cookie domain,
+    secure => [0/1] cookie secure,
+  } )
 
 This method can be called repeatedly and it will create the cookie
 and push it into the response headers.
 
-=item r
+=item r - The Apache Request 
 
-$r = $self->r;	$self->r( $r );
+ $r = $self->r;	
+ $self->r( $r );
 
 Set/get for apache request object
 
 =item cgi
 
-$cgi = $self->cgi; $self->cgi( CGI::Simple->new() );
+ $cgi = $self->cgi; $self->cgi( CGI::Simple->new() );
 
 Set/get for CGI::Simple object. See CGI::Simple docs. This method is only
 available when using the CGI engine.
 
 =item uri 
 
-$uri = $self->uri; $self->uri( uri );
+ $uri = $self->uri; 
+ $self->uri( uri );
 
 Set/get for server uri
 
 =item location
 
-$location = $self->location; $self->location( location );
+ $location = $self->location; 
+ $self->location( location );
 
 Set/get for server location
 
 =item current_url
 
-my $url_for_email = $self->current_url
+ $url_for_email = $self->current_url
 
 Get the url of the current page.  This combines protocol, base_server and
 uri to form a valid url suitable for inclusion in an email.
 
 =item path_info
 
-$path_info  = $self->path_info; $self->path_info( path_info );
+ $path_info  = $self->path_info; $self->path_info( path_info );
 
 Set/get for server path_info
 
 =item content_type
 
-$type = $self->content_type;
-$self->content_type( 'text/html' );
+ $type = $self->content_type;
+ $self->content_type( 'text/html' );
 
 Set/get for reponse content-type
 
 =item root
 
-$self->root( '/home/tkeefer/myapp/root' );
-$root = $self->root;
+ $self->root( '/home/tkeefer/myapp/root' );
+ $root = $self->root;
 
 Set/get for the root value. This value is the application root
 directory that stores the templates and other application specific
@@ -1122,7 +1133,7 @@ files.
 
 =item template
 
-$self->template( 'some_template.tt' );
+ $self->template( 'some_template.tt' );
 
 Set/get for template name for current request
 
@@ -1131,7 +1142,7 @@ be the full path to template file.
 
 =item template_default
 
-$self->template_default( 'some_default_template.tt' );
+ $self->template_default( 'some_default_template.tt' );
 
 Set/get for a template default value. If a template has not been 
 defined for the request, then the default template is called.
@@ -1141,7 +1152,7 @@ be the full path to template file.
 
 =item template_wrapper
 
-$self->template_wrapper( 'wrappers/wrapper.tt' );
+ $self->template_wrapper( 'wrappers/wrapper.tt' );
 
 Set/get for the template toolkit wrapper file. The wrapper does
 exactly as it says; it wrapper the ouput from the controller before
@@ -1150,77 +1161,94 @@ the response is sent to the client.
 The filename is relative to the $self->root value, otherwise it needs to
 be the full path to template file.
 
+=item status
+
+Dual accessor for the HTTP status of the page hit.
+
 =item css_root
 
-$self->css_root( '/home/tkeefer/myapp/root/css' );
-$css_root = $self->css_root;
+ $self->css_root( '/home/tkeefer/myapp/root/css' );
+ $css_root = $self->css_root;
 
 Set/get for the css_root value. This value is used to locate the css
 files on disk.
 
 =item img_root
 
-$self->img_root( '/home/tkeefer/myapp/root/images' );
-$img_root = $self->img_root;
+ $self->img_root( '/home/tkeefer/myapp/root/images' );
+ $img_root = $self->img_root;
 
 Set/get for the img_root value. This value is used to locate the
 application image files on disk.
 
 =item app_rootp
 
-$self->app_rootp( '/myapp' );
-$app_rootp = $self->app_rootp;
+ $self->app_rootp( '/myapp' );
+ $app_rootp = $self->app_rootp;
 
 Set/get for the app_rootp value. This value is used to identify the
 the root URI location for the web application.
 
 =item img_rootp
 
-$self->img_rootp( '/myapp' );
-$img_rootp = $self->img_rootp;
+ $self->img_rootp( '/myapp' );
+ $img_rootp = $self->img_rootp;
 
 Set/get for the img_rootp value. This value is used to identify the
 the root URI location for the web application images.
 
 =item css_rootp
 
-$self->css_rootp( '/myapp/style' );
-$css_rootp = $self->css_rootp;
+ $self->css_rootp( '/myapp/style' );
+ $css_rootp = $self->css_rootp;
 
 Set/get for the app_rootp value. This value is used to identify the
 the root URI location for the web application css files.
 
 =item tmp_rootp
 
-$self->tmp_rootp( '/myapp/tmp' );
-$tmp_rootp = $self->tmp_rootp;
+ $self->tmp_rootp( '/myapp/tmp' );
+ $tmp_rootp = $self->tmp_rootp;
 
 Set/get for the tmp_rootp value. This value is used to identify the
 the root URI location for the web application temporary files.
 
 =item editor_rootp
 
-$self->editor_rootp( '/fck' );
-$editor_rootp = $self->editor_rootp;
+ $self->editor_rootp( '/fck' );
+ $editor_rootp = $self->editor_rootp;
 
 Set/get for the editor_rootp value. This value is used to identify the
 the root URI location for the html editor.
 
 =item tmp_root
 
-$self->tmp_rootp( '/home/httpd/html/myapp/tmp' );
-$tmp_root = $self->tmp_root;
+ $self->tmp_rootp( '/home/httpd/html/myapp/tmp' );
+ $tmp_root = $self->tmp_root;
 
 Set/get for the tmp_root value. This value is used to identify the
 the root directory location for the web application temporary files.
 
+=item stash
+
+Use this to store things for your template system, etc.  See Gantry::Stash.
+
+=item smtp_host
+
+An obscure accessor for storing smtp_host.
+
 =item user
 
-$self->user( $apache_connection_user );
-$user = $self->user;
+ $self->user( $apache_connection_user );
+ $user = $self->user;
 
 Set/get for the user value. Return the full user name of the active user.
 This value only exists if the user has successfully logged in.
+
+=item get_auth_model_name
+
+Always returns Gantry::Control::Model::auth_users.  Override this method
+if you want a different auth model.
 
 =item user_id
 
@@ -1250,8 +1278,8 @@ representation of a database row).
 
 =item page_title
 
-$self->page_title( 'Gantry is for you' );
-$page_title = $self->page_title;
+ $self->page_title( 'Gantry is for you' );
+ $page_title = $self->page_title;
 
 Set/get for the page title value. This page title is passed to the template
 and used for the HTML page title. This can be set in either the Apache
@@ -1259,40 +1287,45 @@ LOCATION block or in the contoller.
 
 =item date_fmt
 
-$self->date_fmt( '%m %d, %Y' );
-$fmt = $self->date_fmt;
+ $self->date_fmt( '%m %d, %Y' );
+ $fmt = $self->date_fmt;
 
 Set/get for the date format value. Used within the application for
 the default date format display.
 
 =item post_max
 
-$self->post_max( '4M' );
-$post_max = $self->post_max;
+ $self->post_max( '4M' );
+ $post_max = $self->post_max;
 
 Set/get for the apache request post_max value. 
 See Apache::Request or Apache2::Request docs.
 
 =item ap_req
 
-$self->ap_req( api_call_to_apache );
-$req = $self->ap_req;
+ $self->ap_req( api_call_to_apache );
+ $req = $self->ap_req;
 
 Set/get for the apache request req object. See mod_perl
 documentation for intructions on how to use apache requets req.
 
+=item get_param_hash
+
+Always returns the params (from forms and the query string) as a hash
+(not a hash reference, a real hash).
+
 =item params
 
-$self->params( $self->ap_req );
-$params = $self->params;
+ $self->params( $self->ap_req );
+ $params = $self->params;
 
 Set/get for the request parameters. Returns a reference to a hash of
 key value pairs.
 
 =item protocol
 
-$self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
-$protocol = $self->protocol;
+ $self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
+ $protocol = $self->protocol;
 
 Set/get for the request protocol. Value is either 'http://' or
 'https://'. This is used to construct the full url to a resource on
@@ -1304,6 +1337,24 @@ Pass this the name of the instance and (optionally) the ganty.conf
 file where the conf for that instance lives.  Returns whatever
 Gantry::Conf->retrieve returns.
 
+=item make_stash
+
+For internal use.  Makes a new stash.  The old one is lost.
+
+=item trim
+
+For internal use in cleaning up Data::Dumper output for presentation on
+the default custom_error page.
+
+=item schema_base_class
+
+Not yet implemented.  Currently you must code this in your model base class.
+
+Dual use accessor so you can keep track of the base model class name
+when using DBIx::Class.
+
+=back
+
 =head1 MODULES
 
 =over 4
@@ -1312,25 +1363,25 @@ Gantry::Conf->retrieve returns.
 
 Main stash object for Gantry
 
-=item Gantry::Utils::CDBI
+=item L<Gantry::Utils::CDBI>
 
 Class::DBI base class for Gantry applications
 
-=item Gantry::Plugins::CRUD
+=item L<Gantry::Plugins::CRUD>
 
 Helper for flexible CRUD coding scheme.
 
-=item Gantry::Plugins::AutoCRUD
+=item L<Gantry::Plugins::AutoCRUD>
 
 provides a more automated approach to the 
 CRUD (Create, Retrieve, Update, Delete) support
 
-=item Gantry::Plugins::Calendar
+=item L<Gantry::Plugins::Calendar>
 
 These module creates a couple calendar views that can be used by other
 applications and are highly customizeable. 
 
-=item Gantry::Engine::MP13
+=item L<Gantry::Engine::MP13>
 
 This module is the binding between the Gantry framework and the mod_perl API.
 This particluar module contains the mod_perl 1.0 specific bindings.
@@ -1338,7 +1389,7 @@ This particluar module contains the mod_perl 1.0 specific bindings.
 See mod_perl documentation for a more detailed description for some of these
 bindings.
 
-=item Gantry::Engine::MP20
+=item L<Gantry::Engine::MP20>
 
 This module is the binding between the Gantry framework and the mod_perl API.
 This particluar module contains the mod_perl 2.0 specific bindings.
@@ -1346,49 +1397,49 @@ This particluar module contains the mod_perl 2.0 specific bindings.
 See mod_perl documentation for a more detailed description for some of these
 bindings.
 
-=item Gantry::Control
+=item L<Gantry::Control>
 
 This module is a library of useful access functions that would be used
 in other handlers, it also details the other modules that belong to the
 Control tree.
 
-=item Gantry::Utils::DB
+=item L<Gantry::Utils::DB>
 
 These functions wrap the common DBI calls to Databases with error
 checking. 
 
-=item Gantry::Template::TT
+=item L<Gantry::Template::TT>
 
 This is recommended templating system in use by by Gantry. 
 
-=item Gantry::Template::Default
+=item L<Gantry::Template::Default>
 
 This modules is used to to bypass a tempalting system and used if you
 prefer to output the raw text from within the controllers.
 
-=item Gantry::Utils::HTML
+=item L<Gantry::Utils::HTML>
 
 Implements HTML tags in a browser non-specfic way conforming to 
 3.2 and above HTML specifications.
 
-=item Gantry::Utils::SQL 
+=item L<Gantry::Utils::SQL>
 
 This module supplies easy ways to make strings sql safe as well as 
 allowing the creation of sql commands. All of these commands should 
 work with any database as they do not do anything database specfic, 
 well as far as I know anyways.
 
-=item Gantry::Utils::Validate
+=item L<Gantry::Utils::Validate>
 
 This module allows the validation of many common types of input.
 
-=item Gantry::Server
+=item L<Gantry::Server>
 
 Stand alone web server used for testing Gantry applications and for 
 quick delopment of Gantry applications. This server is not recommended
 for production use.
 
-=item Gantry::Conf
+=item L<Gantry::Conf>
 
 Flexible configuration system for Gantry
 
@@ -1402,9 +1453,21 @@ L<perl(3)>, L<httpd(3)>, L<mod_perl(3)>
 
 Limitations are listed in the modules they apply to.
 
+=head1 JOIN US
+
+Please visit http://www.usegantry.org for project information, 
+sample applications, documentation and mailing list subscription instructions.
+	
+ Web:
+ http://www.usegantry.org
+	
+ Mailing List:
+ http://www.usegantry.org/mailinglists/
+	
 =head1 AUTHOR
 
 Tim Keefer <tkeefer@gmail.com>
+
 Phil Crow <philcrow2000@yahoo.com>
 
 Gantry was branched from Krkit version 0.16 

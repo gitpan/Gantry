@@ -403,6 +403,10 @@ C<Gantry::Conf::FAQ> for more information.
 
 =over 4
 
+=item new
+
+This constructor is for internal use.  Call retrieve instead.
+
 =item retrieve( $options_hash )
 
 The retrieve method is the only method your application should call. It 

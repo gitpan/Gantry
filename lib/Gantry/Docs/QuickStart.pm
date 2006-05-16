@@ -131,10 +131,25 @@ to the top of your do_* method.
     $self->content_type( 'text/xml' );
     $self->template_disable( 1 );
 
-=head1 Further Reading
+=head1 What To Do Now
 
-For a bigger example, see Gantry::Docs::Tutorial which walks through
-building a simple database-backed app from scratch.
+Once you have your first app running, as shown above, you are ready to
+move on in the following sequence of documents:
+
+=over 4
+
+=item 1.
+
+Gantry::Docs::Tutorial
+
+=item 2.
+
+Bigtop::Docs::Tutorial
+
+=back
+
+After those, you probably want either Gantry::Docs::FAQ or
+Bigtop::Docs::Cookbook.
 
 =head1 Author
 

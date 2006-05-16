@@ -97,6 +97,28 @@ here.
 Note that only cgi scripts need to worry about the auth methods.
 Off line scripts don't need to authenticate through apache.
 
+Here is a list of the methods documented in Gantry::Utils::DBConnHelper.
+
+=over 4
+
+=item get_auth_conn_info
+
+=item get_auth_dbh
+
+=item get_conn_info
+
+=item get_dbh
+
+=item set_auth_conn_info
+
+=item set_auth_dbh
+
+=item set_conn_info
+
+=item set_dbh
+
+=back
+
 =head1 AUTHOR
 
 Phil Crow <philcrow2000@yahoo.com>

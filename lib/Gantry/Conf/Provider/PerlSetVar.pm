@@ -118,6 +118,14 @@ Gantry::Conf::Provider::PerlSetVar - Configure via PerlSetVar's in httpd.conf
 
 =head1 METHODS
 
+=over 4
+
+=item config
+
+Returns config based on set vars in an httpd.conf excerpt.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry(3), Gantry::Conf(3), Gantry::Conf::Tutorial(3), Ganty::Conf::FAQ(3), Apache2::RequestUtil(3), Apache2::ServerUtil(3)

@@ -72,6 +72,14 @@ This allows Gantry::Conf to handle files in a Config::Tiny ( aka INI ) style.
 
 =head1 METHODS
 
+=over 4
+
+=item config
+
+Returns a config subhash by applying Config::Tiny to an ini style file.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry(3), Gantry::Conf(3), Config::Tiny(3)

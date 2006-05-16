@@ -253,6 +253,24 @@ These are the authentication tables that this handler uses.
     "group_id"  int4	
   );
 
+=head1 METHODS
+
+=over 4
+
+=item handler
+
+The mod_perl page based authz handler.
+
+=item do_requires
+
+For internal use.
+
+=item lookup_uri
+
+For internal use.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control::C::Pages(3), Gantry::Control::C::Authz(3), 

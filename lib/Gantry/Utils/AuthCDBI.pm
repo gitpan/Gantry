@@ -17,83 +17,6 @@ __PACKAGE__->_remember_handle('Main');
 sub get_db_options {
     return $db_options;
 }
-   
-#-------------------------------------------------
-# original_db_Main
-#-------------------------------------------------   
-# override default to avoid using Ima::DBI closure
-sub original_db_Main {
-    my $dbh;
-
-    if ( defined $ENV{'AUTH_DBCONN'} ) {
-        my $dbh;
-
-        $db_options->{AutoCommit} = 0;
-
-        # $config is my config object. replace with your own settings...
-        $dbh = DBI->connect_cached(
-                $ENV{'AUTH_DBCONN'},
-                $ENV{'AUTH_DBUSER'},
-                $ENV{'AUTH_DBPASS'},
-                $db_options
-        );
-
-        return $dbh;
-    }
-
-    unless ( defined $mod_perl::VERSION ) {
-        $dbh = $Gantry::Utils::CDBI::Helper::auth_dbh;
-
-        unless ( $dbh ) {
-            my $conn_info = Gantry::Utils::CDBI::Helper->auth_conn_info();
-            $db_options->{AutoCommit} = 0;
-
-            $dbh = DBI->connect_cached(
-                    $conn_info->{ 'auth_dbconn' },
-                    $conn_info->{ 'auth_dbuser' },
-                    $conn_info->{ 'auth_dbpass' },
-                    $db_options
-                    );
-            $Gantry::Utils::CDBI::Helper::auth_dbh = $dbh;
-        }
-
-        return $dbh;
-    }
-
-    my( $mp1, $mp2 );
-    if (  $mod_perl::VERSION =~ /^1/ ) {
-        $mp1 = 1;
-    }
-    else {
-        $mp2 = 1;
-    }
-
-    my $r;
-    $r = Apache->request() if $mp1;
-    $r = Apache2::RequestUtil->request if $mp2;
-
-    if ( $ENV{'MOD_PERL'} and !$Apache::ServerStarting ) {
-        $dbh = $r->pnotes('auth_dbh');
-    }
-    if ( !$dbh ) {
-
-        $db_options->{AutoCommit} = 0;
-    # $config is my config object. replace with your own settings...
-        $dbh = DBI->connect_cached(
-                $r->dir_config( 'auth_dbconn' ),
-                $r->dir_config( 'auth_dbuser' ),
-                $r->dir_config( 'auth_dbpass' ),
-                $db_options
-        );
-
-        if ( $ENV{'MOD_PERL'} and !$Apache::ServerStarting ) {
-            $r->pnotes( 'auth_dbh', $dbh );
-        }
-    }
-
-    return $dbh;
-
-} # end db_Main
 
 #-------------------------------------------------
 # db_Main
@@ -159,6 +82,17 @@ Or, from a script:
 This module provide the base methods for Class::DBI, including the db
 connection through Gantry::Utils::ModelHelper (and its friends in
 the Gantry::Utils::DBConnHelper family).
+
+=head1 METHODS
+
+=over 4
+
+=item get_db_options
+
+Returns the dbi connection options, which are usually supplied by Class::DBI's
+_default_attributes method.
+
+=back
 
 =head1 AUTHOR
 

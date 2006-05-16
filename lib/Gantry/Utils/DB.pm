@@ -368,6 +368,17 @@ will never return a statement handle.
 
 =back
 
+=head1 METHODS
+
+=over 4
+
+=item new
+
+Not currently used, since there are no other methods to act on the
+object.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Utils::SQL(3), DBI(3), DBD::Pg(3)

@@ -176,6 +176,24 @@ If you do not define an auth_dbconn PerlSetVar, this module will return
 the regular connection information, if it is ever asked for auth connection
 information.
 
+Here is a list of the methods documented in Gantry::Utils::DBConnHelper.
+
+=over 4
+
+=item get_auth_conn_info
+
+=item get_auth_dbh
+
+=item get_conn_info
+
+=item get_dbh
+
+=item set_auth_dbh
+
+=item set_dbh
+
+=back
+
 =head1 AUTHOR
 
 Phil Crow <philcrow2000@yahoo.com>

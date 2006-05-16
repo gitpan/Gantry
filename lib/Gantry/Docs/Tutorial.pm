@@ -99,11 +99,10 @@ in L<Complete Code Listings>.
 
 =head2 Apps::AddressBook
 
-The job of the base module is to load Gantry.  If there were any
-app specific set vars to fish out of the configuration info,
-this would be the place to handle them (see below for
-an example).  The base module is also a nice home for code the other
-modules need to share.
+The job of the base module is to load Gantry.  If there was any
+app specific configuration info, this would be the place to handle
+it (see below for an example).  The base module is also a nice home
+for code the other modules need to share.
 
 Here is our module (without its documentation but with commentary
 interspersed):
@@ -236,13 +235,13 @@ class to use for create, update, delete, and lookups.
 Gantry::Plugins::AutoCRUD uses text_descr to fill in the blank in things
 like:
 
-    Delete the _____?
+    Delete _____?
 
 Now we are coming to the real code.  The default action for a Location
 in Gantry is do_main.  We usually use it to display a table with one
 summary row for each database row like this.  It looks like this:
 
-=for html <img src='/images/mainlist.png' alt='Main Listing Screen Shot' />
+=for html <img src='http://www.usegantry.org/images/mainlist.png' alt='Main Listing Screen Shot' />
 
 The code begins:
 
@@ -350,7 +349,7 @@ the call, it will pass in the row as it stands in the database.
 
 The following code produces this on the screen:
 
-=for html <img src='/images/form.png' alt='Form Screen Shot' />
+=for html <img src='http://www.usegantry.org/images/form.png' alt='Form Screen Shot' />
 
     #-----------------------------------------------------------------
     # $self->form( $row )
@@ -433,7 +432,7 @@ That's the whole controller (save the #... where the other fields go
 
 To separate sql from the controller (and view) Gantry uses Class::DBI::Sweet
 (or any other object relational modeller with the same API)
-through its model base class Gantry::Utils::CDBI.  Each model subclasses
+through its model base class L<Gantry::Utils::CDBI>.  Each model subclasses
 that class and represents one table in the database.  These classes are
 standard Class::DBI subclasses.  Here is ours:
 
@@ -679,7 +678,7 @@ you need to set one var:
     PerlSetVar GantryConfInstance addressbook
 
 Then create a config file for the set vars shown above.  See
-Gantry::Conf::Tutorial for details.
+L<Gantry::Conf::Tutorial> for details.
 
 If you are using CGI you need to make a script instead of adjusting apache
 locations.  Here is ours:
@@ -824,7 +823,7 @@ and who should do the generating.
 Init is only really useful when you create a new application, so the
 --new option flags it with no_gen, like this:
 
-                Init            Std           { no_gen 1; }
+        Init            Std           { no_gen 1; }
 
 All of the other backends also respect the no_gen statement.
 
@@ -1327,7 +1326,7 @@ file in it).
  app Apps::AddressBook {
     authors `Phil Crow`;
     email   `philcrow2000@yahoo.com`;
-    set_vars {
+    config {
         dbconn    `dbi:Pg:dbname=address`          => no_accessor;
         dbuser    apache                           => no_accessor;
         template_wrapper `wrapper.tt`              => no_accessor;

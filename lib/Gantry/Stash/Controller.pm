@@ -49,11 +49,12 @@ Gantry::Stash::Controller - Stash object for the controller
 
 =head1 SYNOPSIS
 
+    $self->stash->controller->data( {} );
+
 =head1 DESCRIPTION
 
-=head1 FUNCTIONS
-
-=over 4
+Controller data is an alternative to things like pnotes for data you want
+to track during a single requiest.
 
 =head1 METHODS
 

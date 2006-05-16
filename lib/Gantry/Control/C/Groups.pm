@@ -398,6 +398,30 @@ contains.
     "group_id"  int4	
   );
 
+=head1 METHODS
+
+The methods are all url mapped handlers called by Gantry::handler, except
+redirect_to_main which is a Gantry::Plugins::CRUD callback which decides
+where to go when a button driven action is complete.
+
+=over 4
+
+=item do_add
+
+=item do_ajax_edit
+
+=item do_delete
+
+=item do_edit
+
+=item do_main
+
+=item do_members
+
+=item redirect_to_main
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control::C::Users(3), Gantry::Control(3), Gantry::Control::Users(3),

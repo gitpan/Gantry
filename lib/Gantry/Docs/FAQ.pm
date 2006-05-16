@@ -163,68 +163,48 @@ L<How can my cron (and other) scripts use an app's models?>
 
 =head2 How do I install Gantry?
 
-Download the source, extract it, change to that directory and run 
-the following commands:
+Method 1 (preferred): install via CPAN
 
-=item perl Build.PL
+ perl -MCPAN -e shell
+ cpan> install Gantry
 
-=item ./Build test
+Method 2: Download the source (http://www.usegantry.org), extract it, 
+change to that directory and run the following commands:
 
-=item ./Build install
+ perl Build.PL
+ ./Build test
+ ./Build install
 
+Method 3: Check out Gantry from version control and then install 
+ 
+ mkdir gantry
+ cd gantry
+ svn checkout http://svn.usegantry.org/repo/gantry/trunk/ .
+ perl Build.PL
+ ./Build test
+ ./Build install
+ 
 =head2 How do I install Gantry on Shared Hosting?
 
 Download the source, extract it, change to that directory and run
 the following commands:
 
-=item perl Build.PL
-
-=item ./Build test
-
-=item ./Build install --install_base=<path to your local perl modules>
-
-=over 4
-
-=item * 
-
-Installing Dependancies:
+[ Note on Installing Dependancies:
 
 If your hosting provider will not install the module Dependancies 
 you can just install them from source. You probably will not have 
-access to install into the system perl directories. 
+access to install into the system perl directories. ]
 
-=item Modules using Build.PL
-
-=over 4
-
-=item perl Build.PL
-
-=item ./Build test
-
-=item ./Build install --install_base=<path to local Perl modules>
-
-=back
-
-=item Modules using Makefile.PL
-
-=over 4
-
-=item perl Makefile.PL 
-
-=item make test
-
-=item make install DISTDIR=<path to local Perl modules>
-
-=back
-
-=back
+ perl Build.PL
+ ./Build test
+ ./Build install --install_base=<path to your local perl modules>
 
 =head1 Coding
 
 =head2 What is the smallest app I could write with Gantry?
 
-To see small Gantry apps consult Gantry::Docs::QuickStart and/or
-Gantry::Docs::Tutorial.
+To see small Gantry apps consult l<Gantry::Docs::QuickStart> and/or
+L<Gantry::Docs::Tutorial>.
 
 =head2 How do I turn off templating to dump raw text?
 
@@ -238,7 +218,7 @@ specify -TemplateEngine=Default.
 Once you have a database and a Class::DBI descended model for it (or
 one which responds to the same API), you can use gantry's AutoCRUD.  First,
 
-    use Gantry::Plugins::AutoCRUD;
+ use Gantry::Plugins::AutoCRUD;
 
 This is more a mixin than a plugin.  It exports do_add, do_edit, do_delete,
 and form_name into your module.  The form_name method merely returns the
@@ -270,14 +250,14 @@ put in the hash.  (If your template is different consult it.)
 =head2 What about retrieval?
 
 Your model should provide convenient retrieval methods.  Gantry's
-Gantry::Utils::CDBI inherits from CDBI::Sweet, so it responds to all
+L<Gantry::Utils::CDBI> inherits from CDBI::Sweet, so it responds to all
 the standard Class::DBI methods (with the Sweet additions.
 Gantry::Utils::CDBI also has the poorly named
 retrieve_all_for_main_listing to return all rows in a pleasant order.
 
 =head2 What if AutoCRUD won't work for me?
 
-Gantry::Plugins::AutoCRUD is somewhat rigid, but not as rigid as the
+L<Gantry::Plugins::AutoCRUD> is somewhat rigid, but not as rigid as the
 above example makes it seem.  For instance, suppose the above won't
 work because you need to specify a creation time for every add.
 AutoCRUD provides hooks.
@@ -311,11 +291,10 @@ hash reference of form parameters which are about to become the new
 values for that row.  Make your changes in the params hash.  For example,
 you could insert a new key:
 
-    sub edit_pre_action {
-        my ( $row, $params_hash_ref ) = @_;
-
-        $params_hash_ref{ modified } = 'now';
-    }
+ sub edit_pre_action {
+   my ( $row, $params_hash_ref ) = @_;
+     $params_hash_ref{ modified } = 'now';
+ }
 
 =item edit_post_action
 
@@ -325,29 +304,29 @@ actions.  For instance, we have an application which sends email only if
 the status field of a row has changed.  Its edit hook methods
 look roughly like this:
 
-    sub old_status { # an accessor
-        my ( $self, $old_status ) = @_;
+ sub old_status { # an accessor
+     my ( $self, $old_status ) = @_;
 
-        if ( $old_status ) {
-            $self->{__OLD_STATUS__} = $old_status;
-        }
-        return $self->{__OLD_STATUS__};
-    }
-    sub edit_pre_action { # sets the old_status attribute
-        my ( $row, $params_ref ) = @_;
+     if ( $old_status ) {
+         $self->{__OLD_STATUS__} = $old_status;
+     }
+     return $self->{__OLD_STATUS__};
+ }
+ sub edit_pre_action { # sets the old_status attribute
+     my ( $row, $params_ref ) = @_;
 
-        $self->old_status( $row->status );
-    }
-    sub edit_post_action { # sends mail if the status changed
-        my ( $self, $row ) = @_;
+     $self->old_status( $row->status );
+ }
+ sub edit_post_action { # sends mail if the status changed
+     my ( $self, $row ) = @_;
 
-        my $old_status = $self->old_status();
-        my $new_status = $row->status;
+     my $old_status = $self->old_status();
+     my $new_status = $row->status;
 
-        if ( $old_status != $new_status ) {
-            $self->send_status_mail( $row );
-        }
-    }
+     if ( $old_status != $new_status ) {
+         $self->send_status_mail( $row );
+     }
+ }
 
 =item delete_pre_action
 
@@ -392,27 +371,27 @@ Any that are not implemented are simply not called.
 While the answer to the last question shows a certain amount of flexibility
 in the AutoCRUD scheme, sometimes it just isn't enough.  If you want control,
 but don't want to worry with the basics of displaying the form, validating
-results, etc. Gantry::Plugins::CRUD is for you.
+results, etc. L<Gantry::Plugins::CRUD> is for you.
 
 To have a concrete example, suppose my controller posts comments on a
 blog entry, but only if the user is logged in.
 
-Unlike its AutoCRUD counterpart, Gantry::Plugins::CRUD does not export
+Unlike its AutoCRUD counterpart, L<Gantry::Plugins::CRUD> does not export
 anything.  Instead it is an object oriented helper.  Here's how it works.
 First, use it:
 
-    use Gantry::Plugins::CRUD;
+ use Gantry::Plugins::CRUD;
 
 Then make an instance of it, being explicit about what it should do when:
 
-    my $comment_crud = Gantry::Plugins::CRUD->new(
-        add_action      => \&add_comment,
-        edit_action     => \&edit_comment,
-        delete_action   => \&delete_comment,
-        form            => \&my_form,
-        template        => 'comment_form.tt',
-        text_descr      => 'comment',
-    );
+ my $comment_crud = Gantry::Plugins::CRUD->new(
+      add_action      => \&add_comment,
+      edit_action     => \&edit_comment,
+      delete_action   => \&delete_comment,
+      form            => \&my_form,
+      template        => 'comment_form.tt',
+      text_descr      => 'comment',
+ );
 
 There are other keys you may use -- see the perldoc for Gantry::Plugins::CRUD
 for details.
@@ -427,15 +406,15 @@ The text_descr is used when asking the user to confirm a deletion.
 All that remains is to implement your own do_ methods to catch the CRUD
 requests for your controller.
 
-    do_add {
-        my ( $self, $blog_id ) = @_;
+ do_add {
+     my ( $self, $blog_id ) = @_;
 
-        unless ( $self->is_logged_in ) {
-            die 'You must log in to post a comment'
-        }
+     unless ( $self->is_logged_in ) {
+         die 'You must log in to post a comment'
+     }
 
-        $comment_crud->add( $self, { blog_id = $blog_id } );
-    }
+     $comment_crud->add( $self, { blog_id = $blog_id } );
+ }
 
 If the security check passes, the CRUD plugin's add method will take care of
 showing the comment form and validating the data on it.  Once it is
@@ -443,30 +422,30 @@ satisfied that the comment is valid, it will call add_comment (or
 whatever you registered as the add_action when you called the constructor).
 Here's an example:
 
-    sub add_comment {
-        my ( $self, $params, $data ) = @_;
+ sub add_comment {
+     my ( $self, $params, $data ) = @_;
 
-        $params->{ blog_id } = $data->{ blog_id };
-        $params->{ user_id } = $self->user_id;
-        $params->{ created } = 'now';
-        $params->{ body    } = $self->sanitize_body( $params->{ body } );
+     $params->{ blog_id } = $data->{ blog_id };
+     $params->{ user_id } = $self->user_id;
+     $params->{ created } = 'now';
+     $params->{ body    } = $self->sanitize_body( $params->{ body } );
 
-        my $new_row = Model::comments->create( $params );
-        $new_row->dbi_commit;
+     my $new_row = Model::comments->create( $params );
+     $new_row->dbi_commit;
 
-        $self->send_spam( $data->{ blog_id }, $new_row );
-    }
+     $self->send_spam( $data->{ blog_id }, $new_row );
+ }
 
 You are completely responsible for updating the database in the add_action.
 A good model helps with this.
 
 The other actions work similarly.  Note that there is no need to be completely
-honest with the names.  It would a good use of Gantry::Plugins::CRUD to
+honest with the names.  It would a good use of L<Gantry::Plugins::CRUD> to
 implement do_delete so that it marked rows as invisible rather than deleting
 them.  That wouldn't be possible with AutoCRUD.
 
 As a final note, it is not necessary to define all the options for a
-Gantry::Plugins::CRUD object.  It is fine to have only delete_action
+L<Gantry::Plugins::CRUD> object.  It is fine to have only delete_action
 and the keys it needs.  You may also have different objects for add,
 edit, and/or delete.  This gives an easy way for add and edit to use
 different forms, for example.
@@ -506,13 +485,13 @@ two things, both of them in them in your form method:
 
 Name your form by including this key in the returned hash:
 
-    name => 'your_name',
+ name => 'your_name',
 
 =item 2.
 
 Add a javascript key to the returned hash:
 
-    javascript => $self->calendar_month_js( 'your_name' ),
+ javascript => $self->calendar_month_js( 'your_name' ),
 
 your_name must match the name from step 1.
 
@@ -520,12 +499,12 @@ your_name must match the name from step 1.
 
 Add a date_select_text key to the hash of each date field:
 
-    {
-        date_select_text => 'Popup Calendar',
-        # ...
-    }
+ {
+     date_select_text => 'Popup Calendar',
+     # ...
+ }
 
-See Bigtop::Docs::Tutorial for how to make these steps happen from bigtop
+See L<Bigtop::Docs::Tutorial> for how to make these steps happen from bigtop
 files.
 
 =back
@@ -543,15 +522,15 @@ There are three steps to placing most gantry apps under mod_perl.
 Include PerlSetVar statements for configuration information in the
 root Location block for the app:
 
-    <Location />
-        PerlSetVar dbconn dbi:Pg:dbname=mydb
-        PerlSetVar dbuser unknown
-        PerlSetVar dbpass none_of_your_business
-        PerlSetVar root   /home/you/templates:/home/gantry/root
+ <Location />
+     PerlSetVar dbconn dbi:Pg:dbname=mydb
+     PerlSetVar dbuser unknown
+     PerlSetVar dbpass none_of_your_business
+     PerlSetVar root   /home/you/templates:/home/gantry/root
 
-        SetHandler  perl-script
-        PerlHandler Apps::Malcolm
-    </Location>
+     SetHandler  perl-script
+     PerlHandler Apps::Malcolm
+ </Location>
 
 You probably need more set vars, but that should be enough to show
 you where they go.
@@ -560,27 +539,27 @@ you where they go.
 
 Modify your httpd.conf to include a Location for each controller in your app:
 
-    <Location /sub>
-        SetHandler  perl-script
-        PerlHandler App::Base::Module::Sub
-    </Location>
+ <Location /sub>
+     SetHandler  perl-script
+     PerlHandler App::Base::Module::Sub
+ </Location>
 
-    <Location /sub2>
-        SetHandler  perl-script
-        PerlHandler App::Base::Module::SubOther
-    </Location>
+ <Location /sub2>
+     SetHandler  perl-script
+     PerlHandler App::Base::Module::SubOther
+ </Location>
 
-    <Location /sub/system>
-        SetHandler  perl-script
-        PerlHandler App::Base::Module::Sub::System
-    </Location>
+ <Location /sub/system>
+     SetHandler  perl-script
+     PerlHandler App::Base::Module::Sub::System
+ </Location>
 
 =item 3
 
 Use gantry in a way that loads one of the mod_perl engines.  There are
 multiple ways to do this.  All of them involve a use statement like this:
 
-    use Gantry qw{ -Engine=MP13 -TemplateEngine=TT };
+ use Gantry qw{ -Engine=MP13 -TemplateEngine=TT };
 
 (Replace MP13 with MP20 if you use mod_perl 2.)
 
@@ -598,29 +577,29 @@ move environments).
 
 Create an executable file in a cgi-bin directory like this one:
 
-    #!/usr/bin/perl
-    use strict;
+ #!/usr/bin/perl
+ use strict;
 
-    use App::Base::Module qw{ -Engine=CGI -TemplateEngine=TT };
+ use App::Base::Module qw{ -Engine=CGI -TemplateEngine=TT };
 
-    my $cgi = Gantry::Engine::CGI->new(
-        {
-            locations => {
-                '/'           => 'App::Base::Module',
-                '/sub'        => 'App::Base::Module::Sub',
-                '/sub2'       => 'App::Base::Module::SubOther',
-                '/sub/system' => 'App::Base::Module::Sub::System',
-            }
-            config {
-                dbconn => 'dbi:Pg:dbname=mydb',
-                dbuser => 'unknown',
-                dbpass => 'none_of_your_business',
-                root   => '/home/you/templates:/home/gantry/root',
-            }
-        }
-    );
+ my $cgi = Gantry::Engine::CGI->new(
+     {
+         locations => {
+             '/'           => 'App::Base::Module',
+             '/sub'        => 'App::Base::Module::Sub',
+             '/sub2'       => 'App::Base::Module::SubOther',
+             '/sub/system' => 'App::Base::Module::Sub::System',
+         }
+         config {
+             dbconn => 'dbi:Pg:dbname=mydb',
+             dbuser => 'unknown',
+             dbpass => 'none_of_your_business',
+             root   => '/home/you/templates:/home/gantry/root',
+         }
+     }
+ );
 
-    $cgi->dispatch();
+ $cgi->dispatch();
 
 Adjust the config parameters to fit your app.  Use as many locations
 as you like.
@@ -629,29 +608,18 @@ as you like.
 
 FastCGI requires only a couple of slight changes to the above CGI script.
 
-=over 4
-
-=item *
-
-At the top:
-
-    use FCGI;
-
-=item *
-
 Wrap the dispatch statement like this:
 
-    my $request = FCGI::Request();
+ use FCGI;
+ my $request = FCGI::Request();
 
-    while ( $request->Accept() >= 0 ) {
-        $cgi->dispatch();
-    }
+ while ( $request->Accept() >= 0 ) {
+     $cgi->dispatch();
+ }
 
-=back
+=head2 What is L<Gantry::Conf>?
 
-=head2 What is Gantry::Conf?
-
-Gantry::Conf provides a complete configuration scheme for both web
+L<Gantry::Conf> provides a complete configuration scheme for both web
 and traditional programs.  It allows you to share configuration between
 your web app and its cron scripts.  It lets you run multiple instances
 of the same app in the same apache instance with separate configurations.
@@ -661,18 +629,18 @@ servers (by allowing for http or https access to a single conf file).
 See Gantry::Conf::Tutorial for how to set up your conf files among other
 details.
 
-=head2 How do I use Gantry::Conf under mod_perl?
+=head2 How do I use L<Gantry::Conf> under mod_perl?
 
-To make Gantry::Conf work, you must tell it which instance you need to
+To make L<Gantry::Conf> work, you must tell it which instance you need to
 configure.  In mod_perl do this by setting this variable at the root
 location of your applications:
 
-    PerlSetVar GantryConfInstance your_instance_name
+ PerlSetVar GantryConfInstance your_instance_name
 
 If you are not using the default /etc/gantry.conf for Gantry::Conf's
 configuration, set one additional variable:
 
-    PerlSetVar GantryConfFile /full/path/to/your/conf.file
+ PerlSetVar GantryConfFile /full/path/to/your/conf.file
 
 =head2 How do I use Gantry::Conf under CGI/FastCGI?
 
@@ -680,12 +648,12 @@ To make Gantry::Conf work, you must tell it which instance you need to
 configure.  In CGI and FastCGI do this by setting this by setting this
 key in the config hash passed to the Gantry::Engine::CGI constructor:
 
-    GantryConfInstance => 'your_instance_name'
+ GantryConfInstance => 'your_instance_name'
 
 If you are not using the default /etc/gantry.conf for Gantry::Conf's
 configuration, set one additional variable:
 
-    GantryConfFile => '/full/path/to/your/conf.file'
+ GantryConfFile => '/full/path/to/your/conf.file'
 
 =head1 Appearance
 
@@ -776,7 +744,7 @@ put these into your app's database, or store them in another database.
 This allows you to share auth between multiple apps.
 
 The schema for the tables is in the SCHEMA FOR AUTH TABLES section
-of Gantry::Control.
+of L<Gantry::Control>.
 
 =head2 How do I add authentication to my app?
 
@@ -786,29 +754,31 @@ into your app's database (see the previous question).
 
 Then, you need to add the following Apache directives to the base location
 for your app (or to the location at which auth should begin):
+ 
+ <Location /myloc>
+   AuthType Basic
+   AuthName "Your Auth Realm Name"
 
-    AuthType Basic
-    AuthName "Your Auth Realm Name"
+   PerlSetVar auth_dbconn  "dbi:Pg:dbname=your_auth_db"
+   PerlSetVar auth_dbuser  apache
+   PerlSetVar auth_dbpass  super_secret
 
-    PerlSetVar auth_dbconn  "dbi:Pg:dbname=your_auth_db"
-    PerlSetVar auth_dbuser  apache
-    PerlSetVar auth_dbpass  super_secret
-
-    PerlAuthenHandler Gantry::Control::C::Access
-    PerlAuthenHandler Gantry::Control::C::Authen
-    PerlAuthzHandler  Gantry::Control::C::Authz
-
+   PerlAuthenHandler Gantry::Control::C::Access
+   PerlAuthenHandler Gantry::Control::C::Authen
+   PerlAuthzHandler  Gantry::Control::C::Authz
+ </Location>
+ 
 You need to set auth_dbconn, auth_dbuser, and auth_dbpass even if your
 auth tables are in your app's database.
 
 Finally, add directives to the proper locations:
 
-    require group NAME
-    require valid-user
+ require group NAME
+ require valid-user
 
 If you want to limit access by IP, set this perl var for the location:
 
-    PerlSetVar auth_allow_ips   "172.168.2.41,172.168.2.182'
+ PerlSetVar auth_allow_ips   "172.168.2.41,172.168.2.182'
 
 Note: if you are doing anything important, you should run it through ssh to
 keep the sniffers from seeing your passwords.
@@ -835,35 +805,35 @@ of coordination in the auth_groups and auth_group_members tables.
 
 For now, your script should use the provided helper:
 
-    package Gantry::Utils::Helper::Script;
+ package Gantry::Utils::Helper::Script;
 
-    Gantry::Utils::Helper::Script->set_conn_info(
-        {
-            dbconn => 'dbi:Pg:dbname=yourdb;host=127.0.0.1',
-            dbuser => 'auser',
-            dbpass => 'secret',
-        }
-    )
+ Gantry::Utils::Helper::Script->set_conn_info(
+     {
+         dbconn => 'dbi:Pg:dbname=yourdb;host=127.0.0.1',
+         dbuser => 'auser',
+         dbpass => 'secret',
+     }
+ )
 
 Change the methods as needed (to reflect your database names, user, and
 password or to allow the main package to fill in the values from command
 line args or config file info).  This works for all models which inherit
-from Gantry::Utils::CDBI.
+from L<Gantry::Utils::CDBI>.
 
-If any of your models inherit from Gantry::Utils::AuthCDBI, then
+If any of your models inherit from L<Gantry::Utils::AuthCDBI>, then
 you must include auth_conn_info.
 
-    Gantry::Utils::Helper::Script->auth_conn_info(
-        {
-            auth_dbconn => 'dbi:Pg:dbname=yourauthdb;host=127.0.0.1',
-            auth_dbuser => 'auser',
-            auth_dbpass => 'super_secret',
-        }
-    );
+ Gantry::Utils::Helper::Script->auth_conn_info(
+     {
+         auth_dbconn => 'dbi:Pg:dbname=yourauthdb;host=127.0.0.1',
+         auth_dbuser => 'auser',
+         auth_dbpass => 'super_secret',
+     }
+ );
 
-Note that some models which inherit from Gantry::Utils::CDBI might
+Note that some models which inherit from L<Gantry::Utils::CDBI> might
 have foreign keys pointing to other models which inherit from
-Gantry::Utils::AuthCDBI.  In that case, even though you don't directly
+L<Gantry::Utils::AuthCDBI>.  In that case, even though you don't directly
 see the need for auth, you do in fact need it.
 
 =head1 Summary
@@ -874,6 +844,8 @@ a genuine FAQ.
 =head1 Author
 
 Phil Crow <philcrow2000@yahoo.com>
+
+Tim Keefer <tkeefer@gmail.com>
 
 =head1 Copyright and License
 

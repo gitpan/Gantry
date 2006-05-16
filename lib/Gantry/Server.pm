@@ -175,6 +175,36 @@ with port control, in bigtop by doing this in your config section:
         #...
     }
 
+=head1 METHODS
+
+=over 4
+
+=item set_engine_object
+
+You must call this before calling run.  Pass it a Gantry::Engine::CGI object.
+
+=item run
+
+This starts the server and never returns.
+
+=item handler
+
+This method overrides the parent version to avoid taking form parameters
+prematurely.
+
+=item handle_request
+
+This method functions as a little web server processing http requests
+(but it leans heavily on HTTP::Server::Simple::CGI).
+
+=item handle_request_test
+
+This method pretends to be a web server, but only handles a single request
+before returning.  This is useful for testing your Gantry app without
+having to use sockets.
+
+=back
+
 =head1 AUTHOR
 
 Phil Crow <philcrow2000@yahoo.com>

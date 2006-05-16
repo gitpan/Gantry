@@ -57,6 +57,16 @@ my $config_hash = Gantry::Conf::Provider::FlatFile::Config::General->config($fil
 This is the provider to allow Gantry::Conf to be able to handle Config::General
 aka Apache style configuration files. 
 
+=head1 METHODS
+
+=over 4
+
+=item config
+
+Returns a config subhash by applying Config::General to a file.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry(3), Gantry::Conf(3), Config::General(3)

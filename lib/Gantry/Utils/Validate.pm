@@ -210,6 +210,10 @@ This module allows the validation of many common types of input.
 
 =over 4
 
+=item new
+
+Standard constructor, call it first.  It takes nothing.
+
 =item is_date( $date )
 
 This function takes a date, C<$date>, and verifies that it is indeed a valid
@@ -279,6 +283,7 @@ This module depends on Date::Calc(3) for the is_date validation.
 =head1 AUTHOR
 
 Tim Keefer <tkeefer@gmail.com>
+
 Nicholas Studt <nstudt@angrydwarf.org>
 
 =head1 COPYRIGHT and LICENSE

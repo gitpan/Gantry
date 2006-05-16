@@ -86,11 +86,14 @@ Gantry::Stash::View - Stash object for the view
 
 =head1 SYNOPSIS
 
+    $self->stash->view->title( 'Your Browser Window Title Here' );
+    $self->stash->view->template( 'some_template.template' );
+    $self->stash->view->data( { } ); # the hash goes to template's proccessor
+
 =head1 DESCRIPTION
 
-=head1 FUNCTIONS
-
-=over 4
+Gantry builds the stash view for you in its handler.  Fill in values as
+shown above to communicate with your template and/or your template engine.
 
 =head1 METHODS
 
@@ -102,6 +105,8 @@ Gantry::Stash::View - Stash object for the view
 
 =item title
 
+=back
+
 =head1 MODULES
 
 =over 4
@@ -112,7 +117,7 @@ Gantry::Stash::View - Stash object for the view
 
 =head1 SEE ALSO
 
-Gantry(3), Gantry::Stash(3)
+Gantry(3), Gantry::Stash(3), Gantry::Stash::View::Form(3)
 
 =head1 LIMITATIONS
 

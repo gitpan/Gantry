@@ -58,6 +58,17 @@ my $config_hash = Gantry::Conf::Provider::HTTP::Config::General->config($url);
 This is the provider to allow Gantry::Conf to be able to handle Config::General
 aka Apache style configuration files received via the web. 
 
+=head1 METHODS
+
+=over 4
+
+=item config
+
+Returns a conf subhash constructed by using Config::General on the result
+of an http(s) query.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry(3), Gantry::Conf(3), Config::General(3)

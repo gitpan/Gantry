@@ -68,13 +68,17 @@ Gantry::Template::Default - Default text plugin for Gantry.
 
 =head1 SYNOPSIS
 
-  use Gantry::Template::TT;
+  use Gantry::Template::Default;
 
 
 =head1 DESCRIPTION
 
-This plugin module contains method calls for outputting data returned
-from the controller action.
+Use this module when you don't want templating:
+
+    use Gantry qw/ -Engine=YourChoice -TemplateEngine=Default /;
+
+Then, your controller should return plain text ready for immediate handing
+to the browser.
 
 =head1 METHODS
 
@@ -102,15 +106,16 @@ This method is the final step in the template plugin. Here you need
 call the template object passing the controller data and return the
 output.
 
-See Gantry::Template::TT
+=item $site->template_engine
 
-=over 4
+Returns the name of the current template engine.  (The one in this
+package always returns the package name.)
 
 =back
 
 =head1 SEE ALSO
 
-Gantry(3)
+Gantry(3), Gantry::Template::TT
 
 =head1 LIMITATIONS
 

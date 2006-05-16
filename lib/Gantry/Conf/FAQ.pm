@@ -115,7 +115,7 @@ TODO
 TODO 
 
 =back 
-s
+
 =head1 SEE ALSO
 
 Gantry(3), Gantry::Conf(3), Gantry::Conf::Tutorial(3)

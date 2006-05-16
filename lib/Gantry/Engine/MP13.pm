@@ -513,6 +513,17 @@ libapreq(3) manpage for more details.
 Returns the physical server this connection came in
 on (main server or vhost):
 
+=item $self->cast_custom_error
+
+Called by the handler in Gantry.pm when things go wrong.  It receives
+html output and a death message.  It logs the death message and sets
+the html output via the custom_response routine of the request object.
+Returns FORBIDDEN status code.
+
+=item $self->declined_response
+
+Returns the proper numeric status code for DECLINED.
+
 =item dispatch_location
 
 The uri tail specific to this request.  Returns:
@@ -539,7 +550,7 @@ specific header value directly
 
 See mod_perl docs.
 
-=item fish_conf
+=item fish_config
 
 Pass this method the name of a conf parameter you need.  Returns the
 value for the parameter.
@@ -574,6 +585,13 @@ Returns the currently logged-in user.
 
 Same as get_dbh, but for the authentication database.
 
+=item $self->get_cached_config
+
+Users should call get_config instead.
+
+Pulls the config object out of the pnotes so Gantry::Conf doesn't have
+to regenerate it repeatedly.  (See set_cached_config.)
+
 =item get_config
 
 If you are using Gantry::Conf, this will return the config hash reference
@@ -605,6 +623,10 @@ See mod_perl docs.
 
 Change the value of a response header, or create a new one.
 
+=item $self->is_status_declined
+
+Returns a true value if the status is currently DECLINED or false otherwise.
+
 =item $self->log_error( message )
 
 Writes message to the apache web server log
@@ -618,9 +640,17 @@ Returns port number in which the request came in on.
 This method sends the contents of $response page back to apache.  It
 uses the print method on the request object.
 
+=item $self->redirect_response
+
+Returns the proper numeric status code for REDIRECT.
+
 =item $self->remote_ip
 
 Returns the IP address for the remote user
+
+=item $self->send_error_output
+
+Returns the content of custom_error.  It gives $@ to the custom_error method.
 
 =item $self->send_http_header( $r )
 
@@ -636,6 +666,11 @@ See mod_perl 1.0 docs.
 =item $self->server_root
 
 Returns the value set by the top-level ServerRoot directive
+
+=item set_cached_config
+
+For internal use.  Used to place a config hash into pnotes for reuse
+during the current page request.
 
 =item $self->set_content_type()
 
@@ -656,7 +691,9 @@ Sets up the apreq object and the form parameters from it.
 Get or set the reply status for the client request. The Apache::Constants
 module provide mnemonic names for the status codes.
 
-=over 4
+=item $self->success_code
+
+Returns the proper numeric status code for OK.
 
 =back
 

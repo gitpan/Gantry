@@ -491,7 +491,7 @@ Gantry::Utils::HTML - HTML tag generators.
     ht_a ht_br ht_img ht_lines ht_qt ht_uqt
 
   :style
-    ht_b ht_h ht_i ht_p ht_up 
+    ht_b ht_h ht_i ht_p ht_up ht_div ht_udiv
 
   :form
 	ht_checkbox ht_form ht_form_js ht_input ht_radio ht_select ht_submit
@@ -626,6 +626,15 @@ checked the $value must be exactly equal to $form_value. An %in hash
 with a key of $name may also be used for $form_value. C<@params> is
 passed directly to the end of the checkbox, this can be used for
 javascript or arbitrary html.
+
+=item $div = ht_div( %attributes )
+
+This takes an optional hash of attributes for a div tag and returns a
+scalar containing an opening div tag.
+
+=item $udiv = ht_udiv( )
+
+Returns an ending div tag.
 
 =item $form = ht_form( $action, @extra )
 

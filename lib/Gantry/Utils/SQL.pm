@@ -21,7 +21,7 @@ sub new {
 } # end new
 
 #-------------------------------------------------
-# sql_bool( $bool_string )
+# $sql_helper->sql_bool( $bool_string )
 #-------------------------------------------------
 sub sql_bool {
 	my( $self, $input ) = shift;
@@ -44,7 +44,7 @@ sub sql_bool {
 } # END sql_bool
 
 #-------------------------------------------------
-# sql_insert( $table, %data )
+# $sql_helper->sql_insert( $table, %data )
 #-------------------------------------------------
 sub sql_insert {
 	my ( $self, $table, @vals ) = @_;
@@ -67,7 +67,7 @@ sub sql_insert {
 } # END sql_insert 
 
 #-------------------------------------------------
-# sql_num( $number )
+# $sql_helper->sql_num( $number )
 #-------------------------------------------------
 sub sql_num {
 	my ( $self, $number ) = ( shift, shift );
@@ -81,7 +81,7 @@ sub sql_num {
 } # END sql_num
 
 #-------------------------------------------------
-# sql_str( $string )
+# $sql_helper->sql_str( $string )
 #-------------------------------------------------
 sub sql_str {
 	my( $self, $string ) = ( shift, shift );
@@ -95,7 +95,7 @@ sub sql_str {
 } # END sql_str
 
 #-------------------------------------------------
-# sql_update( $table, $clause, $data )
+# $sql_helper->sql_update( $table, $clause, $data )
 #-------------------------------------------------
 sub sql_update {
 	my ( $self, $table, $clause, @vals ) = @_;
@@ -119,7 +119,7 @@ sub sql_update {
 } # END sql_update
 
 #-------------------------------------------------
-# sql_quote( $string )
+# $sql_helper->sql_quote( $string )
 #-------------------------------------------------
 sub sql_quote {
 	my ( $self, $sql ) = ( shift, shift );
@@ -168,7 +168,12 @@ well as far as I know anyways.
 
 =over 4
 
-=item $sql_boolean = sql_bool( $string )
+=item new
+
+Standard constructor.  Call it first to gain a helper through which to
+call the other methods.  Pass it nothing.
+
+=item $sql_boolean = $sql_helper->sql_bool( $string )
 
 This function takes a string and returns either TRUE or FALSE depending 
 on whether or not the function thinks it's true or not. True is defined 
@@ -177,7 +182,7 @@ the false test if the string is defined. False is defined as 'f', 'n' or '0'.
 Defined and not false is true, and not defined is false. Hopefully this 
 is fairly confusing. 
 
-=item $sql = sql_insert( $table, %vals )
+=item $sql = $sql_helper->sql_insert( $table, %vals )
 
 This function takes the table to insert into C<$table'>, and the information
 to insert into said table, C<%vals>. The function will build an insert 
@@ -186,19 +191,19 @@ the keys corrisponding to the columns in the database where the values
 should be the values to insert into those fields. The function will return,
 hopefully, a valid sql insert string.
 
-=item $sql_number = sql_num( $number )
+=item $sql_number = $sql_helper->sql_num( $number )
 
 This function takes a number, C<$number>, and quotes it in such a way as 
 it may be used in a sql call safely. It handles anything that is a number 
 at all. A properly quoted number is return, including the quotes.
 
-=item $sql_string = sql_str( $string )
+=item $sql_string = $sql_helper->sql_str( $string )
 
 This function takes a string, C<$string>, and quotes in in such a way as 
 it may be used safely in a sql call. The string is then returned, including
 the quotes arround it.
 
-=item $sql = sql_update( $table, $clause, %vals )
+=item $sql = $sql_helper->sql_update( $table, $clause, %vals )
 
 This function creates a valid sql update string. It is identical in form
 to the C<sql_insert()> function save it takes a where clause, C<$clause>.
@@ -207,7 +212,7 @@ a where clause that will always return true. The 'WHERE' in the clause need
 not be supplied as it is assumed and alwas inserted into the update string.
 A valid sql update string is returned, hopefully anyways.
 
-=item $sql_quoted = sql_quote( $string )
+=item $sql_quoted = $sql_helper->sql_quote( $string )
 
 This function works the same way as C<sql_str()> save it doesn't really
 care what it opperates on. A properly quoted version of whatever is passed

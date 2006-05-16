@@ -106,6 +106,28 @@ Gantry::Template::TT - Template Toolkit plugin for Gantry.
 
 =head1 DESCRIPTION
 
+Use this module when you want template toolkit to produce your output:
+
+    use Gantry qw/ -Engine=YourChoice -TemplateEngine=TT /;
+
+Then in your do_* method do something like this:
+
+    sub do_something {
+        my $self = shift;
+
+        # ... gather data for output
+
+        # set the name of the template TT should use:
+        $self->stash->view->template( 'output.tt' );
+
+        # set the data TT should use to fill in the template:
+        $self->stash->view->data(
+            {
+                # vars to pass to TT's process method
+            }
+        );
+    }
+
 This is plugin module that contains the Template Toolkit method calls.  
 
 =head1 METHODS
@@ -134,9 +156,10 @@ This method is the final step in the template plugin. Here you need
 call the template object passing the controller data and return the 
 output. 
 
-See Gantry::Template::TT
+=item $site->template_engine
 
-=over 4
+Always returns the name of this module, which is the name of the current
+template engine.
 
 =back
 

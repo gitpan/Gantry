@@ -492,6 +492,18 @@ row's id.
 
 =back
 
+=head1 INTERNAL METHODS
+
+These are methods used internally to figure out where to go on button presses.
+
+=over 4
+
+=item find_cancel_loc
+
+=item find_submit_loc
+
+=back
+
 =head1 SEE ALSO
 
  Gantry::Plugins::CRUD

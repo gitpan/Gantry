@@ -125,9 +125,14 @@ method within a mod_perl environment.
 
 =over 4
 
-=item _default_attributes
+=item get_db_options
 
-Default database attributes.
+Default database attributes usually supplied by Class::DBI's
+_default_attributes method.
+
+=item pretty_date
+
+A failed attempt at date format beautification.  Probably should be removed.
 
 =back
 

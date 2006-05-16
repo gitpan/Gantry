@@ -662,8 +662,6 @@ module provide mnemonic names for the status codes.
 
 Returns the value set by the top-level ServerRoot directive
 
-=over 4
-
 =back
 
 =head1 SEE ALSO

@@ -68,15 +68,22 @@ Gantry::Stash - Main stash object for Gantry
 
 =head1 SYNOPSIS
 
+This object is created for you by the handler in the base module.
+
 =head1 DESCRIPTION
 
-=head1 FUNCTIONS
+Use this module to store and retrieve things in the stash (which is
+good for one web page hit).  Example:
 
-=over 4
+    $self->stash->view->title( 'Browser Title Bar Text Here' );
 
 =head1 METHODS
 
 =over 4
+
+=item new
+
+    Makes a new empty stash object.  Don't try to pass it anything.
 
 =item view
 
@@ -85,6 +92,8 @@ Gantry::Stash - Main stash object for Gantry
 =item controller
 
 	Returns the 'controller' stash object
+
+=back
 
 =head1 MODULES
 
@@ -98,13 +107,14 @@ Gantry::Stash - Main stash object for Gantry
 
 =head1 SEE ALSO
 
-Gantry(3), Gantry::Stash(3)
+Gantry, Gantry::Stash::View, Gantry::Stash::Controller
 
 =head1 LIMITATIONS
 
 =head1 AUTHOR
 
 Phil Crow <pcrow@sunflowerbroadband.com>
+
 Tim Keefer <tkeefer@gmail.com>
 
 =head1 COPYRIGHT and LICENSE

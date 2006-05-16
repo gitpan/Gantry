@@ -144,6 +144,16 @@ user.
     "email"         varchar
   );
 
+=head1 METHODS
+
+=over 4
+
+=item handler
+
+The mod_perl authen handler.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control::C::Authz(3), Gantry::Control(3), Gantry(3)

@@ -4,6 +4,7 @@ require Exporter;
 ############# THIS MODULE IS NOT WORKING #########################
 
 use Template;
+use Carp;
 use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 
 ############################################################
@@ -113,6 +114,10 @@ Gantry::Template::Framing - Framing  plugin for Gantry.
 
 =head1 DESCRIPTION
 
+To use Old World framing do something like this:
+
+    use Gantry qw/ -Engine=YourChoice -TemplateEngine=Framing /;
+
 This plugin module contains the method calls for the Template Framing.
 
 =head1 METHODS
@@ -141,15 +146,17 @@ This method is the final step in the template plugin. Here you need
 call the template object passing the controller data and return the
 output.
 
-See Gantry::Template::TT
+=item webapp_get_framing
 
-=over 4
+A function for internal use.  Returns to other methods of this class
+an old world framing object.
 
 =back
 
 =head1 SEE ALSO
 
-Gantry(3)
+Gantry(3), Gantry::Template::TT
+
 
 =head1 LIMITATIONS
 

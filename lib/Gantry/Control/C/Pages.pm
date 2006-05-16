@@ -410,6 +410,48 @@ the auth_users and auth_groups tables for reference.
     "title"         varchar
   );
 
+=head1 METHODS
+
+=over 4
+
+=item add_page
+
+Gantry::Plugins::CRUD callback.
+
+=item delete_page
+
+Gantry::Plugins::CRUD callback.
+
+=item do_add
+
+Called by Gantry handler.
+
+=item do_delete
+
+Called by Gantry handler.
+
+=item do_edit
+
+Called by Gantry handler.
+
+=item do_main
+
+Called by Gantry handler.
+
+=item edit_page
+
+Gantry::Plugins::CRUD callback.
+
+=item page_form
+
+The form description.
+
+=item redirect_to_main
+
+Gantry::Plugins::CRUD callback.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control(3), Gantry::Control::C::Users(3), Gantry::Control::C::Groups(3),

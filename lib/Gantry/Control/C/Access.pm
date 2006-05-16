@@ -177,6 +177,20 @@ to override do not set if you want the override to happen.
 
 No database is specfically required for this module.
 
+=head1 METHODS
+
+=over 4
+
+=item handler
+
+The mod_perl access handler.
+
+=item ip2bin
+
+For internal use.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry(3)
