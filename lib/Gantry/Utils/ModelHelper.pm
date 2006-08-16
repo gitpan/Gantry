@@ -20,7 +20,7 @@ sub import {
 
 #----------------------------------------------------------------------
 # db_Main
-# compatible with Class::DBI
+# compatible with Class::DBI and Gantry::Plugins::DBIxClassConn
 #----------------------------------------------------------------------
 sub db_Main {
     my $invocant = shift;
@@ -37,7 +37,7 @@ sub db_Main {
 
         my $db_options = $class->get_db_options();
 
-        $db_options->{AutoCommit} = 0;
+        $db_options->{AutoCommit} = 0 unless defined $db_options->{AutoCommit};
 
         $dbh = DBI->connect_cached(
                 $conn_info->{ 'dbconn' },
@@ -47,14 +47,14 @@ sub db_Main {
         );
         $helper->set_dbh( $dbh );
     }
-	
+    
     return $dbh;
 
 } # end db_Main
 
 #----------------------------------------------------------------------
 # auth_db_Main
-# compatible with Class::DBI
+# compatible with Class::DBI and Gantry::Plugins::DBIxClassConn
 #----------------------------------------------------------------------
 sub auth_db_Main {
     my $invocant = shift;
@@ -71,8 +71,8 @@ sub auth_db_Main {
 
         my $db_options = $class->get_db_options();
 
-        $db_options->{AutoCommit} = 0;
-		
+        $db_options->{AutoCommit} = 0 unless defined $db_options->{AutoCommit};
+        
         $auth_dbh = DBI->connect_cached(
                 $auth_conn_info->{ 'auth_dbconn' },
                 $auth_conn_info->{ 'auth_dbuser' },
@@ -87,7 +87,20 @@ sub auth_db_Main {
 } # end auth_db_Main
 
 #-------------------------------------------------
+# $class->get_listing
+#-------------------------------------------------
+sub get_listing {
+    my ( $class, $params ) = @_;
+
+    my $order_fields = $params->{order_by}
+                    || join ', ', @{ $class->get_foreign_display_fields };
+
+    return ( $class->retrieve_all( order_by => $order_fields ) );
+}
+
+#-------------------------------------------------
 # $class->retrieve_all_for_main_listing
+# DEPRECATED
 #-------------------------------------------------
 sub retrieve_all_for_main_listing {
     my ( $class, $order_fields ) = ( shift, shift );
@@ -126,9 +139,17 @@ sub get_form_selections {
         push( @items, { value => '', label => '- Select -' } );
 
         foreach my $item ( @foreign_display_rows ) {
+
+            my $label;
+
+            eval {
+                $label = $item->foreign_display();
+            };
+            warn "    ERROR for " . $item->id() . " $@" if $@;
+
             push @items, {
                 value => $item->id(),
-                label => $item->foreign_display(),
+                label => $label || '',
             };
         }
 
@@ -149,7 +170,7 @@ Gantry::Utils::ModelHelper - mixin for model base classes
 
     use Gantry::Utils::ModelHelper qw(
         db_Main
-        retrieve_all_for_main_listing
+        get_listing
         get_form_selections
     );
 
@@ -173,12 +194,21 @@ package.
 =item db_Main
 
 This method returns a valid dbh using the scheme described in
-Gantry::Docs::DBConn.  It is compatible with Class::DBI.
+Gantry::Docs::DBConn.  It is compatible with Class::DBI and
+Gantry::Plugins::DBIxClassConn (the later is a mixin which allows
+easy access to a DBIx::Schema object for controllers).
 
 =item auth_db_Main
 
 This method is exported as db_Main and works with the scheme described
-in Gantry::Docs::DBConn.  It too is compatible with Class::DBI.
+in Gantry::Docs::DBConn.  It too is compatible with Class::DBI and
+Gantry::Plugins::DBIxClassConn.
+
+I will repeat, if you ask for this method in your use statement:
+
+    use lib/Gantry/Utils/ModelHelper qw( auth_db_Main ... );
+
+it will come into your namespace as db_Main.
 
 =item get_form_selections
 
@@ -226,7 +256,23 @@ which will appear on the screen in the selection list.  Example:
 
 =back
 
+=item get_listing
+
+Replacement for retrieve_all_for_main_listing.
+
+Returns a list of row objects (one for each row in the table).  The
+ORDER BY clause is either the same as the foreign_display columns
+or chosen by you.  If you want to supply the order do it like this:
+
+    my @rows = $MODEL->get_listing ( { order_by => 'last, first' } );
+
+Note that your order_by will be used AS IS, so it must be a valid SQL
+ORDER BY clause, but feel free to include DESC or anything else you and SQL
+like.
+
 =item retrieve_all_for_main_listing
+
+DEPRECATED use get_listing instead
 
 Returns a list of row objects (one for each row in the table) in order
 by their foreign_display columns.

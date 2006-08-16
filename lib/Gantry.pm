@@ -2,12 +2,13 @@ package Gantry;
 
 use strict;
 use Gantry::Stash;
+use Gantry::Init;
 use CGI::Simple;
 
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.31';
+our $VERSION = '3.38';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -19,79 +20,81 @@ our $CONF;
 # $self->handler( $r );
 #-------------------------------------------------
 sub handler : method {
-	my $class	    = shift;
-	my $r_or_cgi   	= shift;
-	my $self	    = bless( {}, $class );
+    my $class       = shift;
+    my $r_or_cgi    = shift;
+    my $self        = bless( {}, $class );
 
-	# Create the stash object
-	$self->make_stash();
+    # Create the stash object
+    $self->make_stash();
 
-	# die if we don't know the engine
-	if ( ! $self->can( 'engine' ) ) {
-		die( 'No engine specified, engine required' );
-	}
-	
+    # die if we don't know the engine
+    if ( ! $self->can( 'engine' ) ) {
+        die( 'No engine specified, engine required' );
+    }
+    
     my $action;
-	eval { 								
-		$self->init( $r_or_cgi );
+    eval {                              
+        $self->init( $r_or_cgi );
 
-		my @p 		= $self->cleanroot( $self->dispatch_location );
-		my $p1 		= ( shift( @p ) || 'main' );
-		$action 	= 'do_'. $p1;
+        my @p       = $self->cleanroot( $self->dispatch_location );
+        my $p1      = ( shift( @p ) || 'main' );
+        $action     = 'do_'. $p1;
 
-		# Do action if valid
-		if ( $self->can( $action ) ) { 	
-			$self->do_action( $action, @p );
-			$self->cleanup( );	# Cleanup.
-		}
-		
-		# Try default action
-		elsif ( $self->can( 'do_default' ) ) {
-			$self->do_action( 'do_default', $p1, @p );
-			$self->cleanup( );
-		}
-		
-		# Else return declined
-		else {
-			$self->declined( 1 );
-		}
-		
+        # Do action if valid
+        if ( $self->can( $action ) ) {  
+            $self->do_action( $action, @p );
+            $self->cleanup( );  # Cleanup.
+        }
+        
+        # Try default action
+        elsif ( $self->can( 'do_default' ) ) {
+            $self->do_action( 'do_default', $p1, @p );
+            $self->cleanup( );
+        }
+        
+        # Else return declined
+        else {
+            $self->declined( 1 );
+        }
+        
         $self->declined( 1 ) if ( $self->is_status_declined( ) );
 
-	};
+    };
 
-	# Return REDIRECT
+    # Return REDIRECT
     return $self->redirect_response() if ( $self->redirect );
-	
-	# Return DECLINED
+    
+    # Return DECLINED
     return $self->declined_response( $action ) if ( $self->declined );
-		
-	# Call do_error and Return 
-	if( $@ ) {
-		return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
-	}
+        
+    # Call do_error and Return 
+    if( $@ ) {
+        return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
+    }
 
-	# set http headers
+    # set http headers
     $self->set_content_type();
     $self->set_no_cache();
 
-	# Call do_process, defined within the template plugin
-	eval {
-		my $response_page =  $self->do_process( );
-			
-		# call engine plugin to send headers 
-		$self->send_http_header( );
+    # Call do_process, defined within the template plugin
+    eval {
+        my $response_page =  $self->do_process( );
+            
+        #$self->content_length( length( $response_page ) );
+        
+        # call engine plugin to send headers 
+        $self->send_http_header( );
         $self->print_output( $response_page );
-	};
+    };
 
-	if( $@ ) {
-		$self->do_error( $@ );
-		return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
-	}
-	
-	# Return OK
+    if( $@ ) {
+        $self->do_error( $@ );
+        return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
+    }
+    
+    # Return OK
     return $self->success_code;
-	
+    
 } # end handler
 
 #-------------------------------------------------
@@ -120,33 +123,33 @@ sub stash {
 # $self->declined( value )
 #-------------------------------------------------
 sub declined {
-	my ( $self, $p ) = ( shift, shift );
+    my ( $self, $p ) = ( shift, shift );
 
-	$$self{__DECLINED__} = $p if defined $p;
-	return( $$self{__DECLINED__} ); 
-	
+    $$self{__DECLINED__} = $p if defined $p;
+    return( $$self{__DECLINED__} ); 
+    
 } # end declined
 
 #-------------------------------------------------
 # $self->redirect( value )
 #-------------------------------------------------
 sub redirect {
-	my ( $self, $p ) = ( shift, shift );
+    my ( $self, $p ) = ( shift, shift );
 
-	$$self{__REDIRECT__} = $p if defined $p;
-	return( $$self{__REDIRECT__} );
-	
+    $$self{__REDIRECT__} = $p if defined $p;
+    return( $$self{__REDIRECT__} );
+    
 } # end redirect
 
 #-------------------------------------------------
 # $self->status( value )
 #-------------------------------------------------
 sub status {
-	my ( $self, $p ) = ( shift, shift );
+    my ( $self, $p ) = ( shift, shift );
 
-	$$self{__STATUS__} = $p if defined $p;
-	return( $$self{__STATUS__} );
-	
+    $$self{__STATUS__} = $p if defined $p;
+    return( $$self{__STATUS__} );
+    
 } # end status
 
 #-----------------------------------------------------------------
@@ -155,8 +158,8 @@ sub status {
 sub smtp_host {
     my ( $self, $p ) = @_;
 
-	$$self{__SMTP_HOST__} = $p if defined $p;
-	return( $$self{__SMTP_HOST__} );
+    $$self{__SMTP_HOST__} = $p if defined $p;
+    return( $$self{__SMTP_HOST__} );
 
 } # end smtp_host
 
@@ -164,98 +167,98 @@ sub smtp_host {
 # $self->relocate( $location )
 #-------------------------------------------------
 sub relocate {
-	my ( $self, $location ) = ( shift, shift );
+    my ( $self, $location ) = ( shift, shift );
 
-	$location = $self->location if ( ! defined $location );
-	$self->redirect( 1 ); # Tag it for the handler to handle nice.
-	$self->header_out( 'location', $location );
-	$self->status( $self->status_const( 'REDIRECT' ) );
-	
-	return( $self->status_const( 'REDIRECT' ) );
-	
+    $location = $self->location if ( ! defined $location );
+    $self->redirect( 1 ); # Tag it for the handler to handle nice.
+    $self->header_out( 'location', $location );
+    $self->status( $self->status_const( 'REDIRECT' ) );
+    
+    return( $self->status_const( 'REDIRECT' ) );
+    
 } # end relocate 
 
 #-------------------------------------------------
 # $self->get_cookies
 #-------------------------------------------------
 sub get_cookies {
-	my ( $self, $want_cookie ) = ( shift, shift );
+    my ( $self, $want_cookie ) = ( shift, shift );
 
-	my $client = $self->header_in( 'Cookie' ); 
+    my $client = $self->header_in( 'Cookie' ); 
 
-	return () if ( ! defined $client ); #|| ! $raw ); 
-	
-	my %cookies; 
+    return () if ( ! defined $client ); #|| ! $raw ); 
+    
+    my %cookies; 
 
-	for my $crumb ( split ( /; /, $client ) ) { 
-		my ( $key, $value ) = split( /=/, $crumb ); 
-		$cookies{$key} = $value;
- 	} 
-	
-	if ( defined $want_cookie ) {
-		return( $cookies{$want_cookie} );
-	}
-	else {
-		return( \%cookies );
-	}
-	
+    for my $crumb ( split ( /; /, $client ) ) { 
+        my ( $key, $value ) = split( /=/, $crumb ); 
+        $cookies{$key} = $value;
+    } 
+    
+    if ( defined $want_cookie ) {
+        return( $cookies{$want_cookie} );
+    }
+    else {
+        return( \%cookies );
+    }
+    
 } # end get_cookies
 
 #-------------------------------------------------
 # set_cookie( { @options } )
-#  	name => cookie name
-# 	value => cookie value 
-# 	expire => cookie expires
-# 	path => cookie path
-# 	domain => cookie domain
-# 	secure => [0/1] cookie secure
+#   name => cookie name
+#   value => cookie value 
+#   expire => cookie expires
+#   path => cookie path
+#   domain => cookie domain
+#   secure => [0/1] cookie secure
 #-------------------------------------------------
 sub set_cookie {
-	my ( $self, @opts ) = @_; 
-	
-	my $options = (@opts == 1) && UNIVERSAL::isa($opts[0], 'HASH')
-        ? shift(@opts) : { @opts };	
+    my ( $self, @opts ) = @_; 
+    
+    my $options = (@opts == 1) && UNIVERSAL::isa($opts[0], 'HASH')
+        ? shift(@opts) : { @opts }; 
         
-	croak( 'Cookie has no name' ) 	if ( ! defined $$options{name} );	
-	croak( 'Cookie has no value' ) 	if ( ! defined $$options{value} );	
+    croak( 'Cookie has no name' )   if ( ! defined $$options{name} );   
+    croak( 'Cookie has no value' )  if ( ! defined $$options{value} );  
 
-	# Only required fields in the cookie.
-	my $cookie = sprintf( "%s=%s; ", $$options{name}, $$options{value} );
+    # Only required fields in the cookie.
+    my $cookie = sprintf( "%s=%s; ", $$options{name}, $$options{value} );
 
     # these are all optional. and should be created as such.
-	if ( defined $$options{expire} ) {
-    	$$options{expire} = 0 if ( $$options{expire} !~ /^\d+$/ );
-    	$cookie .= strftime( 	"expires=%a, %d-%b-%Y %H:%M:%S GMT; ", 
-								gmtime( time + $$options{expire} ) );
-	}
+    if ( defined $$options{expire} ) {
+        $$options{expire} = 0 if ( $$options{expire} !~ /^\d+$/ );
+        $cookie .= strftime(    "expires=%a, %d-%b-%Y %H:%M:%S GMT; ", 
+                                gmtime( time + $$options{expire} ) );
+    }
 
-    $cookie .= sprintf( "path=%s; ", $$options{path} ) 	
-		if ( defined $$options{path} );
-    $cookie .= sprintf( "domain=%s; ", $$options{domain} )	
-		if ( defined $$options{domain} );
+    $cookie .= sprintf( "path=%s; ", $$options{path} )  
+        if ( defined $$options{path} );
+    $cookie .= sprintf( "domain=%s; ", $$options{domain} )  
+        if ( defined $$options{domain} );
     $cookie .= 'secure' 
-		if ( defined $$options{secure} && $$options{secure} );
+        if ( defined $$options{secure} && $$options{secure} );
 
-	# Always use this method, its safe for redirect and error and
-	# normal pages as well. .
-	$self->err_header_out( 'Set-Cookie', $cookie );
+    # Always use this method, its safe for redirect and error and
+    # normal pages as well. .
+    $self->err_header_out( 'Set-Cookie', $cookie );
 
-	return();
-	
+    return();
+    
 } # end set_cookies
 
 #-------------------------------------------------
 # $self->cleanroot( $uri, $root )
 #-------------------------------------------------
 sub cleanroot {
-	my ( $self, $uri, $root ) = @_;
+    my ( $self, $uri, $root ) = @_;
 
-	$uri =~ s!^$root!!g;
-	$uri =~ s/\/\//\//g;
-	$uri =~ s/^\///;
+    $uri =~ s!^$root!!g;
+    $uri =~ s/\/\//\//g;
+    $uri =~ s/^\///;
 
-	return( split( '/', $uri ) );
-	
+    return( split( '/', $uri ) );
+    
 } # end cleanroot
 
 #-------------------------------------------------
@@ -264,43 +267,43 @@ sub cleanroot {
 sub import {
     my ( $class, @options ) = @_;
 
-	my( $engine, $tplugin, $plugin, $conf_instance, $conf_file );
-	
-	foreach (@options) {
-		
-		# Import the proper engine
+    my( $engine, $tplugin, $plugin, $conf_instance, $conf_file );
+    
+    foreach (@options) {
+        
+        # Import the proper engine
         if ( /^-Engine=(\S+)/ ) { 
-			$engine = "Gantry::Engine::$1";
-			
-			eval "use $engine"; 
-			if ( $@ ) {
-				die "unable to load engine $1 ($@)";
-			}	
-		}
-		
-		# Load Template Engine
-		elsif ( /^-TemplateEngine=(\S+)/ ) {
-			$tplugin = "Gantry::Template::$1";
-			eval "use $tplugin";
-			if ($@) { die qq/Couldn't load plugin "$tplugin", "$@"/ }
-					
-		}
-	
-		else {
-			$plugin = "Gantry::Plugins::$_";
-			eval "use $plugin";
-			if ($@) { die qq/Couldn't load plugin "$plugin", "$@"/ }
-		
-		}
+            $engine = "Gantry::Engine::$1";
+            
+            eval "use $engine"; 
+            if ( $@ ) {
+                die "unable to load engine $1 ($@)";
+            }   
+        }
+        
+        # Load Template Engine
+        elsif ( /^-TemplateEngine=(\S+)/ ) {
+            $tplugin = "Gantry::Template::$1";
+            eval "use $tplugin";
+            if ($@) { die qq/Couldn't load plugin "$tplugin", "$@"/ }
+                    
+        }
+    
+        else {
+            $plugin = "Gantry::Plugins::$_";
+            eval "use $plugin";
+            if ($@) { die qq/Couldn't load plugin "$plugin", "$@"/ }
+        
+        }
     }
-	
-	# Load Default template plugin if one hasn't been defined
-	if ( ! $tplugin && ! $class->can( 'do_action' ) ) {
-		eval "use $DEFAULT_PLUGIN_TEMPLATE";
-		if ($@) { 
-			die qq/Couldn't load Default template plugin, "$@"/ 
-		}
-	}	
+    
+    # Load Default template plugin if one hasn't been defined
+    if ( ! $tplugin && ! $class->can( 'do_action' ) ) {
+        eval "use $DEFAULT_PLUGIN_TEMPLATE";
+        if ($@) { 
+            die qq/Couldn't load Default template plugin, "$@"/ 
+        }
+    }   
 
 }
 #-------------------------------------------------
@@ -319,135 +322,137 @@ sub import {
 # should include its init intructions.
 #-------------------------------------------------
 sub init {
-	my ( $self, $r_or_cgi ) = @_; 
+    my ( $self, $r_or_cgi ) = @_; 
 
     $self->engine_init( $r_or_cgi );
 
-	$self->uri( $self->fish_uri() );
-	$self->location( $self->fish_location() );
-	$self->path_info( $self->fish_path_info() );
-	$self->method( $self->fish_method() );
+    $self->uri( $self->fish_uri() );
+    $self->location( $self->fish_location() );
+    $self->path_info( $self->fish_path_info() );
+    $self->method( $self->fish_method() );
 
-	# set user varible
-	$self->user( $self->fish_user() );
-	
-	# set default content-type
-	$self->content_type( $self->fish_config( 'content_type' ) || 'text/html' );
+    # set user varible
+    $self->user( $self->fish_user() );
+    
+    # set default content-type
+    $self->content_type( $self->fish_config( 'content_type' ) || 'text/html' );
 
-	# set template variables
-	$self->template( $self->fish_config( 'template' ) );
-	$self->template_default( $self->fish_config( 'template_default' ) );
-	$self->template_wrapper( $self->fish_config( 'template_wrapper' ) );
-	$self->template_disable( $self->fish_config( 'template_disable' ) );
-	
-	# set application directory variables
-	$self->root( $self->fish_config( 'root' ) );
-	$self->css_root( $self->fish_config( 'css_root' ) );
-	$self->img_root( $self->fish_config( 'img_root' ) );
-	$self->tmp_root( $self->fish_config( 'tmp_root' ) );
-	
-	# set application uri variables
-	$self->app_rootp( $self->fish_config( 'app_rootp' ) );
-	$self->img_rootp( $self->fish_config( 'img_rootp' ) );
-	$self->css_rootp( $self->fish_config( 'css_rootp' ) );
-	$self->tmp_rootp( $self->fish_config( 'tmp_rootp' ) );
-	$self->editor_rootp( $self->fish_config( 'editor_rootp' ) );
+    # set template variables
+    $self->template( $self->fish_config( 'template' ) );
+    $self->template_default( $self->fish_config( 'template_default' ) );
+    $self->template_wrapper( $self->fish_config( 'template_wrapper' ) );
+    $self->template_disable( $self->fish_config( 'template_disable' ) );
+    
+    # set application directory variables
+    my $app_root = $self->fish_config( 'root' );
 
-	# set no cache
-	$self->no_cache( $self->fish_config( 'no_cache' ) );
-	
-	$self->status( "" ); # to avoid uninitialized value warning
+    $self->root( join ':', $app_root, Gantry::Init::base_root() );
+    $self->css_root( $self->fish_config( 'css_root' ) );
+    $self->img_root( $self->fish_config( 'img_root' ) );
+    $self->tmp_root( $self->fish_config( 'tmp_root' ) );
+    
+    # set application uri variables
+    $self->app_rootp( $self->fish_config( 'app_rootp' ) );
+    $self->img_rootp( $self->fish_config( 'img_rootp' ) );
+    $self->css_rootp( $self->fish_config( 'css_rootp' ) );
+    $self->tmp_rootp( $self->fish_config( 'tmp_rootp' ) );
+    $self->editor_rootp( $self->fish_config( 'editor_rootp' ) );
 
-	# set page title
-	$self->page_title( $self->fish_config( 'page_title' ) || $self->uri );
-	
-	# set default date format
-	$self->date_fmt( $self->fish_config( 'date_fmt' ) || '%b %d, %Y' );
-	
-	# set post_max - used for apache request object
-	$self->post_max( $self->fish_config( 'post_max' ) || '2000000' );
-	
-	# set request body paramater variables
+    # set no cache
+    $self->no_cache( $self->fish_config( 'no_cache' ) );
+    
+    $self->status( "" ); # to avoid uninitialized value warning
+
+    # set page title
+    $self->page_title( $self->fish_config( 'page_title' ) || $self->uri );
+    
+    # set default date format
+    $self->date_fmt( $self->fish_config( 'date_fmt' ) || '%b %d, %Y' );
+    
+    # set post_max - used for apache request object
+    $self->post_max( $self->fish_config( 'post_max' ) || '2000000' );
+    
+    # set request body paramater variables
     $self->set_req_params();
 
-	# set protocol
-	$self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
+    # set protocol
+    $self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
 
-	# database and auth database variables are handled in each engine's
+    # database and auth database variables are handled in each engine's
     # Gantry::Utils::DBConnHelper::* sublcass.
-	
+    
 } # END $site->init
 
 #-------------------------------------------------
 # $self->r( value )
 #-------------------------------------------------
 sub r {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__R__} = $p if ( defined $p );
-	return( $self->{__R__} );
-		
+    $self->{__R__} = $p if ( defined $p );
+    return( $self->{__R__} );
+        
 } # end r
 
 #-------------------------------------------------
 # $self->cgi( value )
 #-------------------------------------------------
 sub cgi {
-	my( $self, $p ) = @_;
+    my( $self, $p ) = @_;
 
-	$self->{__CGI__} = $p if ( defined $p );
-	return( $self->{__CGI__} );
+    $self->{__CGI__} = $p if ( defined $p );
+    return( $self->{__CGI__} );
 } # end cgi
 
 #-------------------------------------------------
 # $self->method( value )
 #-------------------------------------------------
 sub method {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__METHOD__} = $p if ( defined $p );
-	return( $self->{__METHOD__} );
-		
+    $self->{__METHOD__} = $p if ( defined $p );
+    return( $self->{__METHOD__} );
+        
 } # end method
 
 #-------------------------------------------------
 # $self->no_cache( value )
 #-------------------------------------------------
 sub no_cache {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__NO_CACHE__} = $p if ( defined $p );
-	return( $self->{__NO_CACHE__} );
-		
+    $self->{__NO_CACHE__} = $p if ( defined $p );
+    return( $self->{__NO_CACHE__} );
+        
 } # end no_cache
 
 #-------------------------------------------------
 # $self->uri( value )
 #-------------------------------------------------
 sub uri {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__URI__} = $p if ( defined $p );
-	return( $self->{__URI__} );
-		
+    $self->{__URI__} = $p if ( defined $p );
+    return( $self->{__URI__} );
+        
 } # end uri
 
 #-------------------------------------------------
 # $self->location( value )
 #-------------------------------------------------
 sub location {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__LOCATION__} = $p if ( defined $p );
-	return( $self->{__LOCATION__} );
-		
+    $self->{__LOCATION__} = $p if ( defined $p );
+    return( $self->{__LOCATION__} );
+        
 } # end location
 
 #-------------------------------------------------
 # $self->current_url( )
 #-------------------------------------------------
 sub current_url {
-	my ( $self ) = @_;
+    my ( $self ) = @_;
 
     return $self->protocol . $self->base_server . $self->uri;
 } # end location
@@ -456,98 +461,109 @@ sub current_url {
 # $self->path_info( value )
 #-------------------------------------------------
 sub path_info {
+    my ( $self, $p ) = @_;
+
+    $self->{__PATH_INFO__} = $p if ( defined $p );
+    return( $self->{__PATH_INFO__} );
+        
+} # end path_info
+
+#-------------------------------------------------
+# $self->content_length( value )
+#-------------------------------------------------
+sub content_length {
 	my ( $self, $p ) = @_;
 
-	$self->{__PATH_INFO__} = $p if ( defined $p );
-	return( $self->{__PATH_INFO__} );
+	$self->{__CONTENT_LENGTH__} = $p if ( defined $p );
+	return( $self->{__CONTENT_LENGTH__} );
 		
-} # end path_info
+} # end content_length
 
 #-------------------------------------------------
 # $self->content_type( value )
 #-------------------------------------------------
 sub content_type {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__CONTENT_TYPE__} = $p if ( defined $p );
-	return( $self->{__CONTENT_TYPE__} );
-		
+    $self->{__CONTENT_TYPE__} = $p if ( defined $p );
+    return( $self->{__CONTENT_TYPE__} );
+        
 } # end content_type
 
 #-------------------------------------------------
 # $self->template( value )
 #-------------------------------------------------
 sub template {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__TEMPLATE__} = $p if ( defined $p );
-	return( $self->{__TEMPLATE__} );
-		
+    $self->{__TEMPLATE__} = $p if ( defined $p );
+    return( $self->{__TEMPLATE__} );
+        
 } # end template
 
 #-------------------------------------------------
 # $self->template_default( value )
 #-------------------------------------------------
 sub template_default  {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__TEMPLATE_DEFAULT__} = $p if ( defined $p );
-	return( $self->{__TEMPLATE_DEFAULT__} );
-		
+    $self->{__TEMPLATE_DEFAULT__} = $p if ( defined $p );
+    return( $self->{__TEMPLATE_DEFAULT__} );
+        
 } # end template_default
 
 #-------------------------------------------------
 # $self->template_wrapper( value )
 #-------------------------------------------------
 sub template_wrapper {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__TEMPLATE_WRAPPER__} = $p if ( defined $p );
-	return( $self->{__TEMPLATE_WRAPPER__} );
-		
+    $self->{__TEMPLATE_WRAPPER__} = $p if ( defined $p );
+    return( $self->{__TEMPLATE_WRAPPER__} );
+        
 } # end template_wrapper
 
 #-------------------------------------------------
 # $self->template_disable( value )
 #-------------------------------------------------
 sub template_disable {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__TEMPLATE_DISABLE__} = $p if ( defined $p );
-	return( $self->{__TEMPLATE_DISABLE__} );
-		
+    $self->{__TEMPLATE_DISABLE__} = $p if ( defined $p );
+    return( $self->{__TEMPLATE_DISABLE__} );
+        
 } # end template_disable
 
 #-------------------------------------------------
 # $self->root( value )
 #-------------------------------------------------
 sub root {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__ROOT__} = $p if ( defined $p );
-	return( $self->{__ROOT__} );
-		
+    $self->{__ROOT__} = $p if ( defined $p );
+    return( $self->{__ROOT__} );
+        
 } # end root
 
 #-------------------------------------------------
 # $self->css_root( value )
 #-------------------------------------------------
 sub css_root {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__CSS_ROOT__} = $p if ( defined $p );
-	return( $self->{__CSS_ROOT__} );
-		
+    $self->{__CSS_ROOT__} = $p if ( defined $p );
+    return( $self->{__CSS_ROOT__} );
+        
 } # end css_root
 
 #-------------------------------------------------
 # $self->tmp_root( value )
 #-------------------------------------------------
 sub tmp_root {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__TMP_ROOT__} = $p if ( defined $p );
-	return( $self->{__TMP_ROOT__} );
+    $self->{__TMP_ROOT__} = $p if ( defined $p );
+    return( $self->{__TMP_ROOT__} );
 
 } # end tmp_root
 
@@ -555,10 +571,10 @@ sub tmp_root {
 # $self->tmp_rootp( value )
 #-------------------------------------------------
 sub tmp_rootp {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__TMP_ROOTP__} = $p if ( defined $p );
-	return( $self->{__TMP_ROOTP__} );
+    $self->{__TMP_ROOTP__} = $p if ( defined $p );
+    return( $self->{__TMP_ROOTP__} );
 
 } # end tmp_rootp
 
@@ -566,10 +582,10 @@ sub tmp_rootp {
 # $self->editor_rootp( value )
 #-------------------------------------------------
 sub editor_rootp {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__EDITOR_ROOTP__} = $p if ( defined $p );
-	return( $self->{__EDITOR_ROOTP__} );
+    $self->{__EDITOR_ROOTP__} = $p if ( defined $p );
+    return( $self->{__EDITOR_ROOTP__} );
 
 } # end editor_rootp
 
@@ -577,149 +593,151 @@ sub editor_rootp {
 # $self->img_root( value )
 #-------------------------------------------------
 sub img_root {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__IMG_ROOT__} = $p if ( defined $p );
-	return( $self->{__IMG_ROOT__} );
-		
+    $self->{__IMG_ROOT__} = $p if ( defined $p );
+    return( $self->{__IMG_ROOT__} );
+        
 } # end img_root
 
 #-------------------------------------------------
 # $self->app_rootp( value )
 #-------------------------------------------------
 sub app_rootp {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	if ( defined $p ) {
+    if ( defined $p ) {
         # trim trailing slashes
         $p =~ s{/+$}{}g;
 
-	    $self->{__APP_ROOTP__} = $p;
+        $self->{__APP_ROOTP__} = $p;
     }
-	return( $self->{__APP_ROOTP__} );
-		
+    return( $self->{__APP_ROOTP__} );
+        
 } # end app_rootp
 
 #-------------------------------------------------
 # $self->img_rootp( value )
 #-------------------------------------------------
 sub img_rootp {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	if ( defined $p ) {
+    if ( defined $p ) {
         # trim trailing slashes
         $p =~ s{/+$}{}g;
 
-	    $self->{__IMG_ROOTP__} = $p;
+        $self->{__IMG_ROOTP__} = $p;
     }
-	return( $self->{__IMG_ROOTP__} );
-		
+    return( $self->{__IMG_ROOTP__} );
+        
 } # end img_rootp
 
 #-------------------------------------------------
 # $self->css_rootp( value )
 #-------------------------------------------------
 sub css_rootp {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	if ( defined $p ) {
+    if ( defined $p ) {
         # trim trailing slashes
         $p =~ s{/+$}{}g;
 
-	    $self->{__CSS_ROOTP__} = $p;
+        $self->{__CSS_ROOTP__} = $p;
     }
-	return( $self->{__CSS_ROOTP__} );
-		
+    return( $self->{__CSS_ROOTP__} );
+        
 } # end css_rootp
 
 #-------------------------------------------------
 # $self->page_title( value )
 #-------------------------------------------------
 sub page_title {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__PAGE_TITLE__} = $p if ( defined $p );
-	return( $self->{__PAGE_TITLE__} );
-		
+    $self->{__PAGE_TITLE__} = $p if ( defined $p );
+    return( $self->{__PAGE_TITLE__} );
+        
 } # end uri
 
 #-------------------------------------------------
 # $self->date_fmt( value )
 #-------------------------------------------------
 sub date_fmt {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__DATE_FMT__} = $p if ( defined $p );
-	return( $self->{__DATE_FMT__} );
-		
+    $self->{__DATE_FMT__} = $p if ( defined $p );
+    return( $self->{__DATE_FMT__} );
+        
 } # end date_fmt
 
 #-------------------------------------------------
 # $self->user( value )
 #-------------------------------------------------
 sub user {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__USER__} = $p if ( defined $p );
-	return( $self->{__USER__} );
-		
+    $self->{__USER__} = $p if ( defined $p );
+    return( $self->{__USER__} );
+        
 } # end user
 
 #-------------------------------------------------
 # $self->get_auth_model_name(  )
 #-------------------------------------------------
 sub get_auth_model_name {
-    return 'Gantry::Control::Model::auth_users';
+    my ( $self ) = shift;
+
+    return $self->{__MODELS__}{__AUTH_USERS__}
+            || 'Gantry::Control::Model::auth_users';
 }
 
 #-------------------------------------------------
-# $self->get_auth_model_name(  )
+# $self->set_auth_model_name(  )
 #-------------------------------------------------
 sub set_auth_model_name {
     my ( $self, $model ) = @_;
 
     $model = $self->get_auth_model_name() unless $model;
 
-	$self->{__MODELS__}{__AUTH_USERS__} = $model;
+    $self->{__MODELS__}{__AUTH_USERS__} = $model;
 }
 
 #-------------------------------------------------
 # $self->user_row( { model => '', user_name => '' } )
 #-------------------------------------------------
 sub user_row {
-	my ( $self, @opts ) = @_;
+    my ( $self, @opts ) = @_;
 
-	my $options = (@opts == 1) && UNIVERSAL::isa($opts[0], 'HASH')
-	        ? shift(@opts) : { @opts };	
+    my $options = (@opts == 1) && UNIVERSAL::isa($opts[0], 'HASH')
+            ? shift(@opts) : { @opts }; 
 
     $self->set_auth_model_name( $options->{model} );
 
-	if ( defined $self->{__MODELS__}{__AUTH_USERS__} ) {
-		
-		# use request user_name if passed to function
-		my $user_name = defined $options->{user_name} ?
-			$options->{user_name} : $self->user;
-		
-		
-		my @rows = $self->{__MODELS__}{__AUTH_USERS__}->search(
-				user_name => $user_name
-		);
+    if ( defined $self->{__MODELS__}{__AUTH_USERS__} ) {
+        
+        # use request user_name if passed to function
+        my $user_name = defined $options->{user_name} ?
+            $options->{user_name} : $self->user;
 
-		return( $rows[0] ) if @rows;
-	}
-	else {
-		die( "failed to lookup user: unknown auth_users model" );
-	}
+        my @rows = $self->{__MODELS__}{__AUTH_USERS__}->search(
+                { user_name => $user_name }, $self, undef
+        );
 
-	return; # don't know
-	
+        return( $rows[0] ) if @rows;
+    }
+    else {
+        die( "failed to lookup user: unknown auth_users model" );
+    }
+
+    return; # don't know
+    
 } # end user_row
 
 #-------------------------------------------------
 # $self->user_id( { model => '', user_name => '' } )
 #-------------------------------------------------
 sub user_id {
-	my ( $self, @opts ) = @_;
+    my ( $self, @opts ) = @_;
 
     my $row = $self->user_row( @opts );
 
@@ -730,33 +748,33 @@ sub user_id {
 # $self->post_max( value )
 #-------------------------------------------------
 sub post_max {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__POST_MAX__} = $p if ( defined $p );
-	return( $self->{__POST_MAX__} );
-		
+    $self->{__POST_MAX__} = $p if ( defined $p );
+    return( $self->{__POST_MAX__} );
+        
 } # end POST_MAX
 
 #-------------------------------------------------
 # $self->ap_req( value )
 #-------------------------------------------------
 sub ap_req {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__AP_REQ__} = $p if ( defined $p );
-	return( $self->{__AP_REQ__} );
-		
+    $self->{__AP_REQ__} = $p if ( defined $p );
+    return( $self->{__AP_REQ__} );
+        
 } # end ap_req
 
 #-------------------------------------------------
 # $self->params( value )
 #-------------------------------------------------
 sub params {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__PARAMS__} = $p if ( defined $p );
-	return( $self->{__PARAMS__} );
-		
+    $self->{__PARAMS__} = $p if ( defined $p );
+    return( $self->{__PARAMS__} );
+        
 } # end params
 
 #-------------------------------------------------
@@ -764,16 +782,16 @@ sub params {
 #-------------------------------------------------
 sub get_param_hash {
     my $self  = shift;
-	
-	my %param = ();
-	
-	eval {
-    	%param = %{ $self->params };
-	};
-	if ( $@ ) {
-		die "$@";
-	}
-	
+    
+    my %param = ();
+    
+    eval {
+        %param = %{ $self->params };
+    };
+    if ( $@ ) {
+        die "$@";
+    }
+    
     return wantarray ? %param : \%param;
 
 } # end get_param_hash
@@ -782,25 +800,25 @@ sub get_param_hash {
 # $self->protocol( value )
 #-------------------------------------------------
 sub protocol {
-	my ( $self, $p ) = @_;
+    my ( $self, $p ) = @_;
 
-	$self->{__PROTOCOL__} = $p if ( defined $p );
-	return( $self->{__PROTOCOL__} );
-		
+    $self->{__PROTOCOL__} = $p if ( defined $p );
+    return( $self->{__PROTOCOL__} );
+        
 } # end protocol
 
 ##-------------------------------------------------
 ## $self->get_conf( )
 ##-------------------------------------------------
 #sub get_conf {
-#	my $class    = shift;
+#   my $class    = shift;
 #    my $instance = shift;
 #    my $file     = shift;
 #
 #    return Gantry::Conf->retrieve(
-#		$instance,
-#		$file
-#	);
+#       $instance,
+#       $file
+#   );
 #}
 
 #-------------------------------------------------
@@ -819,9 +837,9 @@ sub protocol {
 # should include its cleanup intructions.
 #-------------------------------------------------
 sub cleanup {
-	my ( $self ) = @_;
+    my ( $self ) = @_;
 
- 	# db_disconnect( $$self{dbh} );
+    # db_disconnect( $$self{dbh} );
 
 } # end cleanup
 
@@ -829,126 +847,126 @@ sub cleanup {
 # $self->custom_error( @errors )
 #-------------------------------------------------
 sub custom_error {
-	my( $self, @err ) = @_;
-	
-	eval "use Data::Dumper";
+    my( $self, @err ) = @_;
+    
+    eval "use Data::Dumper";
 
-	my $die_msg 		= join( "\n", @err );
-	
-	my $param_dump 		= Dumper( $self->params );
-	$param_dump =~ s/(?:^|\n)(\s+)/&trim( $1 )/ge;
-	$param_dump =~ s/</&lt;/g;
+    my $die_msg         = join( "\n", @err );
+    
+    my $param_dump      = Dumper( $self->params );
+    $param_dump =~ s/(?:^|\n)(\s+)/&trim( $1 )/ge;
+    $param_dump =~ s/</&lt;/g;
 
-	my $request_dump 	= Dumper( $self );
-	my $response_dump   = '';
-	$request_dump =~ s/(?:^|\n)(\s+)/&trim( $1 )/ge;
-	$request_dump =~ s/</&lt;/g;
+    my $request_dump    = Dumper( $self );
+    my $response_dump   = '';
+    $request_dump =~ s/(?:^|\n)(\s+)/&trim( $1 )/ge;
+    $request_dump =~ s/</&lt;/g;
 
-	my $page = $self->_error_page();
-	
-	$page =~ s/##DIE_MESSAGE##/$die_msg/sg;
-	$page =~ s/##PARAM_DUMP##/$param_dump/sg;
-	$page =~ s/##REQUEST_DUMP##/$request_dump/sg;
-	$page =~ s/##RESPONSE_DUMP##/$response_dump/sg;
-	$page =~ s/##STATUS##/Forbidden/sg;
-	$page =~ s/##PAGE_TITLE##/$self->page_title/sge;
-	
-	return( $page );
-	
+    my $page = $self->_error_page();
+    
+    $page =~ s/##DIE_MESSAGE##/$die_msg/sg;
+    $page =~ s/##PARAM_DUMP##/$param_dump/sg;
+    $page =~ s/##REQUEST_DUMP##/$request_dump/sg;
+    $page =~ s/##RESPONSE_DUMP##/$response_dump/sg;
+    $page =~ s/##STATUS##/Forbidden/sg;
+    $page =~ s/##PAGE_TITLE##/$self->page_title/sge;
+    
+    return( $page );
+    
 
 } # end custom_error
 
 sub trim {
-	my $spaces = $1;
+    my $spaces = $1;
 
-	my $new_sp = " " x int( length($spaces) / 4 );
-	return( "\n$new_sp" );
+    my $new_sp = " " x int( length($spaces) / 4 );
+    return( "\n$new_sp" );
 }
 
 #-------------------------------------------------
 # $self->_error_page()
 #-------------------------------------------------
 sub _error_page {
-	my( $self ) = ( shift );
-	
-	return( qq!
-	<html>
-	<head>
-		<title>##PAGE_TITLE## ##STATUS##</title>
-		<style type="text/css">
-			body {
-				font-family: "Bitstream Vera Sans", "Trebuchet MS", Verdana,
-							Tahoma, Arial, helvetica, sans-serif;
-				color: #ddd;
-				background-color: #eee;
-				margin: 0px;
-				padding: 0px;
-			}
-			div.box {
-				background-color: #ccc;
-				border: 1px solid #aaa;
-				padding: 4px;
-				margin: 10px;
-				-moz-border-radius: 10px;
-			}
-			div.error {
-				font: 20px Tahoma;
-				background-color: #88003A;
-				border: 1px solid #755;
-				padding: 8px;
-				margin: 4px;
-				margin-bottom: 10px;
-				-moz-border-radius: 10px;
-			}
-			div.infos {
-				font: 9px Tahoma;
-				background-color: #779;
-				border: 1px solid #575;
-				padding: 8px;
-				margin: 4px;
-				margin-bottom: 10px;
-				-moz-border-radius: 10px;
-			}
-			.head {
-				font: 12px Tahoma;
-			}
-			div.name {
-				font: 12px Tahoma;
-				background-color: #66B;
-				border: 1px solid #557;
-				padding: 8px;
-				margin: 4px;
-				-moz-border-radius: 10px;
-			}
-		</style>
-	</head>
-	<body>
-		<div class="box">
-			<div class="error">##DIE_MESSAGE##</div>
-			<div class="infos"><br/>
-	
-	<div class="head"><u>site.params</u></div>
-	<br />
-	<pre>
+    my( $self ) = ( shift );
+    
+    return( qq!
+    <html>
+    <head>
+        <title>##PAGE_TITLE## ##STATUS##</title>
+        <style type="text/css">
+            body {
+                font-family: "Bitstream Vera Sans", "Trebuchet MS", Verdana,
+                            Tahoma, Arial, helvetica, sans-serif;
+                color: #ddd;
+                background-color: #eee;
+                margin: 0px;
+                padding: 0px;
+            }
+            div.box {
+                background-color: #ccc;
+                border: 1px solid #aaa;
+                padding: 4px;
+                margin: 10px;
+                -moz-border-radius: 10px;
+            }
+            div.error {
+                font: 20px Tahoma;
+                background-color: #88003A;
+                border: 1px solid #755;
+                padding: 8px;
+                margin: 4px;
+                margin-bottom: 10px;
+                -moz-border-radius: 10px;
+            }
+            div.infos {
+                font: 9px Tahoma;
+                background-color: #779;
+                border: 1px solid #575;
+                padding: 8px;
+                margin: 4px;
+                margin-bottom: 10px;
+                -moz-border-radius: 10px;
+            }
+            .head {
+                font: 12px Tahoma;
+            }
+            div.name {
+                font: 12px Tahoma;
+                background-color: #66B;
+                border: 1px solid #557;
+                padding: 8px;
+                margin: 4px;
+                -moz-border-radius: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <div class="error">##DIE_MESSAGE##</div>
+            <div class="infos"><br/>
+    
+    <div class="head"><u>site.params</u></div>
+    <br />
+    <pre>
 ##PARAM_DUMP##
-	</pre>
-	
-	<div class="head"><u>site</u></div><br/>
+    </pre>
+    
+    <div class="head"><u>site</u></div><br/>
     <pre>
 ##REQUEST_DUMP##
     </pre>
-	<div class="head"><u>Response</u></div><br/>
+    <div class="head"><u>Response</u></div><br/>
     <pre>
 ##RESPONSE_DUMP##
     </pre>
-	
-	</div>
-	
-		<div class="name">Running on Gantry $Gantry::VERSION</div>
-	</div>
-	</body>
-	</html>! );
-	
+    
+    </div>
+    
+        <div class="name">Running on Gantry $Gantry::VERSION</div>
+    </div>
+    </body>
+    </html>! );
+    
 } # end _error_page
 
 1;
@@ -1076,7 +1094,7 @@ and push it into the response headers.
 
 =item r - The Apache Request 
 
- $r = $self->r;	
+ $r = $self->r; 
  $self->r( $r );
 
 Set/get for apache request object
@@ -1121,6 +1139,13 @@ Set/get for server path_info
  $self->content_type( 'text/html' );
 
 Set/get for reponse content-type
+
+=item content_length
+
+ $type = $self->content_length;
+ $self->content_length( $length );
+
+Set/get for reponse content-length
 
 =item root
 
@@ -1250,6 +1275,12 @@ This value only exists if the user has successfully logged in.
 Always returns Gantry::Control::Model::auth_users.  Override this method
 if you want a different auth model.
 
+=item set_auth_model_name
+
+Allows you to set the auth model name, but for this to work correctly, you
+must override get_auth_model_name.  Otherwise your get request will always
+give the default value.
+
 =item user_id
 
  $user_id = $self->user_id( model => '', user_name => '' );
@@ -1275,6 +1306,25 @@ that your model has these methods: id and user_name.
 
 The same as user_id, but it returns the whole model object (usually a
 representation of a database row).
+
+If your models are based on DBIx::Class, or any other ORM which does not
+provide direct search calls on this models, you must implement a search method
+in your auth_users model like this:
+
+    sub search {
+        my ( $class, $search_hash, $site_object, $extra_hash ) = @_;
+
+        my $schema = $site_object->get_schema();
+
+        return $schema->resultset( 'auth_users' )->search(
+                $search_hash, $extra_hash
+        );
+    }
+
+user_row calls this method, but DBIx::Class does not provide it for the model.
+Further, the search it does provide is available through the resultset obtained
+from the schema.  This module knows nothing about schema, but it passes the
+self object as shown above so you can fish it out of the site object.
 
 =item page_title
 
@@ -1363,9 +1413,22 @@ when using DBIx::Class.
 
 Main stash object for Gantry
 
+=item L<Gantry::Utils::Model>
+
+Gantry's native object relational model base class
+
+=item L<Gantry::Utils::DBIxClass>
+
+DBIx::Class base class for models
+
+=item L<Gantry::Plugins::DBIxClassConn>
+
+Mixin providing get_schema which returns DBIx::Class::Schema for
+data models
+
 =item L<Gantry::Utils::CDBI>
 
-Class::DBI base class for Gantry applications
+Class::DBI base class for models
 
 =item L<Gantry::Plugins::CRUD>
 
@@ -1373,7 +1436,7 @@ Helper for flexible CRUD coding scheme.
 
 =item L<Gantry::Plugins::AutoCRUD>
 
-provides a more automated approach to the 
+provides a more automated approach to
 CRUD (Create, Retrieve, Update, Delete) support
 
 =item L<Gantry::Plugins::Calendar>
@@ -1457,13 +1520,16 @@ Limitations are listed in the modules they apply to.
 
 Please visit http://www.usegantry.org for project information, 
 sample applications, documentation and mailing list subscription instructions.
-	
- Web:
- http://www.usegantry.org
-	
- Mailing List:
- http://www.usegantry.org/mailinglists/
-	
+
+Web:
+L<http://www.usegantry.org>
+
+Mailing List:
+L<http://www.usegantry.org/mailinglists/>
+
+IRC:
+#gantry on irc.slashnet.org
+
 =head1 AUTHOR
 
 Tim Keefer <tkeefer@gmail.com>

@@ -17,7 +17,7 @@ sub get_dbh {
     my $dbh;
     my $r = Apache->request();
     
-	if ( not $Apache::ServerStarting ) {
+    if ( not $Apache::ServerStarting ) {
         $dbh = $r->pnotes( 'dbh' );
     }
 
@@ -29,7 +29,7 @@ sub set_dbh {
     my $dbh   = shift;
     my $r     = Apache->request();
 
-	if ( not $Apache::ServerStarting ) {
+    if ( not $Apache::ServerStarting ) {
         $r->pnotes( 'dbh', $dbh );
     }
 }

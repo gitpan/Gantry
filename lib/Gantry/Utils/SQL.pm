@@ -12,11 +12,11 @@ use Carp qw( confess );
 sub new {
     my ( $class, $opt ) = @_;
 
-    my $self = {};	
+    my $self = {};  
     bless( $self, $class );
 
     # populate self with data from site
-    return( $self );	
+    return( $self );    
 
 } # end new
 
@@ -24,22 +24,22 @@ sub new {
 # $sql_helper->sql_bool( $bool_string )
 #-------------------------------------------------
 sub sql_bool {
-	my( $self, $input ) = shift;
+    my( $self, $input ) = shift;
 
-	return( 'FALSE' ) if ( ( ! defined $input ) || ( ! length $input ) );
+    return( 'FALSE' ) if ( ( ! defined $input ) || ( ! length $input ) );
 
-	if ( $input =~ /^(t|y|1)$/i ) {
-		return( 'TRUE' );
-	}
-	elsif ( $input =~ /^(f|n|0)$/i ) {
-		return( 'FALSE' );
-	}
-	elsif ( defined $input ) {
-		return( 'TRUE' );
-	}
-	else {
-		return( 'FALSE' );
-	}
+    if ( $input =~ /^(t|y|1)$/i ) {
+        return( 'TRUE' );
+    }
+    elsif ( $input =~ /^(f|n|0)$/i ) {
+        return( 'FALSE' );
+    }
+    elsif ( defined $input ) {
+        return( 'TRUE' );
+    }
+    else {
+        return( 'FALSE' );
+    }
 
 } # END sql_bool
 
@@ -47,89 +47,89 @@ sub sql_bool {
 # $sql_helper->sql_insert( $table, %data )
 #-------------------------------------------------
 sub sql_insert {
-	my ( $self, $table, @vals ) = @_;
+    my ( $self, $table, @vals ) = @_;
 
-	my ( @fields, @values );
+    my ( @fields, @values );
 
-	while ( @vals ) {
-	push ( @fields, shift( @vals ) );
-		
-		if ( @vals ) {
-			push( @values, shift( @vals ) );
-		}
-		else {
-			confess( 'Error: Incorrect number of arguements.' );
-		}
-	}
+    while ( @vals ) {
+    push ( @fields, shift( @vals ) );
+        
+        if ( @vals ) {
+            push( @values, shift( @vals ) );
+        }
+        else {
+            confess( 'Error: Incorrect number of arguements.' );
+        }
+    }
 
-	return( "INSERT INTO $table ( ". join( ', ', @fields ). ' ) VALUES ( '. 
-			join( ', ', @values ). ' )' );
+    return( "INSERT INTO $table ( ". join( ', ', @fields ). ' ) VALUES ( '. 
+            join( ', ', @values ). ' )' );
 } # END sql_insert 
 
 #-------------------------------------------------
 # $sql_helper->sql_num( $number )
 #-------------------------------------------------
 sub sql_num {
-	my ( $self, $number ) = ( shift, shift );
+    my ( $self, $number ) = ( shift, shift );
 
-	return( 'NULL' ) if ( ( ! defined $number ) || ! length ( $number) );
+    return( 'NULL' ) if ( ( ! defined $number ) || ! length ( $number) );
 
-	$number =~ s/\\/\\\\/g;
-	$number =~ s/\'/\\'/g;
-	
-	return( "'$number'" );
+    $number =~ s/\\/\\\\/g;
+    $number =~ s/\'/\\'/g;
+    
+    return( "'$number'" );
 } # END sql_num
 
 #-------------------------------------------------
 # $sql_helper->sql_str( $string )
 #-------------------------------------------------
 sub sql_str {
-	my( $self, $string ) = ( shift, shift );
+    my( $self, $string ) = ( shift, shift );
 
-	return( "''" ) if ( !defined( $string ) || ! length( $string ) );
+    return( "''" ) if ( !defined( $string ) || ! length( $string ) );
 
-	$string =~ s/\\/\\\\/g;
-	$string =~ s/\'/\\'/g;
+    $string =~ s/\\/\\\\/g;
+    $string =~ s/\'/\\'/g;
 
-	return( "'$string'" );
+    return( "'$string'" );
 } # END sql_str
 
 #-------------------------------------------------
 # $sql_helper->sql_update( $table, $clause, $data )
 #-------------------------------------------------
 sub sql_update {
-	my ( $self, $table, $clause, @vals ) = @_;
+    my ( $self, $table, $clause, @vals ) = @_;
 
-	$clause = '' if ( ! defined $clause );
+    $clause = '' if ( ! defined $clause );
 
-	my @updates;
+    my @updates;
 
-	while ( @vals ) {
-		my $field = shift( @vals );
-		
-		if ( @vals ) {
-			push( @updates, "$field=". shift( @vals ) );
-		}
-		else {
-			confess( 'Error: Incorrect number of arguements.' );
-		}
-	}
+    while ( @vals ) {
+        my $field = shift( @vals );
+        
+        if ( @vals ) {
+            push( @updates, "$field=". shift( @vals ) );
+        }
+        else {
+            confess( 'Error: Incorrect number of arguements.' );
+        }
+    }
 
-	return( "UPDATE $table SET ". join( ', ', @updates ). ' '. $clause );
+    return( "UPDATE $table SET ". join( ', ', @updates ). ' '. $clause );
 } # END sql_update
 
 #-------------------------------------------------
 # $sql_helper->sql_quote( $string )
 #-------------------------------------------------
 sub sql_quote {
-	my ( $self, $sql ) = ( shift, shift );
+    my ( $self, $sql ) = ( shift, shift );
 
-	return( '' ) if ( ! defined $sql );
+    return( '' ) if ( ! defined $sql );
 
- 	$sql =~ s/\\/\\\\/g;
-	$sql =~ s/'/''/g;
+    $sql =~ s/\\/\\\\/g;
+    $sql =~ s/'/''/g;
 
-	return( $sql );
+    return( $sql );
 } # END sql_quote
 
 # EOF

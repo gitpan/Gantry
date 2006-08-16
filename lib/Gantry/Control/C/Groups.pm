@@ -43,110 +43,110 @@ our @ISA = ( 'Gantry' ); # Inherit the handler.
 # $self->do_main( $order )
 #-------------------------------------------------
 sub do_main {
-	my ( $self, $order ) = @_;
-	
-	$order ||= 1;
+    my ( $self, $order ) = @_;
+    
+    $order ||= 1;
 
-	my $order_map = {
-		1 => 'name',
-		2 => 'ident',
-	};
-	
-	# stash template and title
-	$self->stash->view->template( 'results.tt' );
+    my $order_map = {
+        1 => 'name',
+        2 => 'ident',
+    };
+    
+    # stash template and title
+    $self->stash->view->template( 'results.tt' );
     $self->stash->view->title( 'Groups' );
-       	
-	my $location = $self->location;
-	
-	my $retval = {
-		headings => [ 
-			'<a href="' . $self->location . '/main/1">Group Name</a>', 
-			'<a href="' . $self->location . '/main/2">Ident</a>', 
-			'Description' ],
-		header_options	=> [ {
-			text => 'Add', link => ( "$location/add" ),
-		} ],
-	};
+        
+    my $location = $self->location;
+    
+    my $retval = {
+        headings => [ 
+            '<a href="' . $self->location . '/main/1">Group Name</a>', 
+            '<a href="' . $self->location . '/main/2">Ident</a>', 
+            'Description' ],
+        header_options  => [ {
+            text => 'Add', link => ( "$location/add" ),
+        } ],
+    };
 
-	my @rows = Gantry::Control::Model::auth_groups->retrieve_all( 
-		{ 'order_by' => $order } 
-	);
-	
-	foreach my $row ( @rows ) {
-		my $id = $row->id;
-		push( @{$$retval{rows}}, {
-			data => [ 
-				$row->name, 
-				$row->ident,
-				$row->description, 
-			],
-			options => [
-				{ text => 'Members', link => "$location/members/$id" },
-				{ text => 'Edit',	 link => "$location/edit/$id" },
-				{ text => 'Delete',	 link => "$location/delete/$id" },
-			]
-		});
-	}
-	
-	# stash view data
-	$self->stash->view->data( $retval );
+    my @rows = Gantry::Control::Model::auth_groups->retrieve_all( 
+        { 'order_by' => $order } 
+    );
+    
+    foreach my $row ( @rows ) {
+        my $id = $row->id;
+        push( @{$$retval{rows}}, {
+            data => [ 
+                $row->name, 
+                $row->ident,
+                $row->description, 
+            ],
+            options => [
+                { text => 'Members', link => "$location/members/$id" },
+                { text => 'Edit',    link => "$location/edit/$id" },
+                { text => 'Delete',  link => "$location/delete/$id" },
+            ]
+        });
+    }
+    
+    # stash view data
+    $self->stash->view->data( $retval );
 
 } # end: do_main
 
 sub redirect_to_main {
-	my ( $self, $data ) = @_;
-	
-	return $self->location;
-	
+    my ( $self, $data ) = @_;
+    
+    return $self->location;
+    
 }
 
 #-------------------------------------------------
 # $self->do_add( $r )
 #-------------------------------------------------
 sub do_add {
-	my ( $self ) = ( shift );
+    my ( $self ) = ( shift );
    
-	$crud->add( $self );
+    $crud->add( $self );
 
 } # end do_add
 
 sub _add {
-	my( $self, $params, $data ) = @_;
-			
-	my %param = %{ $params };
-							
-	# Clean up the variables some.
-	$param{description} =~ s/\r//g;
-	$param{description} =~ s/\n/<BR>/g;
-	$param{name} 		=~ s/\s+/\_/g;
-											
-	my $new_row = $AUTH_GROUPS->create( \%param );
-	$new_row->dbi_commit;
-		
+    my( $self, $params, $data ) = @_;
+            
+    my %param = %{ $params };
+                            
+    # Clean up the variables some.
+    $param{description} =~ s/\r//g;
+    $param{description} =~ s/\n/<BR>/g;
+    $param{name}        =~ s/\s+/\_/g;
+                                            
+    my $new_row = $AUTH_GROUPS->create( \%param );
+    $new_row->dbi_commit;
+        
 } # end do_add
 
 #-------------------------------------------------
 # $self->do_delete( $id, $yes )
 #-------------------------------------------------
 sub do_delete {
-	my ( $self, $id, $yes ) = @_;
-		
-	# Load row values
-	my $row = $AUTH_GROUPS->retrieve( $id );	   
-	$crud->delete( $self, $yes, { row => $row } );
-	
+    my ( $self, $id, $yes ) = @_;
+        
+    # Load row values
+    my $row = $AUTH_GROUPS->retrieve( $id );       
+    $crud->delete( $self, $yes, { row => $row } );
+    
 } # end do_delete
 
 #-------------------------------------------------
 # $self->delete_page( $data )
 #-------------------------------------------------
 sub _delete {
-	my( $self, $data ) = @_;
-	
-	my $row = $data->{row};
-	
-	$row->delete;
-	$AUTH_GROUPS->dbi_commit();
+    my( $self, $data ) = @_;
+    
+    my $row = $data->{row};
+    
+    $row->delete;
+    $AUTH_GROUPS->dbi_commit();
 
 } # end delete_page
 
@@ -154,153 +154,157 @@ sub _delete {
 # $self->do_edit( $id )
 #-------------------------------------------------
 sub do_edit {
-	my ( $self, $id ) = @_;
+    my ( $self, $id ) = @_;
 
- 	# Load row values
-	my $row = $AUTH_GROUPS->retrieve( $id );
+    # Load row values
+    my $row = $AUTH_GROUPS->retrieve( $id );
 
-	$crud->edit( $self, { row => $row } );
-	
+    $crud->edit( $self, { row => $row } );
+    
 } # end do_edit
 
 #-------------------------------------------------
 # $self->_edit( $param, $data )
 #-------------------------------------------------
 sub _edit {
-	my( $self, $params, $data ) = @_;
-		
-	my %param = %{ $params };
-	
-	my $row = $data->{row};
- 	    		 	    	   		   
-	# Clean up the variables some.
-	$param{description} =~ s/\r//g;
-	$param{description} =~ s/\n/<BR>/g;
-	$param{name} 		=~ s/\s+/\_/g;
- 	    		 	    	   		   
+    my( $self, $params, $data ) = @_;
+        
+    my %param = %{ $params };
+    
+    my $row = $data->{row};
+                                       
+    # Clean up the variables some.
+    $param{description} =~ s/\r//g;
+    $param{description} =~ s/\n/<BR>/g;
+    $param{name}        =~ s/\s+/\_/g;
+                                       
     # Make update
-   	$row->set( %param );
-	$row->update;
+    $row->set( %param );
+    $row->update;
     $row->dbi_commit;
-    	
+        
 } # end do_edit
 
 #-------------------------------------------------
 # $self->do_members( $id )
 #-------------------------------------------------
 sub do_members {
-	my ( $self, $id ) = ( shift, shift );
-	
-	# stash template and title
-	$self->stash->view->title( 'Add/Remove Members' );
-	$self->stash->view->template( 'form_ajax.tt' );
-		
-	my $ajax = HTML::Prototype->new;	
-		
-	my @users = Gantry::Control::Model::auth_users->retrieve_all( 
-		order_by => 'last_name');
-		
-	my %groups;
-	foreach ( Gantry::Control::Model::auth_group_members->search( 
-		group_id => $id ) ) {
-		
-		$groups{$_->user_id} = 1;
-	}
-	
-	my @fields;
-	foreach ( @users ) {
-		my $name 	= ( $_->last_name . ",&nbsp;" . $_->first_name );
-		my $user_id = $_->user_id;
-		
-		# set callback
-		my $callback = $ajax->observe_field( "user_id_$user_id", { 
- 			url => ( $self->location . '/ajax_edit' ) ,
- 			with => (
- 				"'cmd=member\&val='+value+'\&user_id=$user_id"
- 				. "\&group_id=$id'" 
- 			),
- 			update => "view", 
- 		} );
-		
-		push( @fields, {
-			id		=> "user_id_$user_id",
-			name 	=> "user_id_$user_id",
-			label 	=> $name,
-			type	=> 'checkbox',
-			default_value => 1,
-			checked => $groups{$user_id}, 
-			callback => $callback,
-		});
-	}
+    my ( $self, $id ) = ( shift, shift );
+    
+    # stash template and title
+    $self->stash->view->title( 'Add/Remove Members' );
+    $self->stash->view->template( 'form_ajax.tt' );
+        
+    my $ajax = HTML::Prototype->new;    
+        
+    my @users = Gantry::Control::Model::auth_users->retrieve_all( 
+        order_by => 'last_name');
+        
+    my %groups;
+    foreach ( Gantry::Control::Model::auth_group_members->search( 
+        group_id => $id ) ) {
+        
+        $groups{$_->user_id} = 1;
+    }
+    
+    my @fields;
+    foreach ( @users ) {
+        my $name    = ( $_->last_name . ",&nbsp;" . $_->first_name );
+        my $user_id = $_->user_id;
+        
+        # set callback
+        my $callback = $ajax->observe_field( "user_id_$user_id", { 
+            url => ( $self->location . '/ajax_edit' ) ,
+            with => (
+                "'cmd=member\&val='+value+'\&user_id=$user_id"
+                . "\&group_id=$id'" 
+            ),
+            update => "view", 
+        } );
+        
+        push( @fields, {
+            id      => "user_id_$user_id",
+            name    => "user_id_$user_id",
+            label   => $name,
+            type    => 'checkbox',
+            default_value => 1,
+            checked => $groups{$user_id}, 
+            callback => $callback,
+        });
+    }
 
-	my $form =  {
-		ajax_java_script => $ajax->define_javascript_functions,
-		legend 	=> "Add/Remove Members",
-		back 	=> $$self{location},
-		fields 	=> \@fields
-	};		
-			
-	# stash form		
-	$self->stash->view->form( $form );
-		
+    my $form =  {
+        ajax_java_script => $ajax->define_javascript_functions,
+        legend  => "Add/Remove Members",
+        back    => $$self{location},
+        fields  => \@fields
+    };      
+            
+    # stash form        
+    $self->stash->view->form( $form );
+        
 } # end do_members
 
 #-------------------------------------------------
 # $self->do_ajax_edit( )
 #-------------------------------------------------
 sub do_ajax_edit {
-	my( $self ) = ( shift );
-	
-	$self->template_disable( 1 ); 		# turn off frame for ajax
-		
-	my %param = $self->get_param_hash;
-	
-	# check for errors
-	my @errors;
-	push( @errors, "missing user_id" ) 	if ! defined $param{user_id};
-	push( @errors, "missing group_id" ) if ! defined $param{group_id};
-	return( "Ajax Error:<Br />", join( "<br />", @errors ) ) if @errors;
-	
-	# form returns 'undefined' fom unchecked boxes, make them 0
-	$param{val} = 0 if $param{val} eq 'undefined';
-	
-	# update send_to preference	
-	if ( $param{cmd} eq "member" ) {
-		
-		# Add member
-		if ( $param{val} ) {
-			my $new_member = 
-				Gantry::Control::Model::auth_group_members->find_or_create(
-					{ 	user_id => $param{user_id}, 
-						group_id => $param{group_id} 
-					});
-					
-			$new_member->dbi_commit;
-			
-			return( "Status: Added " . $new_member->user_id->first_name );
-		}
-		# Remove member
-		else {
-						
-			my $rem_member = 
-				Gantry::Control::Model::auth_group_members->search(
-					user_id  => $param{user_id},
-					group_id => $param{group_id} 
-			 	)->delete_all;
-			
-			Gantry::Control::Model::auth_group_members->dbi_commit;
-			
-			return( 
-				"Status: Removed " . 
-				Gantry::Control::Model::auth_users->retrieve( 
-					user_id => $param{user_id} 
-				)->first_name 
-			);
-		}
+    my( $self ) = ( shift );
+    
+    $self->template_disable( 1 );       # turn off frame for ajax
+        
+    my %param = $self->get_param_hash;
+    
+    # check for errors
+    my @errors;
+    push( @errors, "missing user_id" )  if ! defined $param{user_id};
+    push( @errors, "missing group_id" ) if ! defined $param{group_id};
+    return( "Ajax Error:<Br />", join( "<br />", @errors ) ) if @errors;
+    
+    # form returns 'undefined' fom unchecked boxes, make them 0
+    $param{val} = 0 if $param{val} eq 'undefined';
+    
+    # update send_to preference 
+    if ( $param{cmd} eq "member" ) {
+        
+        # Add member
+        if ( $param{val} ) {
+            my $new_member = 
+                Gantry::Control::Model::auth_group_members->find_or_create(
+                    {   user_id => $param{user_id}, 
+                        group_id => $param{group_id} 
+                    });
+                    
+            $new_member->dbi_commit;
+            
+            return( "Status: Added " . $new_member->user_id->first_name );
+        }
+        # Remove member
+        else {
+                        
+            my @rem_member = 
+                Gantry::Control::Model::auth_group_members->search(
+                    user_id  => $param{user_id},
+                    group_id => $param{group_id} 
+                );
 
-	}
-		
-	return ( 'Invalid Ajax Action' ); 
+            foreach ( @rem_member ) {
+                $_->delete;
+            }
+
+            Gantry::Control::Model::auth_group_members->dbi_commit;
+            
+            return( 
+                "Status: Removed " . 
+                Gantry::Control::Model::auth_users->retrieve( 
+                    user_id => $param{user_id} 
+                )->first_name 
+            );
+        }
+
+    }
+        
+    return ( 'Invalid Ajax Action' ); 
 
 } # end: do_ajax_edit
 
@@ -308,38 +312,48 @@ sub do_ajax_edit {
 # _form( $row ? )
 #-------------------------------------------------
 sub _form {
-	my ( $self, $data ) = @_;		
-	
-	my $row = $data->{row};
-	
-	my $form =  {
-		legend => $self->path_info =~ /edit/i ? 'Edit' : 'Add',
-		row    => $row,
-		fields => [
-			{	name 	=> 'name',
-				label  	=> 'Group Name',
-				type	=> 'text',
-				is		=> 'varchar',
-			},
-			{   name	=> 'ident',
-				label	=> 'Ident',
-				type	=> 'text',
-				is		=> 'varchar',
-				optional => 1,
-			},
-			{	name 	=> 'description',
-				label  	=> 'Description',
-				type	=> 'textarea',
-				rows	=> 7,
-				cols	=> 40,
-				is		=> 'varchar',
-			},
-		]
-	};		
-			
-	return( $form );
+    my ( $self, $data ) = @_;       
+    
+    my $row = $data->{row};
+    
+    my $form =  {
+        legend => $self->path_info =~ /edit/i ? 'Edit' : 'Add',
+        row    => $row,
+        fields => [
+            {   name    => 'name',
+                label   => 'Group Name',
+                type    => 'text',
+                is      => 'varchar',
+            },
+            {   name    => 'ident',
+                label   => 'Ident',
+                type    => 'text',
+                is      => 'varchar',
+                optional => 1,
+            },
+            {   name    => 'description',
+                label   => 'Description',
+                type    => 'textarea',
+                rows    => 7,
+                cols    => 40,
+                is      => 'varchar',
+            },
+        ]
+    };      
+            
+    return( $form );
 
 } # END form
+
+sub site_links {
+    my $self = shift;
+    
+    return( [
+        { link => ($self->app_rootp . '/users'), label => 'Users' },
+        { link => ($self->app_rootp . '/groups'), label => 'Groups' },
+        { link => ($self->app_rootp . '/pages'), label => 'Pages' },
+    ] );       
+}
 
 # EOF
 1;
@@ -369,10 +383,10 @@ Sample Apache configuration.
     PerlSetVar  SiteTitle       "Group Management: "
 
     PerlSetVar  dbconn  "dbi:Pg:dbname=..."
-	PerlSetVar  dbuser  "<database_username>"
-	PerlSetVar  dbpass  "<database_password>
-	PerlSetVar  DatabaseCommit  off
-				   
+    PerlSetVar  dbuser  "<database_username>"
+    PerlSetVar  dbpass  "<database_password>
+    PerlSetVar  DatabaseCommit  off
+                   
     PerlHandler Gantry::Control::C::Groups
   </Location>
 
@@ -383,7 +397,7 @@ module. They are also used by the authen and authz handlers this package
 contains.
   
   create table "auth_users" (
-	see C<Gantry::Control::C::User>	
+    see C<Gantry::Control::C::User> 
   );
   
   create table "auth_groups" (
@@ -395,7 +409,7 @@ contains.
   create table "auth_group_members" (
     "id"        int4 default nextval('auth_group_members_seq'::text) NOT NULL,
     "user_id"   int4,
-    "group_id"  int4	
+    "group_id"  int4    
   );
 
 =head1 METHODS

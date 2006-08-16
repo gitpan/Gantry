@@ -52,7 +52,7 @@ sub controller {
     my $self = shift;
 
     $self->{__CONTROLLER__} = controller->new() 
-		unless defined $self->{__CONTROLLER__};
+        unless defined $self->{__CONTROLLER__};
 
     return $self->{__CONTROLLER__};
 
@@ -87,11 +87,11 @@ good for one web page hit).  Example:
 
 =item view
 
-	Returns the 'view' stash object
+    Returns the 'view' stash object
 
 =item controller
 
-	Returns the 'controller' stash object
+    Returns the 'controller' stash object
 
 =back
 

@@ -1,3 +1,33 @@
+DBIx::Class support should:
+    be converted to let DBIx::Class handle the primary keys (if possible)
+    be more careful with commits
+
+AutoCRUD should undef all blank form param fields before doing edit updates.
+It does this for dates, because those caused problems with Class::DBI, but
+it should apply to all fields.
+
+Based on initial user feedback we need to resolve some issues:
+    The prereq list is far too long, while many modules have dependencies
+    those modules may not be needed by users.  We should install them,
+    but skip their tests.
+        This is mostly done Class::DBI is no longer on the list.
+        Template Toolkit was retained since all but the simplest samples
+        in the docs rely on it.
+
+    We need a better list of web install directories (possibly with hidden
+    shortcut words for us).
+        Done.  Now there is a default (which is our dev/prod dir) and
+        a chance to type something.
+        I'm not sure if this gives them the chance to skip install.
+        We probably need a 'type space to skip' or some such.
+
+    We need a more complete README.
+        Fleshed out some.
+
+    The auth test offered to the user is doomed to fail.
+        Now they just have to have a database with the proper schema.
+        This is unlikely to succeed, but at least it's more sensible.
+
 Phil Crow Thu May 11 12:05:59 CDT 2006
 Tim suggested a Gantry notes section to be features on usegantry.org.
 I like the idea and here are some notes that need writing:
@@ -48,4 +78,20 @@ DONE:
     template engines (think TT and plain).
         $self->content_type( 'text/plain' );  # or 'text/xml' etc.
         $self->template_disable( 1 );
+
+    Tim's advice from OSCON: there should be more defaults.  In particular:
+        when you tell Gantry where to put the templates, it should write a
+        module with that path in it which init will call to postpend it to
+        your root path.  If you have no custom templates, you don't need root.
+        This will also allow bigtop to find the sample wrapper without being
+        told where to look.
+
+        You should be able to run bigtop in a mode where you list models
+        you want to make and it generates models and controllers for them
+        with trivial structure for immediate use with sqlite.
+
+        Tentmaker should make a table and a controller whenever you enter
+        a sequence.  Its controllers should be ready for auto crud including
+        a form with all_fields_but id already in it and a do_main with
+        the trivial fields except id.
 

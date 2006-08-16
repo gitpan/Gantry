@@ -71,6 +71,14 @@ L<How do I control error page appearance?>
 
 L<How can I let my users pick dates easily?>
 
+=item *
+
+L<How can I use DBIx::Class with Gantry?>
+
+=item *
+
+L<How can I use Gantry's native models?>
+
 =back
 
 =item *
@@ -165,25 +173,26 @@ L<How can my cron (and other) scripts use an app's models?>
 
 Method 1 (preferred): install via CPAN
 
- perl -MCPAN -e shell
+ > perl -MCPAN -e shell
  cpan> install Gantry
 
 Method 2: Download the source (http://www.usegantry.org), extract it, 
 change to that directory and run the following commands:
 
- perl Build.PL
- ./Build test
- ./Build install
+ > perl Build.PL
+ > ./Build test
+ > ./Build install
 
 Method 3: Check out Gantry from version control and then install 
- 
- mkdir gantry
- cd gantry
- svn checkout http://svn.usegantry.org/repo/gantry/trunk/ .
- perl Build.PL
- ./Build test
- ./Build install
- 
+
+ > mkdir gantry
+ > cd gantry
+ > svn checkout http://svn.usegantry.org/repo/gantry/trunk/ .
+ > perl Build.PL
+ > ./Build test
+ > ./Build install
+
+
 =head2 How do I install Gantry on Shared Hosting?
 
 Download the source, extract it, change to that directory and run
@@ -195,15 +204,15 @@ If your hosting provider will not install the module Dependancies
 you can just install them from source. You probably will not have 
 access to install into the system perl directories. ]
 
- perl Build.PL
- ./Build test
- ./Build install --install_base=<path to your local perl modules>
+ > perl Build.PL
+ > ./Build test
+ > ./Build install --install_base=<path to your local perl modules>
 
 =head1 Coding
 
 =head2 What is the smallest app I could write with Gantry?
 
-To see small Gantry apps consult l<Gantry::Docs::QuickStart> and/or
+To see small Gantry apps consult L<Gantry::Docs::QuickStart> and/or
 L<Gantry::Docs::Tutorial>.
 
 =head2 How do I turn off templating to dump raw text?
@@ -215,8 +224,8 @@ specify -TemplateEngine=Default.
 
 =head2 How do I use gantry's AutoCRUD?
 
-Once you have a database and a Class::DBI descended model for it (or
-one which responds to the same API), you can use gantry's AutoCRUD.  First,
+Once you have a database and a supported model for it, you can use
+Gantry's AutoCRUD.  First,
 
  use Gantry::Plugins::AutoCRUD;
 
@@ -247,6 +256,17 @@ put in the hash.  (If your template is different consult it.)
 
 =back
 
+See the docs in Gantry::Plugins::AutoCRUD for additional optional methods.
+The other methods give you control over things like where users are taken
+when they cancel a request.
+
+If DBIx::Class is your object relational mapper (ORM), you need to implement
+get_orm_helper and have it return 'Gantry::Plugins::AutoCRUDHelper::DBIxClass'.
+
+If your ORM does not conform to the either the Class::DBI API or the to
+DBIx::Class API, you need to read the AutoCRUDHelpers section of the docs
+in Gantry::Plugins::AutoCRUD and provide your on helper module.
+
 =head2 What about retrieval?
 
 Your model should provide convenient retrieval methods.  Gantry's
@@ -254,6 +274,9 @@ L<Gantry::Utils::CDBI> inherits from CDBI::Sweet, so it responds to all
 the standard Class::DBI methods (with the Sweet additions.
 Gantry::Utils::CDBI also has the poorly named
 retrieve_all_for_main_listing to return all rows in a pleasant order.
+
+If you use DBIx::Class, you can inherit from L<Gantry::Utils::DBIxClass>
+instead of from DBIx::Class to gain a couple of useful retrieval methods.
 
 =head2 What if AutoCRUD won't work for me?
 
@@ -504,10 +527,123 @@ Add a date_select_text key to the hash of each date field:
      # ...
  }
 
+=back
+
 See L<Bigtop::Docs::Tutorial> for how to make these steps happen from bigtop
 files.
 
+=head1 How can I use DBIx::Class with Gantry?
+
+There are several things you need to do to use DBIx::Class effectively
+with Gantry:
+
+=over 4
+
+=item 1.
+
+Implement your DBIx::Class::Schema class like this:
+
+    package YourApp::Model;
+    use strict; use warnings;
+
+    use base 'DBIx::Class::Schema';
+
+    use Gantry::Utils::ModelHelper qw( db_Main );
+
+    __PACKAGE__->load_classes( qw/ list tables here / );
+
+    sub gen_db_Main {
+        my $class = shift;
+        return sub {
+            return $class->db_Main();
+        };
+    }
+
+    sub get_db_options {
+        return { AutoCommit => 1 };
+    }
+
+    1;
+
+By using Gantry::Utils::ModelHelper as shown, you can rely on the existing
+Gantry database connection scheme (keep reading for details or see
+Gantry::Docs::DBConn for complete info).
+
+=item 2.
+
+Impelement one module for each table which inherits from
+Gantry::Utils::DBIxClass.  These will be very similar to modules which
+inherit from DBIx::Class, but will inherit to useful methods for Gantry
+CRUD schemes (get_listing and get_form_selections).  Example:
+
+    package YourApp::Model::table_name;
+    use strict; use warnings;
+
+    use base 'Gantry::Utils::DBIxClass';
+
+    __PACKAGE__->load_components( qw/ Core / );
+    __PACKAGE__->table( 'table_name' );
+    __PACKAGE__->add_columns( qw/ id other columns / );
+    __PACKAGE__->set_primary_key( 'id' );
+
+    sub get_foreign_display_fields {
+        return [ qw( other ) ];
+    }
+
+    sub get_foreign_tables {
+        return qw();
+    }
+
+    sub foreign_display {
+        my $self = shift;
+
+        my $other = $self->name();
+
+        return "$other";
+    }
+
+    sub table_name {
+        return 'table_name';
+    }
+
+    1;
+
+These models will be ready for use with Gantry CRUD schemes.
+
+=item 3.
+
+Add to your controller:
+
+    use YourApp::Model;
+    use YourApp::Model::table_name qw( $TABLE_NAME );
+    sub schema_base_class { return 'YourApp::Model'; }
+    use Gantry::Plugins::DBIxClassConn qw( get_schema );
+
+This mixes C<get_schema> into your site object and gives you a shortcut
+to your model's extra methods through <$TABLE_NAME>.
+
+=item 4.
+
+Use AutoCRUD directly (follow its docs).
+
+=item 5.
+
+Use your models in your controller:
+
+    my $schema = $self->get_schema();
+    my @rows   = $TABLE_NAME->get_listing( { schema => $schema } );
+
+Use C<$schema> according to the docs in DBIx::Class.
+
 =back
+
+Bigtop can generate all of this for you.
+
+=head1 How can I use Gantry's native models?
+
+The short answer is: use Bigtop.  Better yet, use the tentmaker and
+select Model Gantry on the 'Backends' tab.  Gantry's models require
+a lot of code.  They were designed to be generated.
 
 =head1 Deployment
 

@@ -24,10 +24,10 @@ sub results {
 
 
 sub error_text {
-	my( $self, $p ) = ( shift, shift );
+    my( $self, $p ) = ( shift, shift );
 
-	$self->{error_text} = $p if defined $p;
-	return( $self->{error_text} );
+    $self->{error_text} = $p if defined $p;
+    return( $self->{error_text} );
 
 } # end error_text
 

@@ -17,7 +17,7 @@ my $crud = Gantry::Plugins::CRUD->new(
     edit_action     => \&_edit,
     delete_action   => \&_delete,
     form            => \&_form,
-    redirect        => \&redirect_to_main,
+
     template        => 'form.tt',
     text_descr      => 'user',
     use_clean_dates => 1,
@@ -36,21 +36,21 @@ my $AUTH_GROUP_MEMBERS = 'Gantry::Control::Model::auth_group_members';
 # $self->do_main( $order )
 #-------------------------------------------------
 sub do_main {
-	my ( $self, $order ) = @_;
-	
-	$order ||= 2;
-	
-	my $order_map = {
-		1 => 'active',
-		2 => 'user_id',
-		3 => 'user_name',
-		4 => 'last_name, first_name',
-		5 => 'email'
-	};
-	
-	# stash template name and page title
-	$self->stash->view->template( 'results.tt' );
-    $self->stash->view->title( 'User Add' );
+    my ( $self, $order ) = @_;
+    
+    $order ||= 2;
+    
+    my $order_map = {
+        1 => 'active',
+        2 => 'user_id',
+        3 => 'user_name',
+        4 => 'last_name, first_name',
+        5 => 'email'
+    };
+    
+    # stash template name and page title
+    $self->stash->view->template( 'results.tt' );
+    $self->stash->view->title( 'Users' );
 
     my $retval = {
         headings       => [
@@ -58,7 +58,7 @@ sub do_main {
             '<a href="' . $self->location . '/main/2">User ID</a>',
             '<a href="' . $self->location . '/main/3">User Name</a>',
             '<a href="' . $self->location . '/main/4">Name</a>',
-			'<a href="' . $self->location . '/main/5">E-mail</a>'
+            '<a href="' . $self->location . '/main/5">E-mail</a>'
         ],
         header_options => [
             {
@@ -68,130 +68,125 @@ sub do_main {
         ],
     };
 
-	my @rows = $AUTH_USERS->retrieve_all( 
-		{ 'order_by' => $order_map->{$order} } 
-	);
-	
-	foreach my $row ( @rows ) {
-		my $id = $row->id;
-		push(
-			@{$$retval{rows}},
-			{
-				data => [ 
-					( $row->active ? 'yes' : 'no' ), 
-					$row->user_id,
-					$row->user_name, 
-					( $row->last_name . ", " . $row->first_name ), 
-					$row->email  
-				],
-				options => [
-					{ 
-						text => 'Edit', 
-						link => ( $self->location . "/edit/$id" ) 
-					},
-					{ 
-						text => 'Delete',
-						link => ( $self->location . "/delete/$id" ), 
-					},
-				]
-			}
-		);
-	}
-	
-	# stash view data
-	$self->stash->view->data( $retval );
-	
+    my @rows = $AUTH_USERS->retrieve_all( 
+        { 'order_by' => $order_map->{$order} } 
+    );
+    
+    foreach my $row ( @rows ) {
+        my $id = $row->id;
+        push(
+            @{$$retval{rows}},
+            {
+                data => [ 
+                    ( $row->active ? 'yes' : 'no' ), 
+                    $row->user_id,
+                    $row->user_name, 
+                    ( $row->last_name . ", " . $row->first_name ), 
+                    $row->email  
+                ],
+                options => [
+                    { 
+                        text => 'Edit', 
+                        link => ( $self->location . "/edit/$id" ) 
+                    },
+                    { 
+                        text => 'Delete',
+                        link => ( $self->location . "/delete/$id" ), 
+                    },
+                ]
+            }
+        );
+    }
+    
+    # stash view data
+    $self->stash->view->data( $retval );
+    
 } # end do_main  
 
-sub redirect_to_main {
-	my ( $self, $data ) = @_;
-	
-	return $self->location;
-	
-}
+
 
 #-------------------------------------------------
 # $self->do_add( $r )
 #-------------------------------------------------
 sub do_add {
-	my ( $self ) = ( shift );
+    my ( $self ) = ( shift );
    
-	$crud->add( $self );
+    $crud->add( $self );
 
 } # end do_add
 
 sub _add {
-	my( $self, $params, $data ) = @_;
-			
-	my %param = %{ $params };
-	
-	$param{'crypt'} = encrypt( $param{passwd} );
-	
-	my $new_row = $AUTH_USERS->create( \%param );
-	$new_row->dbi_commit;
-		
+    my( $self, $params, $data ) = @_;
+            
+    my %param = %{ $params };
+    
+    $param{'crypt'} = encrypt( $param{passwd} );
+    
+    my $new_row = $AUTH_USERS->create( \%param );
+    $new_row->dbi_commit;
+        
 } # end do_add
 
 #-------------------------------------------------
 # $self->do_edit( $id )
 #-------------------------------------------------
 sub do_edit {
-	my ( $self, $id ) = @_;
+    my ( $self, $id ) = @_;
 
- 	# Load row values
-	my $user = $AUTH_USERS->retrieve( $id );
+    # Load row values
+    my $user = $AUTH_USERS->retrieve( $id );
 
-	$crud->edit( $self, { user => $user } );
-	
+    $crud->edit( $self, { user => $user } );
+    
 } # end do_edit
 
 #-------------------------------------------------
 # $self->_edit( $param, $data )
 #-------------------------------------------------
 sub _edit {
-	my( $self, $params, $data ) = @_;
-		
-	my %param = %{ $params };
-	
-	$param{'crypt'} = encrypt( $param{passwd} );
-	
-	my $user = $data->{user};
- 	    		 	    	   		   
+    my( $self, $params, $data ) = @_;
+        
+    my %param = %{ $params };
+    
+    $param{'crypt'} = encrypt( $param{passwd} );
+    
+    my $user = $data->{user};
+                                       
     # Make update
-   	$user->set( %param );
-	$user->update;
+    $user->set( %param );
+    $user->update;
     $user->dbi_commit;
-    	
+        
 } # end do_edit
 
 #-------------------------------------------------
 # $self->do_delete( $id, $yes )
 #-------------------------------------------------
 sub do_delete {
-	my ( $self, $id, $yes ) = @_;
-		
-	# Load row values
-	my $user = $AUTH_USERS->retrieve( $id );	   
-	$crud->delete( $self, $yes, { user => $user } );
-	
+    my ( $self, $id, $yes ) = @_;
+        
+    # Load row values
+    my $user = $AUTH_USERS->retrieve( $id );       
+    $crud->delete( $self, $yes, { user => $user } );
+    
 } # end do_delete
 
 #-------------------------------------------------
 # $self->_delete( $data )
 #-------------------------------------------------
 sub _delete {
-	my( $self, $data ) = @_;
-	
-	my $user = $data->{user};
-	
-	my @mems = $AUTH_GROUP_MEMBERS->search( user_id => $user->user_id );
-	foreach ( @mems ) {
-		$_->delete;
-	}
-	$AUTH_GROUP_MEMBERS->dbi_commit;
-	
-	$user->delete;
-	$AUTH_USERS->dbi_commit();
+    my( $self, $data ) = @_;
+    
+    my $user = $data->{user};
+    
+    my @mems = $AUTH_GROUP_MEMBERS->search( user_id => $user->user_id );
+    foreach ( @mems ) {
+        $_->delete;
+    }
+    $AUTH_GROUP_MEMBERS->dbi_commit;
+    
+    $user->delete;
+    $AUTH_USERS->dbi_commit();
 
 
 } # end delete_page
@@ -200,74 +195,90 @@ sub _delete {
 # _form( $row ? )
 #-------------------------------------------------
 sub _form {
-	my ( $self, $data ) = @_;		
-		
-	my $row = $data->{user};
-	
-	my ( @available_ids, %existing_ids );
-	my @users = $AUTH_USERS->retrieve_all();
-	foreach ( @users ) {
-		++$existing_ids{ $_->user_id };
-	}
-	
-	for ( my $i = 1; $i < 300; ++$i ) {
-		push( @available_ids, {	label => $i, value => $i } )
-			unless defined $existing_ids{ $i }; 
-	}
-	
-	my @fields;
-	
-	push( @fields, 
-		{	name 	=> 'user_id',
-			label	=> 'User ID',
-			type	=> 'select',
-			options => \@available_ids,
-		}
-	) if $self->path_info =~ /add/i;
-	
-	push( @fields,
-		{	name 	=> 'active',
-			label  	=> 'Active',
-			type	=> 'select',
-			is		=> 'boolean',
-			options => [
-				{ label => 'Yes', value => 't' },
-				{ label => 'No',  value => 'f' },
-			],
-		},
-		{	name 	=> 'user_name',
-			label  	=> 'User&nbsp;Name',
-			type	=> 'text',
-		},
-		{	name 	=> 'passwd',
-			label  	=> 'Password',
-			type	=> 'password',
-		},
-		{	name 	=> 'first_name',
-			label  	=> 'First&nbsp;Name',
-			type	=> 'text',
-		},
-		{	name 	=> 'last_name',
-			label  	=> 'Last&nbsp;Name',
-			type	=> 'text',
-		},
-		{	optional => 1,
-			name 	=> 'email',
-			label  	=> 'E-mail',
-			type	=> 'text',
-		}
-	);
-	
-	my $form =  {
-		legend => $self->path_info =~ /edit/i ? 'Edit' : 'Add',
-		width => 400,
-		row => $row,
-		fields => \@fields
-	};		
-			
-	return( $form );
+    my ( $self, $data ) = @_;       
+        
+    my $row = $data->{user};
+    
+    my ( @available_ids, %existing_ids );
+    my @users = $AUTH_USERS->retrieve_all();
+    foreach ( @users ) {
+        ++$existing_ids{ $_->user_id };
+    }
+    
+    for ( my $i = 1; $i < 300; ++$i ) {
+        push( @available_ids, { label => $i, value => $i } )
+            unless defined $existing_ids{ $i }; 
+    }
+    
+    my @fields;
+    
+    push( @fields, 
+        {   name    => 'user_id',
+            is      => 'int4',
+            label   => 'User ID',
+            type    => 'select',
+            options => \@available_ids,
+        }
+    ) if $self->path_info =~ /add/i;
+    
+    push( @fields,
+        {   name    => 'active',
+            label   => 'Active',
+            type    => 'select',
+            is      => 'boolean',
+            options => [
+                { label => 'Yes', value => 't' },
+                { label => 'No',  value => 'f' },
+            ],
+        },
+        {   name    => 'user_name',
+            label   => 'User&nbsp;Name',
+            type    => 'text',
+            is      => 'varchar',
+        },
+        {   name    => 'passwd',
+            label   => 'Password',
+            is      => 'varchar',
+            type    => 'password',
+        },
+        {   name    => 'first_name',
+            label   => 'First&nbsp;Name',
+            is      => 'varchar',
+            type    => 'text',
+        },
+        {   name    => 'last_name',
+            label   => 'Last&nbsp;Name',
+            is      => 'varchar',
+            type    => 'text',
+        },
+        {   optional => 1,
+            name    => 'email',
+            is      => 'varchar',
+            label   => 'E-mail',
+            type    => 'text',
+        }
+    );
+    
+    my $form =  {
+        legend => $self->path_info =~ /edit/i ? 'Edit' : 'Add',
+        width => 400,
+        row => $row,
+        fields => \@fields
+    };      
+            
+    return( $form );
 
 } # end _form
+
+sub site_links {
+    my $self = shift;
+    
+    return( [
+        { link => ($self->app_rootp . '/users'), label => 'Users' },
+        { link => ($self->app_rootp . '/groups'), label => 'Groups' },
+        { link => ($self->app_rootp . '/pages'), label => 'Pages' },
+    ] );       
+}
 
 # EOF
 1;
@@ -292,13 +303,13 @@ information at the finger tips of the application.
 =head1 APACHE
 
   <Location /admin/users >
-    SetHandler 	perl-script
+    SetHandler  perl-script
 
     PerlSetVar  title   "User Management: "
 
-    PerlSetVar  dbconn	"dbi:Pg:dbname=..."
+    PerlSetVar  dbconn  "dbi:Pg:dbname=..."
     PerlSetVar  dbuser  "<database_username>"
-    PerlSetVar  dbpass	"<database_password>"
+    PerlSetVar  dbpass  "<database_password>"
     PerlSetVar  dbcommit  off
 
     PerlHandler Gantry::Control::C::Users
@@ -312,11 +323,11 @@ The passwords are ecrypted by the crypt(3) function in perl.
 
   create table "auth_users" (
     "id"            int4 default nextval('auth_users_seq') NOT NULL,
-    "user_id"		int4,
-	"active"        bool,
+    "user_id"       int4,
+    "active"        bool,
     "user_name"     varchar,
     "passwd"        varchar,
-	"crypt"         varchar,
+    "crypt"         varchar,
     "first_name"    varchar,
     "last_name"     varchar,
     "email"         varchar

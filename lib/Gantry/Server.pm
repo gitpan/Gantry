@@ -10,6 +10,7 @@ my $engine_object;
 sub set_engine_object {
     my $self       = shift;
     $engine_object = shift;
+
 }
 
 sub handler {
@@ -22,13 +23,18 @@ sub handler {
 
 sub handle_request_test {
     my ( $self, $request ) = @_;
-	
-	my( $uri, $args ) = split( /\?/, $request );
-	
-	$ENV{PATH_INFO} 	 	= $uri || $request;
-	$ENV{REQUEST_METHOD} 	= 'GET';
-	$ENV{QUERY_STRING}	 	= $args if $args;
-	$ENV{SCRIPT_NAME} 	 	= "";
+    my $method = 'GET';
+    if ( $request =~ s/^(POST|GET)\:// ) {
+        $method = $1;
+    }
+    
+    my( $uri, $args ) = split( /\?/, $request );
+    
+    $ENV{PATH_INFO}         = $uri || $request;
+    $ENV{REQUEST_METHOD}    = $method;
+    $ENV{CONTENT_LENGTH}    = 0;
+    $ENV{QUERY_STRING}      = $args if $args;
+    $ENV{SCRIPT_NAME}       = "";
 
     # divert STDOUT to another handle that stores the returned data
     my $out_handle      = gensym;
@@ -51,8 +57,8 @@ sub handle_request_test {
         $success_code = $1;
     }
 
-	return( $success_code, $out->get_output() );
-	
+    return( $success_code, $out->get_output() );
+    
 }
 
 sub handle_request {
@@ -92,7 +98,7 @@ EO_FAILURE_RESPONSE
     select $original_handle;
 
     print "HTTP/1.0 $success_code\n" . $out->get_output();
-	
+    
 }
 
 package Gantry::Server::Tier;

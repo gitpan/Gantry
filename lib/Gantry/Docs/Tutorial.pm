@@ -430,11 +430,18 @@ That's the whole controller (save the #... where the other fields go
 
 =head2 Apps::AddressBook::Model::address
 
-To separate sql from the controller (and view) Gantry uses Class::DBI::Sweet
-(or any other object relational modeller with the same API)
-through its model base class L<Gantry::Utils::CDBI>.  Each model subclasses
-that class and represents one table in the database.  These classes are
-standard Class::DBI subclasses.  Here is ours:
+To separate sql from the controller (and view) we use Gantry with an
+Object-Relational Mapper (ORM).  For this example I will show
+Class::DBI::Sweet, since it was the first one we used.  But, you can also
+use Gantry's own native models inheriting from Gantry::Utils::Model -- or
+any other ORM responding to the Class::DBI API -- without changing the
+non-Model parts of the app.  With a bit of work on the controllers, you can
+also use DBIx::Class.
+
+Gantry provides its own base class to add to Class::DBI::Sweet, it is
+L<Gantry::Utils::CDBI>.  Each model subclasses it and represents one table
+in the database.  These classes are standard Class::DBI subclasses.  Here
+is ours:
 
     package Apps::AddressBook::Model::address;
     use strict; use warnings;
@@ -769,7 +776,7 @@ is designed for simplicity of structure.  There are basically only two
 constructs: semi-colon terminated statements and brace delimited blocks.
 
 [ Since this tutorial was writtern Bigtop has acquired tentmaker: a browser
-delivered editor.  Using it saves typing.  See Bigtop::Docs::TentMaker
+delivered editor.  Using it saves typing.  See Bigtop::Docs::TentTut
 for details. ]
 
 To show how to use Bigtop, I'll walk through the above example again, this
@@ -777,22 +784,26 @@ time using bigtop.
 
 First, type:
 
-    bigtop --new Apps::AddressBook
+    bigtop --new Apps::AddressBook address
 
 This will create a subdirectory under the current directory called
-Apps-AddressBook and fill it with the basic structure of an application.
+Apps-AddressBook and fill it with the basic structure of our application.
 
 Now, change to the Apps-AddressBook directory and edit
 docs/apps-addressbook.bigtop (feel free to rename the bigtop file).
-Alternatively, you could prepare the entire Bigtop file, then use
+(Alternatively, you could prepare the entire Bigtop file, then use
 
     bigtop --create file.bigtop all
 
-(The file for this example is in the examples directory of the Bigtop
-distribution as address.bigtop.)
+The file for this example is in the examples directory of the Bigtop
+distribution as address.bigtop and is above in the L<Complete Code Listings>
+section.)
 
 Immediately after initial generation is a good time to put the application
 under your favorite revision control system.
+
+XXX choose a fork: describe the bigtop file, or up the app, or use tentmaker
+to customize
 
 There are two required blocks in a bigtop file: config and app.  The config
 block always comes first.  Let's see what goes in it.  As in the

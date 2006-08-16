@@ -1,0 +1,287 @@
+=head1 Overview of Gantry
+
+This document explains Gantry from a high level.  But it starts by
+explaining how to install the framework and the sample apps which do
+the most to help you use it.
+
+=head1 Prerequisites
+
+To use this framework, you need Apache and mod_perl.  You may choose
+either version 1.x or version 2.x for these (but obviously the versions
+must match).
+
+For instructions on how to complete these installations, consult:
+
+	http://perl.apache.org/docs/1.0/guide/install.html
+
+or
+
+	http://perl.apache.org/docs/2.0/user/install/install.html
+
+Following their instructions will ensure that you have the most
+accurate information.
+
+=head1 Installation
+
+This project has two distinct parts: the framework and the sample apps.
+These are developed and distributed separately.  The framework and
+each sample app is a regular Perl distibution like you would find on
+CPAN (though they may be bundled together).  They use Module::Build
+instead of ExtUtils::MakeMaker.  This means that the procedure for
+installation (after you untar the distribution) is:
+
+	perl Build.pl
+	./Build
+	./Build test
+	./Build install
+
+You need to do this for the framework itself and again for each
+sample app you want to deploy.
+
+=head1 Configuration
+
+Once you have installed the framework and a sample app, you need to
+configure the app.  This amounts to including a few directives in your
+httpd.conf.  You can just add this to you system httpd.conf or to
+a virtual host within it:
+
+	Include /path/to/Billing/docs/httpd.conf
+
+See that file for clues about configuration, details follow later in
+this doc.
+
+To run the billing sample app, you must also set up a database for it.
+To create the database, use billing.sql in the docs directory of the
+distibution.  Choose any name you like for the database, but change
+the PerlSetVars in your httpd.conf appropriately (look for the ones
+that start with db).
+
+In order for the apps to serve images and style sheets, you need to
+copy the css and images directories into your document root and
+set the PerlSetVars for css_root and img_root to point to the
+Apache serveable directory where you put them.
+
+=head1 A Sample App (or two)
+
+There are three sample apps that come in one bundle.  You must install
+them separately.  They are:
+
+=over 4
+
+=item Billing
+
+A private contractor billing system.  It keeps track of who you work for,
+what you did for them, and the invoices you sent to them.  The invoices
+can be viewed as PDFs for printing, but are also stored in the database.
+
+=item Dochive
+
+A small CMS for storing journal articles.
+
+=item KrKit
+
+A tiny app to convert uploaded files from one format to another.
+
+=back
+
+=head1 How It Works
+
+Now that you have installed the framework and the sample apps, let's
+see how the pieces work together to server your users.
+
+Consider a typical request to the Billing sample application.  The user
+enters an address (or clicks on a link to it):
+
+	http://somehost/billing/companies/something/param1/param2
+
+Apache handles the initial dispatch through a C<Location> directive
+like this one from the billing app's httpd.conf:
+
+	<Location /billing/companies>
+		SetHandler perl-script
+		PerlHandler Apps::Billing::Companies
+	</Location>
+
+The C<Apps::Billing::Companies> inherits from C<Apps::Billing>, which in turn
+inherits from C<Gantry>.  The only handler you should ever need is
+in the C<Gantry>.  (Though you could override it, we never have).
+
+The handler is a template method, meaning that it performs a standard
+outline of steps calling particular methods of your subclass as it
+needs specific help or information.  Typically this sequence is
+
+	init
+	do_something
+	clean_up
+
+In init, you typically do two things: fish PerlSetVars out of the
+request object through its dir_config method and setup your database access.
+We usually have two inits for the entire app, see init in Billing.pm
+and Gantry.pm for example.  Grouping all of an apps configuration
+parameters makes them easier to find, since they all live in the same
+Location directive in the conf file.  Further, for those reading the code,
+they are all in only one or two places, again making them easier to find.
+
+In cleanup, you release any resources you need to.  But, note that
+Class::DBI based modules handle the database connection pools for you,
+so you don't usually need to put database disconnects in cleanup.
+We usually have a single cleanup for the entire app, see Billing.pm for example.
+
+All of the action methods begin with do_.  What comes after that
+is taken directly from the URL.
+
+In the do_ method, you perform whatever action you need to for the page
+the user requested.  This includes populating the view data portion of
+the site object ($site).  That view data goes to the template.
+
+In reality, the handler is a bit more complex.  But you can think of it
+like it is shown above until you care to adjust its behavior.
+
+The main mystery is, "How does it make output?"  The short answer is,
+it calls do_process (after the steps shown above).  That method is
+supplied by the template engine of your choice (ours is TT).
+When you use C<Gantry>, you do it like so (this is taken from Billing.pm):
+
+	use Gantry qw/-Engine=MP20 -TemplateEngine=TT/;
+
+The Engine here is mod_perl 2.0.  The TemplateEngine is Template Toolkit.
+
+=head2 Principles
+
+There are many principles we used in developing this framework.  See
+principles.pod.
+
+=head1 Engines
+
+A typical use statement for Gantry looks like this:
+
+	use Gantry qw/-Engine=MP20 -TemplateEngine=TT/;
+
+The framework handles Engine and TemplateEngine options specially.
+See below for how it handles TemplateEngine options.
+Engines must be in the Gantry::Engine namespace.
+The engine is responsible for exporting the following methods
+(yes, I said exporting and methods):
+
+=over 4
+
+=item apache_request
+
+Must convert the value in $$site{r} to an apache request object.
+$$site{r} is the second parameter to the handler when it is
+called as a method.
+
+=item apache_param_hash
+
+Receives the apache request object and returns a hash of the form
+parameters in it.
+
+=item err_header_out
+
+Like header_out, but for errors (see below).
+
+=item header_in
+
+Receives the name of a request header.  Must return the value in
+that header.  Useful for retrieving cookies.
+
+=item header_out
+
+Receives a key/value pair for one header.  Must store the header
+so that when output is later generated, it will be sent.
+
+=item remote_ip
+
+Receives the request object and returns the ip address of the client.
+
+=item send_http_header
+
+Must ensure that any headers previously store via header_out and
+err_header_out are sent.  (Not all engines need to do anything for
+this.  For example, mod_perl 2 sends headers during the first
+print.)
+
+=item status
+
+Receives a status string and returns the corresponding constant which
+the apache server understands.  The possible status strings are:
+
+	DECLINED
+	OK
+	REDIRECT
+	FORBIDDEN
+	SERVER_ERROR
+	HTTP_BAD_REQUEST
+	HTTP_UNAUTHORIZED
+
+=back
+
+=head1 Template Engines
+
+Template engines handle the view part of MVC processing.  Typically,
+you don't have to write any code for them, you can just use one
+included in the distribution.  But, should you want to use Mason
+or some other templating system, you will have to write a template
+engine.  These must live in the Mutant::KrKit::Template namespace.
+
+A template engine must export the following methods:
+
+=over 4
+
+=item do_action
+
+This is the actual dispatcher which calls the do_* methods of the
+modules you write.  While most do_methods merely store their data
+in the site object for later retrieval in the template, some return
+their output instead.  This method is responsible for storin
+such returned data in the site object stash.
+
+=item do_error
+
+Makes sure that errors are correctly logged.  Note that this does not
+affect what the user sees, only what is logged.
+
+=item do_process
+
+Receives the site object and must produce output directed to the
+requrest object.  (It must NOT send headers.  They are handled prior
+to calling do_process).
+
+=back
+
+=head1 Plugins
+
+In addition to loading an engine and a template engine, use Gantry
+can also load any other plugins you request.  All plugins must live
+in the Gantry::Plugins namespace.
+
+Plugins are very simple.  They are a lot like mixins from Ruby.
+Each one is a package which exports methods.  These are then available
+throughout the app as methods of the site object.  A plugin could be as
+simple as:
+
+	package Gantry::Plugins::TimeStamp;
+	use strict;
+
+	use Exporter;
+	our @ISA = ( 'Exporter' );
+	our @EXPORT = ( 'set_stamp' );
+
+	sub set_stamp {
+		my $site = shift;
+		$$site{time_stamp} = scalar localtime;
+	}
+
+To use this plugin, simply add it to the list in the use statement:
+
+	use Gantry qw/-Engine=MP20 -TemplateEngine=TT TimeStamp/;
+
+Then, whenever you need it, simply call it like so:
+
+	$site->time_stamp();
+
+=head1 Who Uses Gantry
+
+This web application framework was originally developed by Sunflower Broadband
+of Lawrence, KS (USA).  Sunflower continues to use it to deliver both internal
+and customer facing web sites.

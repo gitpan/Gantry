@@ -12,14 +12,14 @@ sub AUTOLOAD {
     my $command = our $AUTOLOAD;
     $command    =~ s/.*://;
 
-	die( "Undefined stash->view method $command" );
+    die( "Undefined stash->view method $command" );
 }
 
 #-------------------------------------------------
 # DESTROY
 #-------------------------------------------------
 sub DESTROY { }
-				
+                
 #-------------------------------------------------
 # new 
 #-------------------------------------------------
@@ -60,7 +60,7 @@ sub title {
 
     $self->{__TITLE__} = $p if defined $p;
     return( $self->{__TITLE__} );
-	
+    
 } # end title
 
 #-------------------------------------------------

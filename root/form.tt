@@ -106,7 +106,7 @@ Parameters:
 		[% view.form.legend %]
 	</legend>
 	
-	[% IF view.form.change_log %]
+	[%- IF view.form.change_log %]
 	    <div style="float: right; width: 240px">
 	
 		<fieldset>
@@ -121,11 +121,11 @@ Parameters:
     	</div>
     	</fieldset>
 		</div>
-	[% END %]
+	[%- END %]
 
     [% IF view.form.results.missing %]
         <div style="float: left; color: red">
-            <b>Missing:</b> [% view.form.results.missing.join( ', <br />' ) %]
+            <b>Missing:</b> [% view.form.results.missing.join( ', ' ) %]
             <br />
         </div>
 		<br style="clear:both" />
@@ -133,7 +133,7 @@ Parameters:
 
     [% IF view.form.results.invalid %]
         <div style="float: left;  color: red">
-            <b>Invalid:</b> [% view.form.results.invalid.join( ', <br />' ) %]
+            <b>Invalid:</b> [% view.form.results.invalid.join( ', ' ) %]
             <br />
      	</div>
 		<br style="clear:both" />
@@ -154,6 +154,7 @@ Parameters:
                     [% style_str = '' %]
                 [% END %]
 				
+				<!-- LABEL -->
 				<td class="shd" valign="top"[% style_str %] style="width: [%-
 					label_width || '30%' %]">
 					
@@ -163,12 +164,14 @@ Parameters:
 						-%]*[% END %]
 				</td>
 				
+				<!-- FORM INPUT -->
 				<td class="dta" style="width: [% field.width 
 					|| '70%' %]" valign="top">
 					
 					[% IF field.type == 'select' %]
 						<select name="[% field.name %]">
-                        [% default_field  = '';
+                        
+						[% default_field  = '';
                            database_field = '';
                            param_field    = '';
                            row_value      = ''; %]
@@ -226,6 +229,15 @@ Parameters:
 					[% ELSIF field.type == 'html' %]
 						[% field.html %]
 					
+					[% ELSIF field.type == 'date' %]
+						[%- mydate = self.params.${field.name}
+                              || view.form.row.${field.name} -%]
+						
+                        <div dojoType="dropdowndatepicker"
+                            date="[% mydate.replace( '-', '/' ) %]"
+                            fieldName="[% field.name %]">
+                        </div>
+						
 					[% ELSE %]
 						<input type="[% field.type %]" 
 							size="[% field.display_size || 30 %]"

@@ -1,21 +1,20 @@
 package Gantry::Template::Default;
 require Exporter;
 
-use Template;
 use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 
-	do_action
-	do_error
-	do_process
-	template_engine
+@ISA        = qw( Exporter );
+@EXPORT     = qw( 
+    do_action
+    do_error
+    do_process
+    template_engine
 );
 
-@EXPORT_OK 	= qw( );
+@EXPORT_OK  = qw( );
 
 ############################################################
 # Functions                                                #
@@ -24,18 +23,18 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 # $site->do_action( 'do_main|do_edit', @p )
 #-------------------------------------------------
 sub do_action {
-	my( $site, $action, @p ) = @_;
-	
-	$site->stash->controller->data( $site->$action( @p ) ); 
+    my( $site, $action, @p ) = @_;
+    
+    $site->stash->controller->data( $site->$action( @p ) ); 
 }
 
 #-------------------------------------------------
 # $site->do_error( @err )
 #-------------------------------------------------
  sub do_error {
-	my( $site, @err ) = @_;
-	
-	#$$site{r}->log_error( $msg ); 
+    my( $site, @err ) = @_;
+    
+    #$$site{r}->log_error( $msg ); 
 
 }
 
@@ -43,9 +42,9 @@ sub do_action {
 # $site->do_process( )
 #-------------------------------------------------
 sub do_process {
-	my( $site ) = @_;
-	
-	return( $site->stash->controller->data );	
+    my( $site ) = @_;
+    
+    return( $site->stash->controller->data );   
 
 } # end do_process
 
@@ -53,8 +52,8 @@ sub do_process {
 # $site->template_engine
 #-------------------------------------------------
 sub template_engine {
-	return __PACKAGE__;
-	
+    return __PACKAGE__;
+    
 } # end template_engine
 
 # EOF

@@ -10,87 +10,87 @@ use strict;
 # Main Execution Begins Here                                         #
 ######################################################################
 sub handler : method { 
-	my( $self, $r ) = @_; 
+    my( $self, $r ) = @_; 
 
-	my $remote_ip = $self->remote_ip( $r );
+    my $remote_ip = $self->remote_ip( $r );
 
-	# Range, or specfic ips.
-	my $ranges 	= (	$r->dir_config( 'AuthAllowRanges' ) 
-		|| $r->dir_config( 'auth_allow_ranges' ) );
-		
-	my $ips 	= ( $r->dir_config( 'AuthAllowIps' )
-		|| $r->dir_config( 'auth_allow_ips' ) );
-		
-	my $ignore 	= ( $r->dir_config( 'AccessNoOverRide' )
-		|| $r->dir_config( 'ignore_access_handler' ) );
-	
-	$ignore 	= 0 if ( ! defined $ignore );
+    # Range, or specfic ips.
+    my $ranges  = ( $r->dir_config( 'AuthAllowRanges' ) 
+        || $r->dir_config( 'auth_allow_ranges' ) );
+        
+    my $ips     = ( $r->dir_config( 'AuthAllowIps' )
+        || $r->dir_config( 'auth_allow_ips' ) );
+        
+    my $ignore  = ( $r->dir_config( 'AccessNoOverRide' )
+        || $r->dir_config( 'ignore_access_handler' ) );
+    
+    $ignore     = 0 if ( ! defined $ignore );
 
-	if ( defined $ranges ) {
-		# make the decimal version of the ip.
+    if ( defined $ranges ) {
+        # make the decimal version of the ip.
 
-		my @remote = split( '\.', $remote_ip );
+        my @remote = split( '\.', $remote_ip );
 
-		my $dip = ip2bin( $remote[0] );
-		$dip  	.= ip2bin( $remote[1] );
-		$dip 	.= ip2bin( $remote[2] );
-		$dip 	.= ip2bin( $remote[3] );
+        my $dip = ip2bin( $remote[0] );
+        $dip    .= ip2bin( $remote[1] );
+        $dip    .= ip2bin( $remote[2] );
+        $dip    .= ip2bin( $remote[3] );
 
-		# This is broken in 5.05
-		#my $dip1 = sprintf( "%08b %08b %08b %08b", split( '\.', $remote_ip ));
-		
-		for my $range ( split( ',', $ranges ) ) {
-			my ( $ranged, $slash ) = $range =~ /^(.*)\/(\d+)$/;
+        # This is broken in 5.05
+        #my $dip1 = sprintf( "%08b %08b %08b %08b", split( '\.', $remote_ip ));
+        
+        for my $range ( split( ',', $ranges ) ) {
+            my ( $ranged, $slash ) = $range =~ /^(.*)\/(\d+)$/;
 
-			my @ranger 	= split( '\.', $ranged );
-			my $drng 	= ip2bin( $ranger[0] );
-			$drng  		.= ip2bin( $ranger[1] );
-			$drng 		.= ip2bin( $ranger[2] );
-			$drng 		.= ip2bin( $ranger[3] );
+            my @ranger  = split( '\.', $ranged );
+            my $drng    = ip2bin( $ranger[0] );
+            $drng       .= ip2bin( $ranger[1] );
+            $drng       .= ip2bin( $ranger[2] );
+            $drng       .= ip2bin( $ranger[3] );
 
-			# This is broken in 5.05
-			#my $drng = sprintf( "%08b%08b%08b%08b", split( '\.', $ranged ) );
+            # This is broken in 5.05
+            #my $drng = sprintf( "%08b%08b%08b%08b", split( '\.', $ranged ) );
 
-			if ( substr( $dip, 0, $slash) eq substr( $drng, 0, $slash ) ) { 
+            if ( substr( $dip, 0, $slash) eq substr( $drng, 0, $slash ) ) { 
 
-				if ( ! $r->user ) { 
-					$r->user( 'anoymous_ip_user' );
-				}
-				
-				if ( ! $ignore ) {
-					$r->set_handlers( PerlAuthenHandler => [ 
-						sub{ $self->status_const( 'OK' ) }
-					] );
-					$r->set_handlers( PerlAuthzHandler 	=> [
-						sub{ $self->status_const( 'OK' ) } ] );
-				}
+                if ( ! $r->user ) { 
+                    $r->user( 'anoymous_ip_user' );
+                }
+                
+                if ( ! $ignore ) {
+                    $r->set_handlers( PerlAuthenHandler => [ 
+                        sub{ $self->status_const( 'OK' ) }
+                    ] );
+                    $r->set_handlers( PerlAuthzHandler  => [
+                        sub{ $self->status_const( 'OK' ) } ] );
+                }
 
-				return( $self->status_const( 'OK' ) );
-			}
-		}
-	}
+                return( $self->status_const( 'OK' ) );
+            }
+        }
+    }
 
-	if ( defined $ips ) {
-		for my $ip ( split( ',', $ips ) ) {
-			if ( $ip =~ /^\s?$remote_ip\s?$/ ) {
-				if ( ! $r->user ) { 
-					$r->user( 'anoymous_ip_user' );
-				}
+    if ( defined $ips ) {
+        for my $ip ( split( ',', $ips ) ) {
+            if ( $ip =~ /^\s?$remote_ip\s?$/ ) {
+                if ( ! $r->user ) { 
+                    $r->user( 'anoymous_ip_user' );
+                }
 
-				if ( ! $ignore ) {
-					$r->set_handlers( PerlAuthenHandler => [ 
-						sub{ $self->status_const( 'OK' ) }
-					] );
-					$r->set_handlers( PerlAuthzHandler 	=> [
-						sub{ $self->status_const( 'OK' ) } ] );
-				}
+                if ( ! $ignore ) {
+                    $r->set_handlers( PerlAuthenHandler => [ 
+                        sub{ $self->status_const( 'OK' ) }
+                    ] );
+                    $r->set_handlers( PerlAuthzHandler  => [
+                        sub{ $self->status_const( 'OK' ) } ] );
+                }
 
-				return( $self->status_const( 'OK' ) );
-			}
-		}
-	}
+                return( $self->status_const( 'OK' ) );
+            }
+        }
+    }
 
-	return( $self->status_const( 'DECLINED' ) ); 
+    return( $self->status_const( 'DECLINED' ) ); 
 
 } # END handler 
 
@@ -100,17 +100,17 @@ sub handler : method {
 # dec 2 bin for the ip address.
 #-------------------------------------------------
 sub ip2bin {
-	my $dec = shift;
+    my $dec = shift;
 
-	my $bin = unpack( "B32", pack( "N", $dec ) );
-	$bin    =~ s/^0+(?=\d)//;
+    my $bin = unpack( "B32", pack( "N", $dec ) );
+    $bin    =~ s/^0+(?=\d)//;
 
-	if ( length( $bin ) < 8 ) { 
-		return( '0' x ( 8 - length( $bin ) ) . $bin );
-	}
-	else {
-		return( $bin );
-	}
+    if ( length( $bin ) < 8 ) { 
+        return( '0' x ( 8 - length( $bin ) ) . $bin );
+    }
+    else {
+        return( $bin );
+    }
 } # END ip2bin
 
 #-------------------------------------------------
@@ -163,7 +163,7 @@ to override do not set if you want the override to happen.
     
     PerlSetVar  auth_allow_ranges  "192.168.1.0/24,192.168.2.0/24"
     PerlSetVar  auth_allow_ips     "127.0.0.1" 
-	PerlSetVar	auth_ignore_access_handler  1 
+    PerlSetVar  auth_ignore_access_handler  1 
 
     AuthType Basic
     AuthName "My Auth Location"

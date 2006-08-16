@@ -6,36 +6,18 @@
     <head>
         <title>Auth Control: [% title %]</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<link rel="stylesheet" type="text/css" media="screen"
-			title="Default" href="[% site.css_rootp %]/default.css" />
 
+        <style type="text/css">
+            [% INCLUDE 'css/default.css' %]
+        </style>        
     </head>
     <body id="">
 	
-	<!-- START: top nav logo (using page element style) - - >
-	<div id="page">
-		<img width="740" src="[% self.img_rootp %]/nav_banner3.jpg" 
-			alt="Billing Logo" />
-	</div>
-	<! - - END: top nav logo -->
-
 	<br />
 
-	<!-- START: top navigation -->
-	<div id="nav">
-		<div class="lowtech">Site Navigation:</div>	
-		<ul>
-			<li><a href="[% site.app_rootp %]/users">Users </a></li>
-			<li><a href="[% site.app_rootp %]/groups">Groups </a></li>
-			<li><a href="[% site.app_rootp %]/pages">Pages </a></li>
-		</ul>
-	</div>
-	<!-- END: top navigation -->
-
 	<!-- START: title bar -->
-	<div id="title">
-		<h1>[% title %]</h1>
-		<p>&nbsp;</p>
+	<div id="title_bar">
+		[% title %]
 	</div>
 	<!-- END: title bar -->
 	
@@ -56,22 +38,17 @@
 
 	<!-- START: footer -->
 	<div id="footer">
+        <div id="site_links">
+            [% FOREACH page IN self.site_links %]
+            <a href='[% page.link %]'> [% page.label %] </a>
+            [% IF ! loop.last; ' | '; END; %]
+            [% END %]
+         </div>
+        
 		[% USE Date %]
 		<p>Page generated on 
 		[% Date.format(Date.now, "%A, %B %d, %Y at %l:%M %p") %]
 		[% IF site.user; "for $site.user"; END; %]
-		<br />
-			
-		This site is licensed under a 
-		<a rel="license" href="http://creativecommons.org/licenses/by/2.0/">
-		Creative Commons License</a>,<br />
-		except where otherwise noted.
-		<br />
-		<a rel="license" href="http://creativecommons.org/licenses/by/2.0/">
-		<img src="[% site.img_rootp %]/cc.primary.srr.gif" width="88" 
-			height="31" alt="Creative Commons License" border="0" /></a>
-
-		</p>
 	</div>
 	<!-- END: footer -->
 	

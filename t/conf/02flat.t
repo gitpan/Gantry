@@ -4,7 +4,19 @@ use Test::More tests => 12;
 use Test::Exception;
 use File::Spec;
 
-use Gantry::Conf;
+BEGIN {
+    eval { require Gantry::Conf; };
+    my $skip_all = 1 if ( $@ );
+
+    SKIP: {
+        skip "couldn't use Gantry::Conf (missing dependencies?)", 12
+                if $skip_all;
+    }
+    exit 0 if $skip_all;
+
+    # If Gantry::Conf ever decides to export add this:
+    # use Gantry::Conf;
+}
 
 #-------------------------------------------------------------------------
 # no params supplied

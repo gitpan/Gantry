@@ -22,49 +22,49 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 
-	apache_param_hash
-	apache_request
-	base_server
-	cast_custom_error
+@ISA        = qw( Exporter );
+@EXPORT     = qw( 
+    apache_param_hash
+    apache_request
+    base_server
+    cast_custom_error
     declined_response
     dispatch_location
-	engine
+    engine
     engine_init
-	err_header_out
+    err_header_out
     fish_config
     fish_location
     fish_method
     fish_path_info
     fish_uri
     fish_user
-	log_error
-	get_arg_hash
-	get_auth_dbh
+    log_error
+    get_arg_hash
+    get_auth_dbh
     get_cached_config
     get_config
-	get_dbh
-	header_in
-	header_out
+    get_dbh
+    header_in
+    header_out
     is_status_declined
-	port
+    port
     print_output
-	remote_ip
-	redirect_response
-	send_http_header
-	send_error_output
-	server_root
+    remote_ip
+    redirect_response
+    send_http_header
+    send_error_output
+    server_root
     set_cached_config
     set_content_type
     set_no_cache
     set_req_params
-	status_const
+    status_const
     success_code
 );
 
-@EXPORT_OK 	= qw( );
-					
+@EXPORT_OK  = qw( );
+                    
 ############################################################
 # Functions                                                #
 ############################################################
@@ -76,7 +76,7 @@ sub log_error {
     my( $self, $msg ) = @_;
 
     $self->r->log_error( $msg );
-	
+    
 } 
 
 #-------------------------------------------------
@@ -96,14 +96,14 @@ sub cast_custom_error {
 # $self->apache_param_hash( $req )
 #-------------------------------------------------
 sub apache_param_hash {
-	my( $self, $req ) = @_;
-	
-	my $params = {};
-	foreach my $p ( $req->param ) {
-		$params->{$p} = $req->param( $p );
-	}
+    my( $self, $req ) = @_;
+    
+    my $params = {};
+    foreach my $p ( $req->param ) {
+        $params->{$p} = $req->param( $p );
+    }
 
-	return( $params );
+    return( $params );
 
 } # end: apache_param_hash
 
@@ -111,23 +111,23 @@ sub apache_param_hash {
 # $self->apache_request( )
 #-------------------------------------------------
 sub apache_request {
-	my( $self, $r ) = @_;
-	
-	return( 
-		$r ? Apache2::Request->new( $r, POST_MAX => $self->post_max )
-		: Apache2::Request->new( $self->r, POST_MAX => $self->post_max ) );
-	
+    my( $self, $r ) = @_;
+    
+    return( 
+        $r ? Apache2::Request->new( $r, POST_MAX => $self->post_max )
+        : Apache2::Request->new( $self->r, POST_MAX => $self->post_max ) );
+    
 } # end: apache_request
 
 #-------------------------------------------------
 # $self->base_server( $r )
 #-------------------------------------------------
 sub base_server {
-	my( $self, $r ) = ( shift, shift );
+    my( $self, $r ) = ( shift, shift );
 
-	return (
-		$r ? $r->connection->base_server
-		: $self->r->connection->base_server );
+    return (
+        $r ? $r->connection->base_server
+        : $self->r->connection->base_server );
 
 } # end base_server
 
@@ -153,7 +153,7 @@ sub dispatch_location {
 # $self->engine
 #-------------------------------------------------
 sub engine {
-	return __PACKAGE__;
+    return __PACKAGE__;
 
 } # end engine
 
@@ -175,9 +175,9 @@ sub engine_init {
 # $self->err_header_out( $header_key, $header_value )
 #-------------------------------------------------
 sub err_header_out {
-	my( $self, $k, $v ) = @_;
+    my( $self, $k, $v ) = @_;
 
-	$self->r->err_headers_out->add( $k => $v );
+    $self->r->err_headers_out->add( $k => $v );
 
 } # end err_header_out
 
@@ -249,14 +249,14 @@ sub get_arg_hash {
     my( $self, $r ) = @_;
 
     my %args;
-	if ( $r ) {
-		%args = $r->args;
-	}
-	else {
-	    %args = $self->r->args;
+    if ( $r ) {
+        %args = $r->args;
     }
-   	return wantarray ? %args : \%args;
-										
+    else {
+        %args = $self->r->args;
+    }
+    return wantarray ? %args : \%args;
+                                        
 } # end get_arg_hash
 
 #-------------------------------------------------
@@ -334,9 +334,9 @@ sub get_dbh {
 # $self->header_in( )
 #-------------------------------------------------
 sub header_in {
-	my( $self, $key ) = @_;
-	
-	return $self->r->headers_in->{ $key };
+    my( $self, $key ) = @_;
+    
+    return $self->r->headers_in->{ $key };
 
 } # end header_in
 
@@ -344,9 +344,9 @@ sub header_in {
 # $self->header_out( $header_key, $header_value )
 #-------------------------------------------------
 sub header_out {
-	my( $self, $k, $v ) = @_;
-	
-	$self->r->headers_out->set( $k => $v );	
+    my( $self, $k, $v ) = @_;
+    
+    $self->r->headers_out->set( $k => $v ); 
 
 } # end header_out
 
@@ -365,10 +365,10 @@ sub is_status_declined {
 # $self->port( $r )
 #-------------------------------------------------
 sub port {
-	my( $self, $r ) = ( shift, shift );
+    my( $self, $r ) = ( shift, shift );
   
-	my $s = Apache2::ServerUtil->server;
-	return( $s->port );	
+    my $s = Apache2::ServerUtil->server;
+    return( $s->port ); 
 
 } # end port
 
@@ -395,11 +395,11 @@ sub redirect_response {
 # $self->remote_ip( $r )
 #-------------------------------------------------
 sub remote_ip {
-	my( $self, $r ) = ( shift, shift );
-	
-	return( 
-		$r ? $r->connection->remote_ip
-		: $self->r->connection->remote_ip );
+    my( $self, $r ) = ( shift, shift );
+    
+    return( 
+        $r ? $r->connection->remote_ip
+        : $self->r->connection->remote_ip );
 
 } # end remote_ip
 
@@ -418,8 +418,8 @@ sub send_error_output {
 # $self->send_http_header( )
 #-------------------------------------------------
 sub send_http_header {
-	
-	# do nothing for mod_perl 2.0
+    
+    # do nothing for mod_perl 2.0
 
 } # send_http_header
 
@@ -427,9 +427,9 @@ sub send_http_header {
 # $self->server_root( $r )
 #-------------------------------------------------
 sub server_root {
-	my( $self ) = ( shift );
-	
-	return( Apache2::ServerUtil::server_root() );
+    my( $self ) = ( shift );
+    
+    return( Apache2::ServerUtil::server_root() );
 
 } # end server_root
 
@@ -465,17 +465,17 @@ sub set_req_params {
 # $self->status_const( 'OK | DECLINED | REDIRECT' )
 #-------------------------------------------------
 sub status_const {
-	my( $self, $status ) = @_;
-	
-	return Apache2::Const::DECLINED  		if uc $status eq 'DECLINED';
-	return Apache2::Const::OK		 		if uc $status eq 'OK';
-	return Apache2::Const::REDIRECT  		if uc $status eq 'REDIRECT';
-	return Apache2::Const::FORBIDDEN 		if uc $status eq 'FORBIDDEN';
-	return Apache2::Const::SERVER_ERROR 	if uc $status eq 'SERVER_ERROR';
-	return Apache2::Const::HTTP_BAD_REQUEST if uc $status eq 'HTTP_BAD_REQUEST';
-	return Apache2::Const::HTTP_UNAUTHORIZED if uc $status eq 'HTTP_UNAUTHORIZED';
-	
-	die( "Undefined constant $status" );
+    my( $self, $status ) = @_;
+    
+    return Apache2::Const::DECLINED         if uc $status eq 'DECLINED';
+    return Apache2::Const::OK               if uc $status eq 'OK';
+    return Apache2::Const::REDIRECT         if uc $status eq 'REDIRECT';
+    return Apache2::Const::FORBIDDEN        if uc $status eq 'FORBIDDEN';
+    return Apache2::Const::SERVER_ERROR     if uc $status eq 'SERVER_ERROR';
+    return Apache2::Const::HTTP_BAD_REQUEST if uc $status eq 'HTTP_BAD_REQUEST';
+    return Apache2::Const::HTTP_UNAUTHORIZED if uc $status eq 'HTTP_UNAUTHORIZED';
+    
+    die( "Undefined constant $status" );
 
 } # end status_const
 

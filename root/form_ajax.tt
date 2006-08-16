@@ -6,8 +6,6 @@
 		[% view.form.legend %]
 	</legend>
 	
-	<div id="view"></div>
-	
 	<div id="float_left">
 		<table class="results" cellspacing="[% view.form.cellspacing || 0 %]"
 			 border=0 width="[% view.form.width %]">
@@ -30,13 +28,15 @@
 			</tr>
 			[% END %]
 
-
+        <tr>
+            <td colspan="2">
+                <div id="view"></div>
+            </td>
+        </tr>
 		</table>
 	</div>
 	
 </fieldset>
-</form>
-
 
 [% IF view.form.back %]
 	<br />

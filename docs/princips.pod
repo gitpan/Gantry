@@ -1,0 +1,106 @@
+=head1 Principles of Gantry
+
+This framework grew over several years in the hands of several programmers.
+Though we haven't always made bumper sticker mottos, some come to mind
+which might help you understand what we do and why.
+
+=over 4
+
+=item MVC is the correct standard for web apps.
+
+Once upon a time our do_* methods queried our databases directly and
+produced HTML output.  The flow of our modules was hard to follow.
+The markup was hard to work on.  Worst of all much of the sql and
+markup was repeated over and over again with cp or cut and paste.
+
+=item Data models should be Class::DBI::Sweet classes.
+
+Instead of hand writing each select, we rejoice in the simplicity of
+Class::DBI, but we need some Sweet features, like order_by on retrieve_all.
+
+=item Views should be handled by the Template Toolkit.
+
+Yes, we used to have an in house templating system.  It was simple, so
+simple that do_* methods had to produce almost the final form of our html
+output.  Only wrappers and simple substitutions were applied.  We want
+more, but there's no need to write it here.
+
+=item A few templates go a long way.
+
+At first, we thought that we might need a template for each do_* method.
+Then we coded and realized that we need only a few templates which can be
+shared widely.  For instance, there is only one form template in the Billing
+sample app and it is very similar to the one we use for our production
+applications.
+
+=item Never code in a template.
+
+Even though Template Toolkit allows you to write raw Perl in the template,
+please don't.  This just opens up too many problems, including security
+problems.  But primarily, it defeats the separation of concerns which is
+so useful for people to keep track of a project.  Our minds work better
+if things are separated into manageable pieces.
+
+=item Avoid markup in code.
+
+Following on the previous principle, avoid putting any sort of display
+markup in your code.  Rather, build a data structure which the template
+can unpack into marked up form.
+
+There are cases where the two concerns meet in the middle.  In our
+applications, popup calendars are isolated into a single module which
+computes the dates and generates the javascript for the calendars.
+The alternative would be to duplicate a lot of computation in both
+the calendar plugin and the template.
+
+=item If you must include markup in the code, isolate it.
+
+=item If you must code in template, write a plugin.
+
+=item Explicit is better than implicit.
+
+In some frameworks, extreme magic is employed so that only one Location
+directive is needed for each application.  This has two problems.  First,
+it requires the urls to exactly match the modules which handle them.  This
+immediately defeats our naming convention.  We place all of our apps in
+the Apps:: name space, but we never include 'apps' in the url.  Second, and
+more importantly, it baffles new people who can't immediately determine
+dispatch from the httpd.conf alone.
+
+=item mod_perl rules, but there are different versions, all must be supported.
+
+When converting to a new version of mod_perl, not all apps will move
+at once.  Hence the framework provides a plugin scheme for different
+mod_perl engines.
+
+=item Plugin only things that everyone will need.
+
+Plugins add a bit of complexity to a framework.  We've chosen to use
+them for specifying things like which version of mod_perl you have
+and what templating system you use.  For other things that only
+some modules even care about, we just use the standard or CPAN module
+directly.  The rule is this: if Gantry.pm calls the methods,
+there will be plugins, otherwise not.
+
+=item Fewer files are better than more.
+
+Since our CDBI model packages are typically only 10-15 lines, we
+put all of them in the same file for easy access.
+
+=item Configuration information belongs in httpd.conf.
+
+There is a lot of data in any application which should not be hard coded.
+In particular, this allows development and production code to be identical,
+but have different effects on the outside world.
+
+=item Restarting the web server is painful, do it infrequently.
+
+The following would be better advice if Apache2::Reload wasn't broken.
+
+If you develop with the same architechture as you deploy, you must
+reinstall the app on each change, then restart the server.  It is better
+to leave the app in a development directory, use lib and Apache::Reload or
+Apache2::Reload.  These ensure that the app is reloaded as needed.  Note
+that changes to the CDBI modules usually require a server restart.
+
+=back

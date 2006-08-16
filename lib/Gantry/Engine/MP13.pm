@@ -5,7 +5,7 @@ use strict;
 use Carp qw( croak );
 
 use Apache::Constants qw( DECLINED OK REDIRECT AUTH_REQUIRED 
-							SERVER_ERROR FORBIDDEN );
+                            SERVER_ERROR FORBIDDEN );
 use Apache::Request;
 
 use Gantry::Conf;
@@ -16,49 +16,49 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 
-	apache_param_hash
-	apache_request
-	base_server
-	cast_custom_error
+@ISA        = qw( Exporter );
+@EXPORT     = qw( 
+    apache_param_hash
+    apache_request
+    base_server
+    cast_custom_error
     declined_response
     dispatch_location
-	engine
+    engine
     engine_init
-	err_header_out
+    err_header_out
     fish_config
     fish_location
     fish_method
     fish_path_info
     fish_uri
     fish_user
-	get_arg_hash
+    get_arg_hash
     get_auth_dbh
     get_cached_config
     get_config
     get_dbh
-	header_in
-	header_out
+    header_in
+    header_out
     is_status_declined
-	log_error
-	port
+    log_error
+    port
     print_output
     redirect_response
-	remote_ip
-	send_http_header
+    remote_ip
+    send_http_header
     send_error_output
-	server_root	
+    server_root 
     set_cached_config
     set_content_type
     set_no_cache
     set_req_params
-	status_const
+    status_const
     success_code
 );
 
-@EXPORT_OK 	= qw( );
-					
+@EXPORT_OK  = qw( );
+                    
 ############################################################
 # Functions                                                #
 ############################################################
@@ -77,24 +77,24 @@ sub log_error {
 # $self->cast_custom_error( error )
 #-------------------------------------------------
 sub cast_custom_error {
-	my( $self, $error_page, $die_msg ) = @_;
+    my( $self, $error_page, $die_msg ) = @_;
 
-	$self->r->log_error( 'custom ' . $die_msg );
-	$self->r->custom_response( 
-		$self->status_const( 'FORBIDDEN' ), $error_page );
-	
-	return( $self->status_const( 'FORBIDDEN' ) );
+    $self->r->log_error( 'custom ' . $die_msg );
+    $self->r->custom_response( 
+        $self->status_const( 'FORBIDDEN' ), $error_page );
+    
+    return( $self->status_const( 'FORBIDDEN' ) );
 }
 
 #-------------------------------------------------
 # $self->apache_param_hash( $req )
 #-------------------------------------------------
 sub apache_param_hash {
-	my( $self, $req ) = @_;
-	
-	my $hash = $req->param;
-		
-	return( $hash );
+    my( $self, $req ) = @_;
+    
+    my $hash = $req->param;
+        
+    return( $hash );
 
 } # end: apache_param_hash
 
@@ -102,24 +102,24 @@ sub apache_param_hash {
 # $self->apache_request( )
 #-------------------------------------------------
 sub apache_request {
-	my( $self, $r ) = @_;
-	
-	return( 
-		$r ? Apache::Request->new( $r, POST_MAX => $self->post_max )
-		: Apache::Request->new( $self->r, POST_MAX => $self->post_max ) );
-	
+    my( $self, $r ) = @_;
+    
+    return( 
+        $r ? Apache::Request->new( $r, POST_MAX => $self->post_max )
+        : Apache::Request->new( $self->r, POST_MAX => $self->post_max ) );
+    
 } # end: apache_request
 
 #-------------------------------------------------
 # $self->base_server( $r )
 #-------------------------------------------------
 sub base_server {
-	my( $self, $r ) = ( shift, shift );
+    my( $self, $r ) = ( shift, shift );
 
-	return( 
-		$r ? $r->server->server_hostname
-		: $self->r->server->server_hostname );
-	
+    return( 
+        $r ? $r->server->server_hostname
+        : $self->r->server->server_hostname );
+    
 } # end base_server
 
 #-------------------------------------------------
@@ -144,7 +144,7 @@ sub dispatch_location {
 # $self->engine
 #-------------------------------------------------
 sub engine {
-	return __PACKAGE__;
+    return __PACKAGE__;
 
 } # end engine
 
@@ -154,7 +154,7 @@ sub engine {
 sub engine_init {
     my $self = shift;
     my $r    = shift;
-	
+    
     $self->r( $r );
 } # END engine_init
 
@@ -162,9 +162,9 @@ sub engine_init {
 # $self->err_header_out( $key, $value ) 
 #-------------------------------------------------
 sub err_header_out {
-	my( $self, $k, $v ) = @_;
-	
-	$self->r->err_header_out( $k => $v );
+    my( $self, $k, $v ) = @_;
+    
+    $self->r->err_header_out( $k => $v );
 
 } # end err_header_out
 
@@ -178,9 +178,9 @@ sub fish_config {
     my $conf     = $self->get_config();
 
     return $$conf{$param} if ( defined $conf and defined $$conf{$param} );
-   	
+    
     # otherwise, use dir_config for traditional approach
-	return $self->r()->dir_config( $param );
+    return $self->r()->dir_config( $param );
 
 } # END fish_config
 
@@ -233,17 +233,17 @@ sub fish_user {
 # $self->get_arg_hash
 #-------------------------------------------------
 sub get_arg_hash {
-	my( $self, $r ) = @_;
-	
-	my %args;
-	if ( $r ) {
-		%args = $r->args;
-	}
-	else {
-		%args = $self->r->args;
-	}
-	
-	return wantarray ? %args : \%args;
+    my( $self, $r ) = @_;
+    
+    my %args;
+    if ( $r ) {
+        %args = $r->args;
+    }
+    else {
+        %args = $self->r->args;
+    }
+    
+    return wantarray ? %args : \%args;
 
 } # end get_arg_hash
 
@@ -286,7 +286,7 @@ sub get_config {
             if ( not $cached and defined $conf );
 
     return $conf;
-	
+    
 } # END get_config
 
 sub get_cached_config {
@@ -316,9 +316,9 @@ sub get_dbh {
 # $self->header_in( $key )
 #-------------------------------------------------
 sub header_in {
-	my( $self, $key ) = @_;
-	
-	return $self->r->header_in($key);
+    my( $self, $key ) = @_;
+    
+    return $self->r->header_in($key);
 
 } # end header_in
 
@@ -326,9 +326,9 @@ sub header_in {
 # $self->header_out( $header_key, $header_value )
 #-------------------------------------------------
 sub header_out {
-	my( $self, $k, $v ) = @_;
-	
-	$self->r->header_out( $k => $v );	
+    my( $self, $k, $v ) = @_;
+    
+    $self->r->header_out( $k => $v );   
 
 } # end header_out
 
@@ -347,10 +347,10 @@ sub is_status_declined {
 # $self->port( $r ) - NOT TIED TO API YET
 #-------------------------------------------------
 sub port {
-	my( $self, $r ) = ( shift, shift );
-		
-	return( '' );
-	
+    my( $self, $r ) = ( shift, shift );
+        
+    return( '' );
+    
 } # end port
 
 #-------------------------------------------------
@@ -376,11 +376,11 @@ sub redirect_response {
 # $self->remote_ip( $r )
 #-------------------------------------------------
 sub remote_ip {
-	my( $self, $r ) = @_;
+    my( $self, $r ) = @_;
 
-	return( 
-		$r ? $r->connection->remote_ip
-		: $self->r->connection->remote_ip );
+    return( 
+        $r ? $r->connection->remote_ip
+        : $self->r->connection->remote_ip );
 
 } # end remote_ip
 
@@ -399,9 +399,9 @@ sub send_error_output {
 # $self->send_http_header( )
 #-------------------------------------------------
 sub send_http_header {
-	my( $self ) = @_;
-	
-	$self->r->send_http_header; 
+    my( $self ) = @_;
+    
+    $self->r->send_http_header; 
 
 } # end send_http_header
 
@@ -409,10 +409,10 @@ sub send_http_header {
 # $self->server_root( $r ) - NOT TIED TO API YET
 #-------------------------------------------------
 sub server_root {
-	my( $self, $r ) = ( shift, shift );
+    my( $self, $r ) = ( shift, shift );
 
-	return('');
-	
+    return('');
+    
 } # end server_root
 
 #-------------------------------------------------
@@ -448,17 +448,17 @@ sub set_req_params {
 # $self->status_const( 'OK | DECLINED | REDIRECT' )
 #-------------------------------------------------
 sub status_const {
-	my( $self, $status ) = @_;
-	
-	return DECLINED  		if uc $status eq 'DECLINED';
-	return OK		 		if uc $status eq 'OK';
-	return REDIRECT  		if uc $status eq 'REDIRECT'; 
-	return FORBIDDEN 		if uc $status eq 'FORBIDDEN'; 
-	return AUTH_REQUIRED 	if uc $status eq 'AUTH_REQUIRED';
-	return AUTH_REQUIRED 	if uc $status eq 'HTTP_UNAUTHORIZED';
-	return SERVER_ERROR 	if uc $status eq 'SERVER_ERROR';
+    my( $self, $status ) = @_;
+    
+    return DECLINED         if uc $status eq 'DECLINED';
+    return OK               if uc $status eq 'OK';
+    return REDIRECT         if uc $status eq 'REDIRECT'; 
+    return FORBIDDEN        if uc $status eq 'FORBIDDEN'; 
+    return AUTH_REQUIRED    if uc $status eq 'AUTH_REQUIRED';
+    return AUTH_REQUIRED    if uc $status eq 'HTTP_UNAUTHORIZED';
+    return SERVER_ERROR     if uc $status eq 'SERVER_ERROR';
 
-	die( "Undefined constant $status" );
+    die( "Undefined constant $status" );
 
 } # end status_const
 

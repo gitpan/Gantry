@@ -7,15 +7,15 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 
-	do_action
-	do_error
-	do_process 
-	template_engine
+@ISA        = qw( Exporter );
+@EXPORT     = qw( 
+    do_action
+    do_error
+    do_process 
+    template_engine
 );
 
-@EXPORT_OK 	= qw( );
+@EXPORT_OK  = qw( );
 
 my %tt;
 
@@ -26,11 +26,11 @@ my %tt;
 # $self->do_action( 'do_main|do_edit', @p )
 #-------------------------------------------------
 sub do_action {
-	my( $self, $action, @p ) = @_;
-	
-	# stash the output from the action ie. do_main, do_edit
-	# for use when do_process is call.
-	$self->stash->controller->data( $self->$action( @p ) ); 
+    my( $self, $action, @p ) = @_;
+    
+    # stash the output from the action ie. do_main, do_edit
+    # for use when do_process is call.
+    $self->stash->controller->data( $self->$action( @p ) ); 
 
 } # end do_action
 
@@ -38,9 +38,9 @@ sub do_action {
 # $self->do_error( @err )
 #-------------------------------------------------
 sub do_error {
-	my( $self, @err ) = @_;
-	
-	#$self->r->log_error( join( "\n", @err ) ); 
+    my( $self, @err ) = @_;
+    
+    #$self->r->log_error( join( "\n", @err ) ); 
 
 } # end do_error
 
@@ -48,47 +48,47 @@ sub do_error {
 # $site->do_process(  )
 #-------------------------------------------------
 sub do_process {
-	my( $self ) = @_;
-	
-	# Check template disabled flag
-	if ( $self->template_disable ) {
-		return( $self->stash->controller->data );
-	}
-	
-	# Process through template tookit
-	else {
+    my( $self ) = @_;
+    
+    # Check template disabled flag
+    if ( $self->template_disable ) {
+        return( $self->stash->controller->data );
+    }
+    
+    # Process through template tookit
+    else {
         if ( not defined $tt{ $self->location } ) {
-		    $tt{ $self->location } = Template->new({
-		    	WRAPPER 		=> $self->template_wrapper,
-		    	INCLUDE_PATH 	=> $self->root, 		
-		    	DEFAULT			=> $self->template_default,
-		    });
+            $tt{ $self->location } = Template->new({
+                WRAPPER         => $self->template_wrapper,
+                INCLUDE_PATH    => $self->root,         
+                DEFAULT         => $self->template_default,
+            });
         }
-		
-		# Use the template defined in controller use template from PerlSetVar
-		if ( ! defined  $self->stash->view->template ) {
-			$self->stash->view->template( $self->template );
-		}
-		
-		return( $self->stash->view->data . $self->stash->controller->data ) 
-			if ! $self->stash->view->template();
+        
+        # Use the template defined in controller use template from PerlSetVar
+        if ( ! defined  $self->stash->view->template ) {
+            $self->stash->view->template( $self->template );
+        }
+        
+        return( $self->stash->view->data . $self->stash->controller->data ) 
+            if ! $self->stash->view->template();
 
-		my $page;
-		$tt{ $self->location }->process( $self->stash->view->template, 
-			{ self => $self, site => $self, view => $self->stash->view }, 
-			\$page 
-		) || die( "Template Error: " . $tt{ $self->location }->error );	
-		
-		return( $page );
-	}
+        my $page;
+        $tt{ $self->location }->process( $self->stash->view->template, 
+            { self => $self, site => $self, view => $self->stash->view }, 
+            \$page 
+        ) || die( "Template Error: " . $tt{ $self->location }->error ); 
+        
+        return( $page );
+    }
 } # end do_process
 
 #-------------------------------------------------
 # $site->template_engine
 #-------------------------------------------------
 sub template_engine {
-	return __PACKAGE__;
-	
+    return __PACKAGE__;
+    
 } # end template_engine
 # EOF
 1;

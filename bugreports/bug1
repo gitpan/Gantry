@@ -1,0 +1,66 @@
+The following problem was caused by the CGI engine trying to bless
+the second arg to its constructor when it is undefined.  To correct it,
+I made {} the default second argument if the first argument is false.
+
+From: "Красимир Беров" <k.berov@gmail.com>
+To: "Phil Crow" <pcrow@sunflowerbroadband.com>
+Subject: Re: Gantry ?bigtop?
+Date: Wed, 10 May 2006 19:33:10 +0300
+
+I thank You so much!!!
+I installed Gantry at home and it worked almost from the first time
+There is a problem thought You would like to know about.
+When I tried to run the example from the QuickStart, the following
+does not work:
+
+    my $cgi = Gantry::Engine::CGI->new();
+    $cgi->add_location( '/', 'HiWorld' );
+    $cgi->dispatch();
+
+
+After changing it to:
+  my $cgi = Gantry::Engine::CGI->new( {locations=>{'/', 'HiWorld'}} );
+  $cgi->dispatch();
+
+it worked
+
+Additionally I would like to ask you what are the plans for the future
+of Gantry.
+I have to admit that I am really looking for for a complete solution
+upon which I would like to build a CMS or/and (why not) an Application
+server :) .
+
+I was doing Apache::ASP programming for about an year. Apache::ASP is
+mature and reliable but lacks things like Class::DBI and TinyMCE.
+Ofcourse it was not its purpose but this is another question.
+
+At present I am hired by a company where I am doing TYPO3 extension programming.
+TYPO3 is a PHP based CMS/Framework which is rather evolved, but is so
+unnatural for me that makes me screem from time to time! :)
+However there are things which are good enough ;) to "steal"...
+
+And  of course  I will try Bigtop.
+
+Thanks again!!! I will write what happened
+
+2006/5/10, Phil Crow <pcrow@sunflowerbroadband.com>:
+> >Could you just tell me where is this "bigtop" thing?
+>
+> Unfortunately I haven't put it out on the web yet.  I've attached a
+> copy of the tar.gz.  I hope that its size doesn't cause problems with
+> your mail system.  If it does, let me know.
+>
+> Please keep in mind that bigtop is beta software.  While we do use
+> it, it hasn't been used on more than one computer yet.
+>
+> If you decide to try it, please let us know what you think.
+>
+> Phil
+>
+>
+
+
+
+--
+--------------------
+With Regards: Краси Беров

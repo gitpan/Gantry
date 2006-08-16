@@ -12,15 +12,15 @@ use vars qw( @ISA @EXPORT );
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 	dec2bin
-					encrypt
-					get_grnam
-					get_grgid
-					get_pwnam
-					get_pwuid
-					get_usrgrp	);
-	
+@ISA        = qw( Exporter );
+@EXPORT     = qw(   dec2bin
+                    encrypt
+                    get_grnam
+                    get_grgid
+                    get_pwnam
+                    get_pwuid
+                    get_usrgrp  );
+    
 ############################################################
 # Functions                                                #
 ############################################################
@@ -29,133 +29,133 @@ use vars qw( @ISA @EXPORT );
 # dec2bin( $bits )
 #-------------------------------------------------
 sub dec2bin {
-	my $bits = shift;
+    my $bits = shift;
 
-	return( 0, 0, 0 ) if ( ! $bits );
+    return( 0, 0, 0 ) if ( ! $bits );
 
-	# Is there a nicer way to do this ?
- 	return( ( split( '', unpack( 'B32', pack( 'N', $bits ) ) ) )[-3..-1] );
+    # Is there a nicer way to do this ?
+    return( ( split( '', unpack( 'B32', pack( 'N', $bits ) ) ) )[-3..-1] );
 } # END dec2bin
 
 #-------------------------------------------------
 # encrypt( $string )
 #-------------------------------------------------
 sub encrypt {
-	my $str = shift;
+    my $str = shift;
 
-	# Emulates unix crypt(3)
-	my @chars = ( '.', '/', 0..9, 'A'..'Z', 'a'..'z' )[ rand 64, rand 64 ];
+    # Emulates unix crypt(3)
+    my @chars = ( '.', '/', 0..9, 'A'..'Z', 'a'..'z' )[ rand 64, rand 64 ];
 
-	return( crypt( $str, join( '', @chars ) ) );
+    return( crypt( $str, join( '', @chars ) ) );
 } # END encrypt 
 
 #-------------------------------------------------
 # get_grnam( $dbh, $group_name )
 #-------------------------------------------------
 sub get_grnam {
-	my ( $dbh, $name ) = @_;
-	
-	# act like C's getgrnam
-	my $sth = db_query( $dbh, 'get a groups id', 
-						'SELECT id FROM auth_groups WHERE name = ', 
-						sql_str( $name ) );
+    my ( $dbh, $name ) = @_;
+    
+    # act like C's getgrnam
+    my $sth = db_query( $dbh, 'get a groups id', 
+                        'SELECT id FROM auth_groups WHERE name = ', 
+                        sql_str( $name ) );
 
-	my $gid = db_next( $sth ); 
+    my $gid = db_next( $sth ); 
 
-	db_finish( $sth );
+    db_finish( $sth );
 
-	$gid = 0 if ( ! $gid );
+    $gid = 0 if ( ! $gid );
 
-	return( $gid );
+    return( $gid );
 } # END get_grnam
 
 #-------------------------------------------------
 # get_grgid( $dbh, $gid )
 #-------------------------------------------------
 sub get_grgid {
-	my ( $dbh, $gid ) = @_;
-	
-	$gid = 0 if ( ! $gid );
-	
-	# act like C's getgrgid
-	my $sth = db_query( $dbh, 'get a groups name', 
-						'SELECT name FROM auth_groups WHERE id = ',
-						sql_num( $gid ) );
+    my ( $dbh, $gid ) = @_;
+    
+    $gid = 0 if ( ! $gid );
+    
+    # act like C's getgrgid
+    my $sth = db_query( $dbh, 'get a groups name', 
+                        'SELECT name FROM auth_groups WHERE id = ',
+                        sql_num( $gid ) );
 
-	my $gname = db_next( $sth ); 
+    my $gname = db_next( $sth ); 
 
-	db_finish( $sth );
+    db_finish( $sth );
 
-	$gname = '' if ( ! $gname );
+    $gname = '' if ( ! $gname );
 
-	return( $gid );
+    return( $gid );
 } # END get_grgid
 
 #-------------------------------------------------
 # get_pwnam( $dbh, $name ) 
 #-------------------------------------------------
 sub get_pwnam {
-	my ( $dbh, $name ) = @_;
+    my ( $dbh, $name ) = @_;
 
-	my $sth = db_query( $dbh, 'Get users info',
-						'SELECT id, password, first_name, last_name, email, ',
-						'active FROM auth_users WHERE user_name = ',
-						sql_str( $name ) );
+    my $sth = db_query( $dbh, 'Get users info',
+                        'SELECT id, password, first_name, last_name, email, ',
+                        'active FROM auth_users WHERE user_name = ',
+                        sql_str( $name ) );
 
-	my ( $id, $passwd, $first, $last, $email, $active ) = db_next( $sth );
+    my ( $id, $passwd, $first, $last, $email, $active ) = db_next( $sth );
 
-	db_finish( $sth );	
-	
-	# act like C's getpwuid 
-	return( $id || 0, $active || 0, $passwd || '', $first || '', 
-			$last || '', $email || '' );
+    db_finish( $sth );  
+    
+    # act like C's getpwuid 
+    return( $id || 0, $active || 0, $passwd || '', $first || '', 
+            $last || '', $email || '' );
 } # END get_pwnam
 
 #-------------------------------------------------
 # get_pwuid( $dbh, $uid )
 #-------------------------------------------------
 sub get_pwuid {
-	my ( $dbh, $uid ) = @_;
+    my ( $dbh, $uid ) = @_;
 
-	$uid = 0 if ( ! $uid );
+    $uid = 0 if ( ! $uid );
 
-	my $sth = db_query( $dbh, 'Get users info',
-						'SELECT user_name, password, first_name, last_name, ',
-						'email, active FROM auth_users WHERE id = ',
-						sql_num( $uid ) );
+    my $sth = db_query( $dbh, 'Get users info',
+                        'SELECT user_name, password, first_name, last_name, ',
+                        'email, active FROM auth_users WHERE id = ',
+                        sql_num( $uid ) );
 
-	my ( $uname, $passwd, $first, $last, $email, $active ) = db_next( $sth );
+    my ( $uname, $passwd, $first, $last, $email, $active ) = db_next( $sth );
 
-	db_finish( $sth );	
-	
-	# act like C's getpwuid 
-	return( $uname || '', $active || 0, $passwd || '', $first || '', 
-			$last || '', $email || '' );
+    db_finish( $sth );  
+    
+    # act like C's getpwuid 
+    return( $uname || '', $active || 0, $passwd || '', $first || '', 
+            $last || '', $email || '' );
 } # END get_pwuid
 
 #-------------------------------------------------
 # get_usrgrp( $dbh, $uid )
 #-------------------------------------------------
 sub get_usrgrp {
-	my ( $dbh, $uid ) = @_;
+    my ( $dbh, $uid ) = @_;
 
-	my %grp;
+    my %grp;
 
-	$uid = 0 if ( ! $uid );
+    $uid = 0 if ( ! $uid );
 
-	my $sth = db_query( $dbh, 'get groups user is in', 
-						'SELECT auth_groups.id, auth_groups.name FROM ',
-						'auth_groups, auth_group_members WHERE ',
-						'auth_groups.id = auth_group_members.group_id AND ',
-						'auth_group_members.user_id = ', sql_num( $uid ) );
+    my $sth = db_query( $dbh, 'get groups user is in', 
+                        'SELECT auth_groups.id, auth_groups.name FROM ',
+                        'auth_groups, auth_group_members WHERE ',
+                        'auth_groups.id = auth_group_members.group_id AND ',
+                        'auth_group_members.user_id = ', sql_num( $uid ) );
 
-	while ( my ( $gid, $gname ) = db_next( $sth ) ) {
-		$grp{$gid} = $gname;
-	}
+    while ( my ( $gid, $gname ) = db_next( $sth ) ) {
+        $grp{$gid} = $gname;
+    }
 
-	db_finish( $sth );
+    db_finish( $sth );
 
-	return( \%grp ); # Gets all of a users groups as a hash reference.
+    return( \%grp ); # Gets all of a users groups as a hash reference.
 } # END get_usrgrp
 
 # EOF
@@ -294,14 +294,14 @@ information at the finger tips of the application.
         "first_name"    varchar,
         "last_name"     varchar,
         "email"         varchar,
-	    CONSTRAINT auth_users_pk PRIMARY KEY (user_id)
+        CONSTRAINT auth_users_pk PRIMARY KEY (user_id)
     );
 
     create sequence "auth_groups_seq";
     create table "auth_groups" (
         "id"            int4 default nextval('auth_groups_seq'::text) NOT NULL,
         "name"          varchar,
-        "ident"			varchar,
+        "ident"         varchar,
         "description"   text
     );
 

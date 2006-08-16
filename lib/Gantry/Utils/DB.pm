@@ -9,18 +9,18 @@ use vars qw( @ISA @EXPORT );
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 	= qw( Exporter );
-@EXPORT = qw( 	db_commit
-				db_connect
-				db_disconnect
-				db_finish
-				db_lastseq
-				db_next
-				db_nextvals	
-				db_query
-				db_rollback
-				db_rowcount
-				db_run		); 
+@ISA    = qw( Exporter );
+@EXPORT = qw(   db_commit
+                db_connect
+                db_disconnect
+                db_finish
+                db_lastseq
+                db_next
+                db_nextvals 
+                db_query
+                db_rollback
+                db_rowcount
+                db_run      ); 
 
 ############################################################
 # Functions                                                #
@@ -43,104 +43,104 @@ sub new {
 # db_commit( $dbh )
 #-------------------------------------------------
 sub db_commit {
-	my $handle = shift;
+    my $handle = shift;
 
-	$handle->commit if ( $handle->{AutoCommit} == 0 );
+    $handle->commit if ( $handle->{AutoCommit} == 0 );
 
-	return();
+    return();
 } # END db_commit
 
 #-------------------------------------------------
 # db_connect()
 #-------------------------------------------------
 sub db_connect {
-	my ( $db_type, $user, $pass, $server, $db, $commit );
+    my ( $db_type, $user, $pass, $server, $db, $commit );
 
-	# Setup the variables, sanity check it too.
-	if ( $_[0] =~ /^(dbtype|usr|pwd|db|srv|commit)$/ ) { # It's a hash
-		my %settings = @_;
-	
-		$db_type	= $settings{dbtype} || '';
-		$user 		= $settings{usr} 	|| '';
-		$pass 		= $settings{pwd} 	|| '';
-		$db 		= $settings{db} 	|| '';
-		$server		= $settings{srv} 	|| '';
-		$commit 	= $settings{commit} || '';
+    # Setup the variables, sanity check it too.
+    if ( $_[0] =~ /^(dbtype|usr|pwd|db|srv|commit)$/ ) { # It's a hash
+        my %settings = @_;
+    
+        $db_type    = $settings{dbtype} || '';
+        $user       = $settings{usr}    || '';
+        $pass       = $settings{pwd}    || '';
+        $db         = $settings{db}     || '';
+        $server     = $settings{srv}    || '';
+        $commit     = $settings{commit} || '';
 
-		$commit 	= ( $commit =~ /off/i ) ? 0 : 1 ; 
-	}
-	else {
-		( $db_type, $user, $pass, $server, $db, $commit ) = @_;
-	
-		$db_type 	= '' 	if ( ! defined ( $db_type ) );
-		$user 		= '' 	if ( ! defined ( $user ) );
-		$pass 		= '' 	if ( ! defined ( $pass ) );
-		$server 	= '' 	if ( ! defined ( $server ) );
-		$db 		= '' 	if ( ! defined ( $db ) );
-		$commit 	= '1' 	if ( ! defined ( $commit ) );
-		$commit 	= ( $commit =~ /off/i ) ? 0 : 1 ; 
-	}
+        $commit     = ( $commit =~ /off/i ) ? 0 : 1 ; 
+    }
+    else {
+        ( $db_type, $user, $pass, $server, $db, $commit ) = @_;
+    
+        $db_type    = ''    if ( ! defined ( $db_type ) );
+        $user       = ''    if ( ! defined ( $user ) );
+        $pass       = ''    if ( ! defined ( $pass ) );
+        $server     = ''    if ( ! defined ( $server ) );
+        $db         = ''    if ( ! defined ( $db ) );
+        $commit     = '1'   if ( ! defined ( $commit ) );
+        $commit     = ( $commit =~ /off/i ) ? 0 : 1 ; 
+    }
 
-	croak 'No Database Type defined' if ( length( $db_type ) < 1 );
+    croak 'No Database Type defined' if ( length( $db_type ) < 1 );
 
-	my $dsn = "dbi:$db_type:dbname=$db"; 
+    my $dsn = "dbi:$db_type:dbname=$db"; 
 
- 	$dsn .= ( $server eq '' ) ? '' : ";host=$server";
+    $dsn .= ( $server eq '' ) ? '' : ";host=$server";
 
-	my $dbh = DBI->connect( $dsn, "$user", "$pass", 
-  							{   RaiseError  =>  0,
-								PrintError  =>  1,
-								AutoCommit  =>  $commit } ) or
-								confess( $DBI::errstr );
+    my $dbh = DBI->connect( $dsn, "$user", "$pass", 
+                            {   RaiseError  =>  0,
+                                PrintError  =>  1,
+                                AutoCommit  =>  $commit } ) or
+                                confess( $DBI::errstr );
 
-	return( $dbh );
+    return( $dbh );
 } # END db_connect 
 
 #-------------------------------------------------
 # db_disconnect( $dbh )
 #-------------------------------------------------
 sub db_disconnect {
-	my $handle = shift;
+    my $handle = shift;
 
-	$handle->rollback if ( $handle->{AutoCommit} == 0 );
+    $handle->rollback if ( $handle->{AutoCommit} == 0 );
 
-	$handle->disconnect;
+    $handle->disconnect;
 
-	return;
+    return;
 } # END db_disconnect 
 
 #-------------------------------------------------
 # db_finish( $sth )
 #-------------------------------------------------
 sub db_finish {
-	my $handle = shift;
+    my $handle = shift;
 
-	$handle->finish;
+    $handle->finish;
 
-	return();
+    return();
 } # END db_finish
 
 #-------------------------------------------------
 # db_lastseq( $dbh, $sequence_name )
 #-------------------------------------------------
 sub db_lastseq {
-	my ( $handle, $seq ) = @_;
+    my ( $handle, $seq ) = @_;
 
-	croak "No database handle for db_lastseq: $!\n" unless ( defined $handle );
+    croak "No database handle for db_lastseq: $!\n" unless ( defined $handle );
 
-	if ( ! defined $seq ) {
-		$handle->rollback if ( $handle->{AutoCommit} );
-		croak "No sequence for db_lastseq: $!\n";
-	}
+    if ( ! defined $seq ) {
+        $handle->rollback if ( $handle->{AutoCommit} );
+        croak "No sequence for db_lastseq: $!\n";
+    }
 
-	my $sth = db_query ( $handle, "db_lastseq getting last value",
-						 "SELECT last_value FROM $seq;" );
+    my $sth = db_query ( $handle, "db_lastseq getting last value",
+                         "SELECT last_value FROM $seq;" );
 
-	my ( $last_value ) = db_next ( $sth );
+    my ( $last_value ) = db_next ( $sth );
 
-	db_finish ( $sth );
+    db_finish ( $sth );
 
-	return ( $last_value );
+    return ( $last_value );
 
 } # END db_lastseq
 
@@ -148,24 +148,24 @@ sub db_lastseq {
 # db_next( $sth )
 #-------------------------------------------------
 sub db_next {
-	my $handle = shift;
+    my $handle = shift;
 
-	croak "Error: db_next() not given a handle, $!\n" if ( ! $handle );
-	
-	return( $handle->fetchrow );	
+    croak "Error: db_next() not given a handle, $!\n" if ( ! $handle );
+    
+    return( $handle->fetchrow );    
 } # END db_next 
 
 #-------------------------------------------------
 # db_nextvals( $sth )
 #-------------------------------------------------
 sub db_nextvals {
-	my $handle = shift; 
+    my $handle = shift; 
    
-	if( ! $handle ) {
-   		croak "Query error db_nextvals() not given a statement: $!\n";
-	}
-	
-	return( $handle->fetchrow_hashref );
+    if( ! $handle ) {
+        croak "Query error db_nextvals() not given a statement: $!\n";
+    }
+    
+    return( $handle->fetchrow_hashref );
 
 } # END db_nextvals
 
@@ -173,75 +173,75 @@ sub db_nextvals {
 # db_query( $dbh, $description, @query )
 #-------------------------------------------------
 sub db_query {
-	my ( $handle, $description, @query ) = @_;
+    my ( $handle, $description, @query ) = @_;
 
-	if ( ! defined ( $handle ) ) {
-		croak "Error $description: db_query not given a connection: $!\n";
-	}
+    if ( ! defined ( $handle ) ) {
+        croak "Error $description: db_query not given a connection: $!\n";
+    }
 
-	if ( length ( @query ) == 0 ) {
-		$handle->rollback if ( $handle->{AutoCommit} == 0 );
-		croak "Error $description: db_query not given any SQL: $!\n";
-	}
+    if ( length ( @query ) == 0 ) {
+        $handle->rollback if ( $handle->{AutoCommit} == 0 );
+        croak "Error $description: db_query not given any SQL: $!\n";
+    }
 
-	my $sql = join ( "\n", @query );
+    my $sql = join ( "\n", @query );
 
-	my $sth = $handle->prepare( $sql );
-	
-	$sth->execute or do 
-		{
-			$handle->rollback if ( $handle->{AutoCommit} == 0 );
-			croak "SQL Query Error ( $description ): $sql\n";
-		};
+    my $sth = $handle->prepare( $sql );
+    
+    $sth->execute or do 
+        {
+            $handle->rollback if ( $handle->{AutoCommit} == 0 );
+            croak "SQL Query Error ( $description ): $sql\n";
+        };
 
-	return( $sth );
+    return( $sth );
 } # END db_query 
 
 #-------------------------------------------------
 # db_rollback( $sth )
 #-------------------------------------------------
 sub db_rollback {
-	my $handle = shift;
+    my $handle = shift;
 
-	$handle->rollback;
+    $handle->rollback;
 
-	return;
+    return;
 } # END db_rollback
 
 #-------------------------------------------------
 # db_rowcount( $sth )
 #-------------------------------------------------
 sub db_rowcount {
-	my $handle = shift;
+    my $handle = shift;
 
-	return( $handle->rows );
+    return( $handle->rows );
 } # END db_rowcount
 
 #-------------------------------------------------
 # db_run( $dbh, $description, @sql )
 #-------------------------------------------------
 sub db_run {
-	my ( $handle, $description, @sql ) = @_;
+    my ( $handle, $description, @sql ) = @_;
 
-	if ( ! defined ( $handle ) ) {
-		croak "Error $description: db_run() not given a connection: $!\n";
-	}
+    if ( ! defined ( $handle ) ) {
+        croak "Error $description: db_run() not given a connection: $!\n";
+    }
 
-	if ( length ( @sql ) == 0 ) {
-		$handle->rollback if ( $handle->{AutoCommit} == 0 );
-		croak "Error $description: db_run() was not given any SQL: $!\n";
-	}
+    if ( length ( @sql ) == 0 ) {
+        $handle->rollback if ( $handle->{AutoCommit} == 0 );
+        croak "Error $description: db_run() was not given any SQL: $!\n";
+    }
 
-	my $command = join ( "\n", @sql );
+    my $command = join ( "\n", @sql );
 
-	$handle->do( $command ) or do 
-			{
-				$handle->rollback if ( $handle->{AutoCommit} == 0 );
-				croak "SQL Query Error ($description): $command\n".
-					  $handle->errstr. "\n";
-			};
+    $handle->do( $command ) or do 
+            {
+                $handle->rollback if ( $handle->{AutoCommit} == 0 );
+                croak "SQL Query Error ($description): $command\n".
+                      $handle->errstr. "\n";
+            };
 
-	return;
+    return;
 } # END db_run
 
 # EOF
@@ -287,7 +287,7 @@ Gantry::Utils::DB - Database wrapper fucntions, specfic to PostgreSQL
     $rows = db_rowcount( $sth );
 
   db_run
-	db_run( $dbh, $description, @sql_query );
+    db_run( $dbh, $description, @sql_query );
 
 =head1 DESCRIPTION
 

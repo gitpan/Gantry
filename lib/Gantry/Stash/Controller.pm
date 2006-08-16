@@ -5,11 +5,11 @@ package controller;
 # AUTOLOAD
 #-------------------------------------------------
 sub AUTOLOAD {
-	my $self    = shift;
-	my $command = our $AUTOLOAD;
-	$command    =~ s/.*://;
+    my $self    = shift;
+    my $command = our $AUTOLOAD;
+    $command    =~ s/.*://;
 
-	die( "Undefined stash->controller method $command" );
+    die( "Undefined stash->controller method $command" );
 
 } # end AUTOLOAD
 

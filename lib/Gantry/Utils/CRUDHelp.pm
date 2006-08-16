@@ -27,31 +27,31 @@ sub clean_dates {
 
 # build the profile that Data::FormValidator wants
 sub form_profile {
-	my ( $form_fields ) = @_;
-	my @required;
-	my @optional;
-	my %constraints;
+    my ( $form_fields ) = @_;
+    my @required;
+    my @optional;
+    my %constraints;
 
-	foreach my $item ( @{ $form_fields } ) {
-		if ( defined $$item{optional} and $$item{optional} ) {
-			push @optional, $$item{name};
-		}
-		else {
-			push @required, $$item{name};
-		}
+    foreach my $item ( @{ $form_fields } ) {
+        if ( defined $$item{optional} and $$item{optional} ) {
+            push @optional, $$item{name};
+        }
+        else {
+            push @required, $$item{name};
+        }
 
-		if ( defined $$item{constraint} and $$item{constraint} ) {
-			$constraints{ $$item{name} } = $$item{constraint};
-		}
-	}
+        if ( defined $$item{constraint} and $$item{constraint} ) {
+            $constraints{ $$item{name} } = $$item{constraint};
+        }
+    }
 
-	my %retval;
+    my %retval;
 
-	$retval{required}           = \@required    if @required;
-	$retval{optional}           = \@optional    if @optional;
-	$retval{constraint_methods} = \%constraints if ( keys %constraints );
+    $retval{required}           = \@required    if @required;
+    $retval{optional}           = \@optional    if @optional;
+    $retval{constraint_methods} = \%constraints if ( keys %constraints );
 
-	return \%retval;
+    return \%retval;
 }
 
 1;
@@ -79,9 +79,9 @@ Exports helper functions useful when writing CRUD plugins.
 Pass a hash of form parameters and the fields list from a
 C<Gantry::Plugins::AutoCRUD > style _form method.  Any field with
 key is whose value is date is examined in the params hash.  If its
-value is false, that value is changed to undef.  This keeps Class::DBI
+value is false, that value is changed to undef.  This keeps the ORM
 from trying to insert a blank string into a date field which is fatal,
-at least in Postgres.
+at least for Class::DBI inserting into Postgres.
 
 =item form_profile
 

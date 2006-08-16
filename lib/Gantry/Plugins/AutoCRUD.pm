@@ -8,17 +8,18 @@ use Gantry::Utils::CRUDHelp qw( clean_dates form_profile );
 use Exporter;
 use Carp;
 
-our @ISA = qw( Exporter );
-our @EXPORT = qw(
-	do_add
-	do_edit
-	do_delete
-	form_name
-);
-
 ############################################################
 # Variables                                                #
 ############################################################
+our @ISA = qw( Exporter );
+our @EXPORT = qw(
+    do_add
+    do_edit
+    do_delete
+    form_name
+);
+
+our $orm_helper;
  
 ############################################################
 # Functions                                                #
@@ -42,184 +43,190 @@ sub get_submit_loc {
 # $self->do_add( )
 #-------------------------------------------------
 sub do_add {
-	my ( $self ) = @_;
+    my ( $self ) = @_;
 
-	$self->stash->view->template( $self->form_name( 'add' ) );
-	$self->stash->view->title( 'Add ' . $self->text_descr() );
+    $self->stash->view->template( $self->form_name( 'add' ) );
+    $self->stash->view->title( 'Add ' . $self->text_descr() );
 
     my $params  = $self->get_param_hash();
 
-	# Redirect if user pressed 'Cancel'
-	if ( $params->{cancel} ) {
-		return $self->relocate( find_cancel_loc( $self, 'add' ) );
-	}
+    # Redirect if user pressed 'Cancel'
+    if ( $params->{cancel} ) {
+        return $self->relocate( find_cancel_loc( $self, 'add' ) );
+    }
 
-	# get and hold the form description
-	my $form;
+    # get and hold the form description
+    my $form;
     
     eval {
         $form = $self->form();
     };
+    my $full_error = $@;
     unless ( $form ) {
         eval {
             $form = $self->_form();
         };
+        $full_error .= $@;
     }
-    croak ( "No form or _form method defined for AutoCRUD do_add " )
+    croak ( 'No form or _form method defined for AutoCRUD do_add ' .
+            "[ invocant: $self errors: $full_error ]" )
             unless ( $form );
 
-	# Check form data
+    # Check form data
     my $show_form = 0;
 
     # If there are no form parameters, show the form (all the fields might
     # be optional).
     $show_form = 1 if ( keys %{ $params } == 0 );
 
-	my $results = Data::FormValidator->check(
-		$params,
-		form_profile( $form->{fields} ),
-	);
+    my $results = Data::FormValidator->check(
+        $params,
+        form_profile( $form->{fields} ),
+    );
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
 
     if ( $show_form ) {
-		# order is important, first put in the form...
-		$self->stash->view->form( $form );
+        # order is important, first put in the form...
+        $self->stash->view->form( $form );
 
-		# ... then add error results
-		if ( $self->method eq 'POST' ) {
-			$self->stash->view->form->results( $results );
-		}
-	}
-	else {
-		# remove submit button entry
-		delete $params->{submit};
+        # ... then add error results
+        if ( $self->method eq 'POST' ) {
+            $self->stash->view->form->results( $results );
+        }
+    }
+    else {
+        # remove submit button entry
+        delete $params->{submit};
 
         clean_dates( $params, $form->{fields} );
 
-		# let subclass massage the params, but only if it wants to
+        # let subclass massage the params, but only if it wants to
         if ( $self->can( 'add_pre_action' ) ) {
-		    $self->add_pre_action( $params );
+            $self->add_pre_action( $params );
         }
 
-		# update the database
-		my $new_row = $self->get_model_name->create( $params );
-
-		$new_row->dbi_commit;
+        # update the database
+        $orm_helper ||= find_orm_helper( $self );
+        my $new_row    = $orm_helper->insert( $self, $params );
 
         # let the subclass do post add actions
         if ( $self->can( 'add_post_action' ) ) {
             $self->add_post_action( $new_row );
         }
 
-		# move along, we're all done here
-		return $self->relocate( find_submit_loc( $self, 'add' ) );
-	}
+        # move along, we're all done here
+        return $self->relocate( find_submit_loc( $self, 'add' ) );
+    }
 } # END: do_add
 
 #-------------------------------------------------
 # $self->do_edit( $id )
 #-------------------------------------------------
 sub do_edit {
-	my ( $self, $id ) = @_;
+    my ( $self, $id ) = @_;
 
-	$self->stash->view->template( $self->form_name( 'edit' ) );
-	$self->stash->view->title( 'Edit ' . $self->text_descr() );
+    $self->stash->view->template( $self->form_name( 'edit' ) );
+    $self->stash->view->title( 'Edit ' . $self->text_descr() );
 
     my %params = $self->get_param_hash();
 
-	# Redirect if 'Cancel'
-	if ( $params{cancel} ) {
-		return $self->relocate( find_cancel_loc( $self, 'edit' ) );
-	}
+    # Redirect if 'Cancel'
+    if ( $params{cancel} ) {
+        return $self->relocate( find_cancel_loc( $self, 'edit' ) );
+    }
 
-	# Load data from database
-	my $row = $self->get_model_name->retrieve( $id );
+    $orm_helper ||= find_orm_helper( $self );
+
+    # Load data from database
+    my $row = $orm_helper->retrieve( $self, $id );
 
     my $show_form = 0;
 
     $show_form = 1 if ( keys %params == 0 );
 
-	# get and hold the form description
-	my $form;
+    # get and hold the form description
+    my $form;
     
     eval {
         $form = $self->form( $row );
     };
+    my $full_error = $@;
     unless ( $form ) {
         eval {
             $form = $self->_form( $row );
         };
+        $full_error .= $@;
     }
-    croak ( "No form or _form method defined for AutoCRUD do_edit" )
+    croak ( 'No form or _form method defined for AutoCRUD do_edit ' .
+            "[ invocant: $self errors: $full_error ]" )
             unless ( $form );
 
-	# Check form data
-	my $results = Data::FormValidator->check(
-		\%params,
-		form_profile( $form->{fields} ),
-	);
+    # Check form data
+    my $results = Data::FormValidator->check(
+        \%params,
+        form_profile( $form->{fields} ),
+    );
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
 
-	# Form has errors
+    # Form has errors
     if ( $show_form ) {
-		# order matters, get form data first...
-		$self->stash->view->form( $form );
+        # order matters, get form data first...
+        $self->stash->view->form( $form );
 
-		# ... then overlay with results
-		if ( $self->method eq 'POST' ) {
-			$self->stash->view->form->results( $results );
-		}
-	}
-	# Form looks good, make update
-	else {
-		# remove submit button param
-		delete $params{submit};
+        # ... then overlay with results
+        if ( $self->method eq 'POST' ) {
+            $self->stash->view->form->results( $results );
+        }
+    }
+    # Form looks good, make update
+    else {
+        # remove submit button param
+        delete $params{submit};
 
         clean_dates( \%params, $form->{fields} );
 
-		# allow child module to make changes
+        # allow child module to make changes
         if ( $self->can( 'edit_pre_action' ) ) {
-		    $self->edit_pre_action( $row, \%params );
+            $self->edit_pre_action( $row, \%params );
         }
 
-		# make the update
-		$row->set( %params );
-		$row->update;
-		$row->dbi_commit;
+        # make the update
+        $orm_helper->update( $self, $row, \%params );
 
         # allow child to do post update actions
         if ( $self->can( 'edit_post_action' ) ) {
             $self->edit_post_action( $row );
         }
 
-		# all done, move along
-		return $self->relocate( find_submit_loc( $self, 'edit' ) );
-	}
+        # all done, move along
+        return $self->relocate( find_submit_loc( $self, 'edit' ) );
+    }
 } # END: do_edit
 
 #-------------------------------------------------
 # $self->do_delete( $id, $yes )
 #-------------------------------------------------
 sub do_delete {
-	my ( $self, $id, $yes ) = @_;
+    my ( $self, $id, $yes ) = @_;
 
-	$self->stash->view->template( 'delete.tt' );
+    $self->stash->view->template( 'delete.tt' );
     $self->stash->view->title( 'Delete' );
 
     # go back if user cancelled
-	if ( $self->params->{cancel} ) {
-		return $self->relocate( find_cancel_loc( $self, 'delete' ) );
-	}
+    if ( $self->params->{cancel} ) {
+        return $self->relocate( find_cancel_loc( $self, 'delete' ) );
+    }
 
-	if ( ( defined $yes ) and ( $yes eq 'yes' ) ) {
+    if ( ( defined $yes ) and ( $yes eq 'yes' ) ) {
 
-		# Get the doomed row
-		my $model = $self->get_model_name();
-		my $row   = $model->retrieve( $id );
+        $orm_helper ||= find_orm_helper( $self );
+
+        # Get the doomed row
+        my $row = $orm_helper->retrieve( $self, $id );
 
         # allow subclasses to do things before the delete
         if ( $self->can( 'delete_pre_action' ) ) {
@@ -227,22 +234,47 @@ sub do_delete {
         }
 
         # dum dum da dum...
-		$row->delete;
-		$model->dbi_commit();
+        $orm_helper->delete( $self, $row );
 
         # allow subclasses to do things after the delete
         if ( $self->can( 'delete_post_action' ) ) {
             $self->delete_post_action( $id );
         }
 
-		# Move along, it's already dead
-		return $self->relocate( find_submit_loc( $self, 'delete' ) );
-	}
-	else {
-		$self->stash->view->form->message (
-			'Delete ' . $self->text_descr() . '?'
+        # Move along, it's already dead
+        return $self->relocate( find_submit_loc( $self, 'delete' ) );
+    }
+    else {
+        $self->stash->view->form->message (
+            'Delete ' . $self->text_descr() . '?'
         );
-	}
+    }
+}
+
+#-------------------------------------------------
+# The following routines look for user supplied
+# methods, but provide fallbacks if the user didn't
+# give any.
+#-------------------------------------------------
+
+sub find_orm_helper {
+    my ( $gantry_site ) = @_;
+
+    if ( $gantry_site->can( 'get_orm_helper' ) ) {
+        $orm_helper = $gantry_site->get_orm_helper;
+    }
+    else {
+        $orm_helper = 'Gantry::Plugins::AutoCRUDHelper::CDBI';
+    }
+
+    my $orm_helper_file = $orm_helper;
+
+    $orm_helper_file    =~ s{::}{/}g;
+    $orm_helper_file   .= '.pm';
+
+    require $orm_helper_file;
+
+    return $orm_helper;
 }
 
 sub find_submit_loc {
@@ -305,7 +337,7 @@ In a base class:
 
 Or
 
-  use Gantry qw/-Engine=MP13 -TemplateEngine=TT AutoCRUD/;	
+  use Gantry qw/-Engine=MP13 -TemplateEngine=TT AutoCRUD/;  
 
 In your subclass:
 
@@ -331,6 +363,8 @@ This module exports the following methods into the site object's class:
 
 =item do_delete
 
+=item form_name (see below)
+
 =back
 
 The handler calls these when the user clicks on the proper links
@@ -345,9 +379,9 @@ methods from this list yourself:
 
 Return the string which will fill in the blank in the following phrases
 
-	Add _____
-	Edit _____
-	Delete ____
+    Add _____
+    Edit _____
+    Delete ____
 
 =item form_name
 
@@ -363,11 +397,30 @@ activities.
 If you implement your own, don't import the one provided here (or
 Perl will warn about subroutine redefinition).
 
+=item get_orm_helper
+
+Optional, defaults to
+
+    sub get_orm_helper {
+        return 'Gantry::Plugins::AutoCRUDHelper::CDBI';
+    }
+
+Implement this if you are not using Class::DBI as your ORM.  Return the
+name of your ORM helper.  For instance, if you use DBIx::Class implement
+this in your controller (or in something your controller inherits from):
+
+    sub get_orm_helper {
+        return 'Gantry::Plugins::AutoCRUDHelper::DBIxClass';
+    }
+
+If you need to implement your own helper, see L<AutoCRUDHelpers> below
+and/or look at any module in Gantry::Plugins::AutoCRUDHelper::* for advice.
+
 =item get_relocation
 
 Optional.
 Called with the name of the current action and whether the user clicked
-submit or cancel.  Example:
+submit or cancel like this:
 
     $self->get_relocation( 'add', 'cancel' );
 
@@ -405,7 +458,7 @@ get_cancel_loc to control where bailing out takes the user.
 Return the name of your data model package.  If your base class knows
 this name you might want to do something like this:
 
-	sub get_model_name { return $_[0]->companies_model }
+    sub get_model_name { return $_[0]->companies_model }
 
 This way, the model name is only in one place.
 
@@ -456,8 +509,8 @@ and both rows and cols for textarea types.
 
 Optional.
 Called immediately before a new row is inserted into the database with
-the hash that will be passed directly to Class::DBI's create method for
-the table.  Adjust any parameters in the hash you like (fill in dates,
+the hash that will be passed directly to the ORM helper's insert method.
+Adjust any parameters in the hash you like (fill in dates,
 remove things that can't have '' as a value, etc.).
 
 =item add_post_action
@@ -494,9 +547,12 @@ row's id.
 
 =head1 INTERNAL METHODS
 
-These are methods used internally to figure out where to go on button presses.
+These are methods used internally to figure out where to go on button presses
+and who should help the ORM manage the database.
 
 =over 4
+
+=item find_orm_helper
 
 =item find_cancel_loc
 
@@ -504,7 +560,78 @@ These are methods used internally to figure out where to go on button presses.
 
 =back
 
+=head1 AutoCRUDHelpers
+
+If there is not a Gantry::Plugins::AutoCRUD::* module for your ORM, you
+can easily implement your own.  Here's how.
+
+Create a module (the name is completely up to you, but something in the
+Gantry::Plugins::AutoCRUD:: namespace may be easier for others to find).
+In it implement four methods:
+
+=over 4
+
+=item insert
+
+Parameters:
+    $class              - invoking class name
+    $gantry_site_object - the current Gantry site object
+    $params             - a hash to be inserted into a new row
+Return:
+    the newly created row
+
+Puts a new row into a table of the database.  You must determine
+the table name by querying $gantry_site_object.  For instance, if the app
+uses CDBI models, your table name is:
+
+    $gantry_site_object->get_model_name
+
+For DBIx::Class models, your table name is:
+
+    $gantry_site->get_model_name->table_name();
+
+=item retrieve
+
+Parameters:
+    $class              - invoking class name
+    $gantry_site_object - the current Gantry site object
+    $id                 - the primary key of a row (single column only)
+Return:
+    the row whose id is $id
+
+Given a unique one column primary key, called $id, return the corresponding
+row.  See the discussion under insert for how to find your table name.
+
+=item update
+
+Parameters:
+    $class              - invoking class name
+    $gantry_site_object - the current Gantry site object
+    $row                - the row object to update
+    $params             - a hash to be inserted into a new row
+Return:
+    whatever you like (ignored)
+
+Given an ORM object, update the underlying data.
+
+=item delete
+
+Parameters:
+    $class              - invoking class name
+    $gantry_site_object - the current Gantry site object
+    $row                - the row object to update
+Return:
+    whatever you like (ignored)
+
+Given an ORM object, delete the underlying row.
+
+=back
+
 =head1 SEE ALSO
+
+ Gantry::Plugins::AutoCRUD::CDBI
+
+ Gantry::Plugins::AutoCRUD::DBIxClass
 
  Gantry::Plugins::CRUD
 

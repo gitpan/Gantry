@@ -11,19 +11,19 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 
-	apache_param_hash
-	apache_request
-	base_server
+@ISA        = qw( Exporter );
+@EXPORT     = qw( 
+    apache_param_hash
+    apache_request
+    base_server
     cgi_obj
     config
-	cast_custom_error
+    cast_custom_error
     declined_response
     dispatch_location
-	engine
+    engine
     engine_init
-	err_header_out
+    err_header_out
     fish_location
     fish_method
     fish_path_info
@@ -35,27 +35,27 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     get_config
     get_dbh
     locations
-	get_arg_hash
-	header_in
-	header_out
+    get_arg_hash
+    header_in
+    header_out
     is_status_declined
-	port
+    port
     print_output
     redirect_response
-	remote_ip
-	send_http_header
+    remote_ip
+    send_http_header
     set_cached_config
     set_content_type
     set_no_cache
     set_req_params
-	status_const
+    status_const
     send_error_output
     success_code
-	server_root
+    server_root
 );
 
-@EXPORT_OK 	= qw( );
-					
+@EXPORT_OK  = qw( );
+                    
 ############################################################
 # Functions                                                #
 ############################################################
@@ -93,16 +93,16 @@ sub new {
         }
     );
 
-	return $self;
-	
+    return $self;
+    
 } # end new
 
 #--------------------------------------------------
 # $self->add_config( key, value );
 #--------------------------------------------------
 sub add_config {
-	my( $self, $key, $val ) = @_;
-	$self->{cgi_obj}{config}->{$key} = $val;
+    my( $self, $key, $val ) = @_;
+    $self->{cgi_obj}{config}->{$key} = $val;
 
 } # end add_config
 
@@ -110,9 +110,9 @@ sub add_config {
 # $self->add_location( key, value )
 #--------------------------------------------------
 sub add_location {
-	my( $self, $key, $val ) = @_;
+    my( $self, $key, $val ) = @_;
 
-	$self->{locations}->{$key} = $val;
+    $self->{locations}->{$key} = $val;
 
 } # end add_location
 
@@ -120,39 +120,39 @@ sub add_location {
 # $self->dispatch();
 #--------------------------------------------------
 sub dispatch {
-	my( $self ) = @_;
+    my( $self ) = @_;
 
-    my @path = ( split( /\//, $ENV{PATH_INFO} ) );       	
+    my @path = ( split( /\//, $ENV{PATH_INFO} ) );          
 
-	LOOP:
-	while ( @path ) {
+    LOOP:
+    while ( @path ) {
 
-		$self->{config}->{location} = join( '/', @path );
+        $self->{config}->{location} = join( '/', @path );
 
-		if ( defined $self->{locations}->{ $self->{config}->{location} } ) {
-			my $mod = $self->{locations}->{ $self->{config}->{location} }; 
-			
-			die "module not defined for location $self->{config}->{location}"
-				unless $mod;
-		
-			eval "use $mod";
-			if ( $@ ) { die $@; }
+        if ( defined $self->{locations}->{ $self->{config}->{location} } ) {
+            my $mod = $self->{locations}->{ $self->{config}->{location} }; 
+            
+            die "module not defined for location $self->{config}->{location}"
+                unless $mod;
+        
+            eval "use $mod";
+            if ( $@ ) { die $@; }
 
-			return $mod->handler( $self );
+            return $mod->handler( $self );
 
-		}
+        }
 
-		pop( @path );
-	
-	} # end while path
-	
-	$self->{config}->{location} = '/';
-	my $mod = $self->{locations}->{ '/' }; 
+        pop( @path );
+    
+    } # end while path
+    
+    $self->{config}->{location} = '/';
+    my $mod = $self->{locations}->{ '/' }; 
 
-	eval "use $mod" if $mod;
-	if ( $@ ) { die $@; }
+    eval "use $mod" if $mod;
+    if ( $@ ) { die $@; }
 
-	return $mod->handler( $self );
+    return $mod->handler( $self );
 
 } # end dispatch
 
@@ -165,10 +165,10 @@ sub dispatch {
 # $self->cast_custom_error( error )
 #-------------------------------------------------
 sub cast_custom_error {
-	my( $self, $error_page, $die_msg ) = @_;
+    my( $self, $error_page, $die_msg ) = @_;
 
-	$self->send_http_header();
-	$self->print_output( $error_page );
+    $self->send_http_header();
+    $self->print_output( $error_page );
 
 }
 
@@ -176,37 +176,37 @@ sub cast_custom_error {
 # $self->apache_param_hash( $req )
 #-------------------------------------------------
 sub apache_param_hash {
-	my( $self ) = @_;
-	
-	#my %hash_ref = $self->cgi->Vars;
-	#return( \%hash_ref );	
-	return( $self->cgi_obj->{params} );
-	
+    my( $self ) = @_;
+    
+    #my %hash_ref = $self->cgi->Vars;
+    #return( \%hash_ref );  
+    return( $self->cgi_obj->{params} );
+    
 } # end: apache_param_hash
 
 #-------------------------------------------------
 # $self->apache_request( )
 #-------------------------------------------------
 sub apache_request {
-	my( $self, $r ) = @_;
-		
+    my( $self, $r ) = @_;
+        
 } # end: apache_request
 
 #-------------------------------------------------
 # $self->base_server( $r )
 #-------------------------------------------------
 sub base_server {
-	my( $self ) = ( shift );
+    my( $self ) = ( shift );
 
-	return( $ENV{HTTP_SERVER} );
-	
+    return( $ENV{HTTP_SERVER} );
+    
 } # end base_server
 
 #--------------------------------------------------
 # $self->cgi_obj( $hash_ref )
 #--------------------------------------------------
 sub cgi_obj {
-	my( $self, $hash_ref ) = @_;
+    my( $self, $hash_ref ) = @_;
 
     if ( defined $hash_ref ) {
         $self->{cgi_obj} = $hash_ref;
@@ -219,7 +219,7 @@ sub cgi_obj {
 # $self->config( $hash_ref )
 #--------------------------------------------------
 sub config {
-	my( $self, $hash_ref ) = @_;
+    my( $self, $hash_ref ) = @_;
 
     if ( defined $hash_ref ) {
         $self->{cgi_obj}{config} = $hash_ref;
@@ -233,7 +233,7 @@ sub config {
 #-------------------------------------------------
 sub declined_response {
     my( $self, $action )  = @_;
-	
+    
     print $self->cgi->header(
             -type => 'text/html',
             -status => '404 Declined',
@@ -267,7 +267,7 @@ sub dispatch_location {
 # $self->engine
 #--------------------------------------------------
 sub engine {
-	return __PACKAGE__;
+    return __PACKAGE__;
 } # engine
 
 #-------------------------------------------------
@@ -277,7 +277,7 @@ sub engine_init {
     my $self    = shift;
     my $cgi_obj = shift;
 
-	$cgi_obj->{params} = parse_env();
+    $cgi_obj->{params} = parse_env();
 
     $self->cgi_obj( $cgi_obj );
     $self->cgi( CGI::Simple->new( $cgi_obj->{params} ) );
@@ -288,7 +288,7 @@ sub engine_init {
 # $self->err_header_out( $header_key, $header_value )
 #-------------------------------------------------
 sub err_header_out {
-	my( $self, $k, $v ) = @_;
+    my( $self, $k, $v ) = @_;
 
 } # end err_header_out
 
@@ -370,7 +370,14 @@ sub get_config {
 
     my $conf;
     my $cached   = 0;
-    my $location = $self->location;
+    my $location = '';
+
+    eval {
+        $location = $self->location;
+    };
+    # There will be an error if this method was called during construction
+    # that is before their is a Gantry descended object as the invocant.
+    # In that case, we don't care about the location anyway.
     
     $conf        = $self->get_cached_config( $instance, $location );
 
@@ -415,10 +422,11 @@ sub set_cached_config {
 sub get_arg_hash {
     my( $self ) = @_;
 
-	#my %hash_ref = $self->cgi->Vars;
-	
-	return( $self->cgi_obj->{params} );	
-										
+    #my %hash_ref = $self->cgi->Vars;
+    
+    return wantarray ? %{ $self->cgi_obj->{params} }
+                     :    $self->cgi_obj->{params}; 
+                                        
 } # end get_arg_hash
 
 #-------------------------------------------------
@@ -439,7 +447,7 @@ sub get_dbh {
 # $self->header_in( )
 #-------------------------------------------------
 sub header_in {
-	my( $self, $key ) = @_;
+    my( $self, $key ) = @_;
 
 } # end header_in
 
@@ -447,10 +455,10 @@ sub header_in {
 # $self->header_out( $header_key, $header_value )
 #-------------------------------------------------
 sub header_out {
-	my( $self, $k, $v ) = @_;
-		
-	$self->{__HEADERS_OUT__}->{$k} = $v if defined $k;	
-	return( $self->{__HEADERS_OUT__} );
+    my( $self, $k, $v ) = @_;
+        
+    $self->{__HEADERS_OUT__}->{$k} = $v if defined $k;  
+    return( $self->{__HEADERS_OUT__} );
 
 } # end header_out
 
@@ -458,7 +466,7 @@ sub header_out {
 # $self->locations( $hash_ref )
 #--------------------------------------------------
 sub locations {
-	my( $self, $hash_ref ) = @_;
+    my( $self, $hash_ref ) = @_;
 
     if ( defined $hash_ref ) {
         $self->{cgi_obj}{locations} = $hash_ref;
@@ -481,9 +489,9 @@ sub redirect_response {
 # $self->remote_ip( $r )
 #-------------------------------------------------
 sub remote_ip {
-	my( $self ) = ( shift, shift );
-	
-	return( $ENV{REMOTE_ADDR} );
+    my( $self ) = ( shift, shift );
+    
+    return( $ENV{REMOTE_ADDR} );
 
 } # end remote_ip
 
@@ -502,9 +510,9 @@ sub print_output {
 # $self->port( $r )
 #-------------------------------------------------
 sub port {
-	my( $self ) = ( shift );
-  	
-	return( $ENV{SERVER_PORT} );
+    my( $self ) = ( shift );
+    
+    return( $ENV{SERVER_PORT} );
 
 } # end port
 
@@ -512,9 +520,9 @@ sub port {
 # $self->server_root( $r )
 #-------------------------------------------------
 sub server_root {
-	my( $self ) = ( shift );
-	
-	return( $ENV{HTTP_SERVER} );
+    my( $self ) = ( shift );
+    
+    return( $ENV{HTTP_SERVER} );
 
 } # end server_root
 
@@ -522,18 +530,18 @@ sub server_root {
 # $self->status_const( 'OK | DECLINED | REDIRECT' )
 #-------------------------------------------------
 sub status_const {
-	my( $self, $status ) = @_;
+    my( $self, $status ) = @_;
 
     return '404'         if uc $status eq 'DECLINED';
     return '200'         if uc $status eq 'OK';
     return '302'         if uc $status eq 'REDIRECT';
-	return '403'         if uc $status eq 'FORBIDDEN';
+    return '403'         if uc $status eq 'FORBIDDEN';
     return '401'         if uc $status eq 'AUTH_REQUIRED';
     return '401'         if uc $status eq 'HTTP_UNAUTHORIZED';
-    return '400'	     if uc $status eq 'SERVER_ERROR';
+    return '400'         if uc $status eq 'SERVER_ERROR';
 
-	die( "Undefined constant $status" );
-	
+    die( "Undefined constant $status" );
+    
 
 } # end status_const
 
@@ -554,10 +562,10 @@ sub is_status_declined {
 sub send_error_output {
     my $self     = shift;
 
-   	print $self->cgi->header(
+    print $self->cgi->header(
             -type   => 'text/html',
             -status => '500 Server Error',
-   	);
+    );
 
     $self->do_error( $@ );
     print( $self->custom_error( $@ ) );
@@ -571,7 +579,7 @@ sub send_http_header {
     my $self = shift;
 
     print $self->cgi->header(
-            -type => $self->content_type
+            -type => $self->content_type,
     );
 
 } # send_http_header
@@ -601,12 +609,12 @@ sub set_no_cache {
 # $self->set_req_params( )
 #-------------------------------------------------
 sub set_req_params {
-	my $self = shift;
-	
-	#my %params = $self->cgi->Vars;
-	#my %params = %CGI::Deurl::query;
+    my $self = shift;
+    
+    #my %params = $self->cgi->Vars;
+    #my %params = %CGI::Deurl::query;
 
-	$self->params( $self->cgi_obj->{params} );
+    $self->params( $self->cgi_obj->{params} );
 
 } # END set_req_params
 
@@ -621,29 +629,29 @@ sub success_code {
 } # END success_code
 
 sub parse_env {
-	my $data;
-	my $hash = {};
+    my $data;
+    my $hash = {};
 
-	my $ParamSeparator = '&';
+    my $ParamSeparator = '&';
 
-	if ( defined $ENV{REQUEST_METHOD} 
-			&& $ENV{REQUEST_METHOD} eq "POST" ) {
+    if ( defined $ENV{REQUEST_METHOD} 
+            && $ENV{REQUEST_METHOD} eq "POST" ) {
 
-		read STDIN , $data , $ENV{CONTENT_LENGTH} ,0;
+        read STDIN , $data , $ENV{CONTENT_LENGTH} ,0;
 
-     	if ( $ENV{QUERY_STRING} ) {
-      		$data .= $ParamSeparator . $ENV{QUERY_STRING};
-     	}
+        if ( $ENV{QUERY_STRING} ) {
+            $data .= $ParamSeparator . $ENV{QUERY_STRING};
+        }
 
     } 
-	elsif ( defined $ENV{REQUEST_METHOD} 
-		&& $ENV{REQUEST_METHOD} eq "GET" ) {
+    elsif ( defined $ENV{REQUEST_METHOD} 
+        && $ENV{REQUEST_METHOD} eq "GET" ) {
      
-		$data = $ENV{QUERY_STRING};
+        $data = $ENV{QUERY_STRING};
     } 
-	elsif ( defined $ENV{REQUEST_METHOD} ) {
-     	print "Status: 405 Method Not Allowed\r\n\r\n";
-     	exit;
+    elsif ( defined $ENV{REQUEST_METHOD} ) {
+        print "Status: 405 Method Not Allowed\r\n\r\n";
+        exit;
     }
 
     return {} unless (defined $data and $data ne '');
@@ -657,37 +665,37 @@ sub parse_env {
 
     foreach $thing (@items) {
 
-     	my @res = $thing=~/^(.*?)=(.*)$/;
-     	my ( $name, $value, @value );
+        my @res = $thing=~/^(.*?)=(.*)$/;
+        my ( $name, $value, @value );
 
-     	if ( $#res <= 0 ) {
-      		$name  = $i++;
-      		$value = $thing;
-     	} 
-		else {
-      		( $name, $value ) = @res;
-     	}
-     	
-     	$name =~ tr/+/ /;
-     	$name =~ s/%(\w\w)/chr(hex $1)/ge;
+        if ( $#res <= 0 ) {
+            $name  = $i++;
+            $value = $thing;
+        } 
+        else {
+            ( $name, $value ) = @res;
+        }
+        
+        $name =~ tr/+/ /;
+        $name =~ s/%(\w\w)/chr(hex $1)/ge;
 
-     	$value =~ tr/+/ /;
-     	$value =~ s/%(\w\w)/chr(hex $1)/ge;
+        $value =~ tr/+/ /;
+        $value =~ s/%(\w\w)/chr(hex $1)/ge;
 
-     	if ( $hash->{$name} ) {
-      		if ( ref $hash->{$name} ) {
-       			push( @{$hash->{$name}}, $value );
-      		} 
-			else {
-       			$hash->{$name} = [ $hash->{$name}, $value];
-      		}
-     	} 
-		else {
-      		$hash->{$name} = $value;
-     	}
+        if ( $hash->{$name} ) {
+            if ( ref $hash->{$name} ) {
+                push( @{$hash->{$name}}, $value );
+            } 
+            else {
+                $hash->{$name} = [ $hash->{$name}, $value];
+            }
+        } 
+        else {
+            $hash->{$name} = $value;
+        }
     }
-	
-	return( $hash );
+    
+    return( $hash );
 }
 
 # EOF

@@ -3,21 +3,20 @@ require Exporter;
 
 ############# THIS MODULE IS NOT WORKING #########################
 
-use Template;
 use Carp;
 use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 
 ############################################################
 # Variables                                                #
 ############################################################
-@ISA 		= qw( Exporter );
-@EXPORT 	= qw( 
-	do_action
-	do_error
-	do_process 
+@ISA        = qw( Exporter );
+@EXPORT     = qw( 
+    do_action
+    do_error
+    do_process 
 );
 
-@EXPORT_OK 	= qw( );
+@EXPORT_OK  = qw( );
 
 ############################################################
 # Functions                                                #
@@ -26,9 +25,9 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 # $site->do_action( $r, 'do_main|do_edit', @p )
 #-------------------------------------------------
 sub do_action {
-	my( $site, $r, $action, @p ) = @_;
-	
-	$site->{stash}{output} = $site->$action( $r, @p ); 
+    my( $site, $r, $action, @p ) = @_;
+    
+    $site->{stash}{output} = $site->$action( $r, @p ); 
 
 }
 
@@ -36,9 +35,9 @@ sub do_action {
 # $site->do_error( $r, @err )
 #-------------------------------------------------
 sub do_error {
-	my( $site, $r, @err ) = @_;
-	
-	$r->log_error( @err ); 
+    my( $site, $r, @err ) = @_;
+    
+    $r->log_error( @err ); 
 
 }
 
@@ -46,13 +45,13 @@ sub do_error {
 # $site->do_process( $r, @err )
 #-------------------------------------------------
 sub do_process {
-	my( $site ) = @_;
+    my( $site ) = @_;
 
     my $r = $site->r();
 
-	my $framing = webapp_get_framing( $r, $$site{frame} );		
-	
-	$r->print( $site->{stash}{output} );	
+    my $framing = webapp_get_framing( $r, $$site{frame} );      
+    
+    $r->print( $site->{stash}{output} );    
 
 } 
 
@@ -63,40 +62,40 @@ sub do_process {
 # for us. 
 #-------------------------------------------------
 sub webapp_get_framing ($;$) { 
-	my ($r, $framing ) = @_;
-	my $frame; 
+    my ($r, $framing ) = @_;
+    my $frame; 
 
-	$framing = '' if ( ! defined $framing );
+    $framing = '' if ( ! defined $framing );
 
-	croak "invalid apache request object: $!" if ( $r eq '' );
+    croak "invalid apache request object: $!" if ( $r eq '' );
 
-	# Get our framing if we don't have it
-	if( ($framing eq '') || ($framing eq 'auto') ) { 
-		$framing = $r->dir_config('Framing');
+    # Get our framing if we don't have it
+    if( ($framing eq '') || ($framing eq 'auto') ) { 
+        $framing = $r->dir_config('Framing');
 
-		croak "no framing defined: $!" if( $framing eq '' );
-	}
+        croak "no framing defined: $!" if( $framing eq '' );
+    }
 
-	if (!$framing or ($framing =~ /^(off|none)$/i)) {
-		$framing = 'TheWorld::Framing';
-	}
+    if (!$framing or ($framing =~ /^(off|none)$/i)) {
+        $framing = 'TheWorld::Framing';
+    }
 
-	$framing = 'TheWorld::Framing::Plain' if( $framing =~ /^plain$/i );
+    $framing = 'TheWorld::Framing::Plain' if( $framing =~ /^plain$/i );
 
-	my ( $mod, @opt ) = split(';', $framing );
+    my ( $mod, @opt ) = split(';', $framing );
 
-	$mod = 'TheWorld::Framing::FromTemplate' if ( $mod =~ /template/ );
+    $mod = 'TheWorld::Framing::FromTemplate' if ( $mod =~ /template/ );
 
-	# Get an instance of our framing and put it into $frame
-	eval { $frame = new $mod };
+    # Get an instance of our framing and put it into $frame
+    eval { $frame = new $mod };
 
-	croak "could not load framing '$mod': $!\n" if( $@ );
+    croak "could not load framing '$mod': $!\n" if( $@ );
 
-	croak "could not load framing '$mod': $!\n" if( ! $frame );
+    croak "could not load framing '$mod': $!\n" if( ! $frame );
 
-	$frame->set_options(@opt);
+    $frame->set_options(@opt);
 
-	return( $frame );
+    return( $frame );
 } # END webapp_get_framing
 # EOF
 1;

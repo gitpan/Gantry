@@ -11,16 +11,18 @@ use Pod::POM::View::HTML;
 use Pod::POM;
 use File::Find;
 use Pod::Pdf;
+our $app_rootp = '';
 
 #-------------------------------------------------
 # $self->init( $self );
 #-------------------------------------------------
 sub init {
-	my( $self, $r ) = @_;
-	
-	$self->SUPER::init( $r ); 
-	
-	$self->{__POD_DIR__} = $self->fish_config( 'pod_dir' );
+    my( $self, $r ) = @_;
+    
+    $self->SUPER::init( $r ); 
+    
+    $self->{__POD_DIR__} = $self->fish_config( 'pod_dir' );
+    $app_rootp = $self->app_rootp;
 
 } # end init
 
@@ -28,82 +30,82 @@ sub init {
 # $self->do_main( $file);
 #-------------------------------------------------
 sub do_main {
-	my( $self, $file ) = @_;
-	
-	my %p = $self->get_param_hash;
-	$file ||= $p{file};
-	
-	my $module = $file;
-	
-	my $DO_PDF = 0;
-	
-	if ( $file =~ /\.pdf$/ ) {
-		$file =~ s/\.pdf$//;
-		$DO_PDF=1;
-	}
-	
-	$self->stash->view->template( 'pod.tt' );
-	$self->stash->view->title( $file );
-	
-	my @path = split( /\//, $self->{__POD_DIR__} );
-	my $base_module = $path[-1];
+    my( $self, $file ) = @_;
+    
+    my %p = $self->get_param_hash;
+    $file ||= $p{file};
+    
+    my $module = $file;
+    
+    my $DO_PDF = 0;
+    
+    if ( $file =~ /\.pdf$/ ) {
+        $file =~ s/\.pdf$//;
+        $DO_PDF=1;
+    }
+    
+    $self->stash->view->template( 'pod.tt' );
+    $self->stash->view->title( $file );
+    
+    my @path = split( /\//, $self->{__POD_DIR__} );
+    my $base_module = $path[-1];
 
-	my $p = Pod::POM->new();
-	
-	$file = '' if $file eq $base_module;
-	$file =~ s/::/\//g;
-	$file = '/' . $file if $file;
-	
-	if ( $DO_PDF ) {
-		$self->template_disable( 1 );
-		$self->content_type( 'application/pdf' );
-		my $f = ( $self->{__POD_DIR__} . "${file}.pm" );
-		
-		my $pdf;
-		eval {
-			$pdf = pod2pdf( '--paper=usletter', $f );
-		              
-		};
-		if ( $@ ) {
-			$self->content_type( 'text/plain' );
-			return( $@ );
-		}
-		
-		return( $pdf );
+    my $p = Pod::POM->new();
+    
+    $file = '' if $file eq $base_module;
+    $file =~ s/::/\//g;
+    $file = '/' . $file if $file;
+    
+    if ( $DO_PDF ) {
+        $self->template_disable( 1 );
+        $self->content_type( 'application/pdf' );
+        my $f = ( $self->{__POD_DIR__} . "${file}.pm" );
+        
+        my $pdf;
+        eval {
+            $pdf = pod2pdf( '--paper=usletter', $f );
+                      
+        };
+        if ( $@ ) {
+            $self->content_type( 'text/plain' );
+            return( $@ );
+        }
+        
+        return( $pdf );
 
-	}
-	
-	my $pom = $p->parse_file(
-	 ( $self->{__POD_DIR__} . "${file}.pm" ) 
-	) or die "$!";
-	
-	my $location = $self->location;
-	
-	my $d = My::View->print($pom);
-	$d =~ s/<\/?body.*?>//ig;
-	$d =~ s/<\/?html>//ig;
-	$d =~ s/(${base_module}::)((\w+)?(::\w+)*)/<a href="$location\/main\/$2">$1$2<\/a>/g;
-	$d =~ s/(${base_module}\(3\))/<a href="$location\/main\/$base_module">$1<\/a>/g;
-	$d =~ s/<h1>(\w+)\s*<\/h1>/<h1><a style="text-decoration: none" name="$1">$1<\/a><\/h1>/g;
+    }
+    
+    my $pom = $p->parse_file(
+     ( $self->{__POD_DIR__} . "${file}.pm" ) 
+    ) or die "$!";
+    
+    my $location = $self->location;
+    
+    my $d = My::View->print($pom);
+    $d =~ s/<\/?body.*?>//ig;
+    $d =~ s/<\/?html>//ig;
+    #$d =~ s/(${base_module}::)((\w+)?(::\w+)*)/<a href="$location\/main\/$2">$1$2<\/a>/g;
+    #$d =~ s/(${base_module}\(3\))/<a href="$location\/main\/$base_module">$1<\/a>/g;
+    $d =~ s/<h1>(\w+)\s*<\/h1>/<h1><a style="text-decoration: none" name="$1">$1<\/a><\/h1>/g;
 
-	my @headings;
-	foreach my $sec ( $pom->head1() ) {
-		my $stitle = $sec->title;
-		$stitle =~ s/\s+/&nbsp;/g;	
-		push( @headings, 
-			( "<a href=\"#" . $sec->title . "\">$stitle</a> " ) );
-	}
-	
-	my @pm_files = _collect_pm_files( $self->{__POD_DIR__} );
-		
-	$self->stash->view->data( {
-		base_module => $base_module,
-		module_name		=> $module,
-		files 		=> \@pm_files,
-		headings 	=> \@headings,
-		html 		=>  $d
-		}
-	);
+    my @headings;
+    foreach my $sec ( $pom->head1() ) {
+        my $stitle = $sec->title;
+        $stitle =~ s/\s+/&nbsp;/g;  
+        push( @headings, 
+            ( "<a href=\"#" . $sec->title . "\">$stitle</a> " ) );
+    }
+    
+    my @pm_files = _collect_pm_files( $self->{__POD_DIR__} );
+        
+    $self->stash->view->data( {
+        base_module => $base_module,
+        module_name     => $module,
+        files       => \@pm_files,
+        headings    => \@headings,
+        html        =>  $d
+        }
+    );
 
 } # end do_main
 
@@ -111,22 +113,22 @@ sub do_main {
 # $self->collect_pm_files( $dir );
 #-------------------------------------------------
 sub _collect_pm_files {
-	my( $dir ) = @_;
-	
-	my @files;
-	
-	find({ 
-		wanted => sub { 
-			my $file = $File::Find::name;
-			$file =~ s/$dir//;
-			push( @files, $file ) if $_ =~ /\.pm$/; 
-		}, 
-		follow => 1 
-		}, 
-		$dir 
-	);
-	
-	return( sort( @files ) );
+    my( $dir ) = @_;
+    
+    my @files;
+    
+    find({ 
+        wanted => sub { 
+            my $file = $File::Find::name;
+            $file =~ s/$dir//;
+            push( @files, $file ) if $_ =~ /\.pm$/; 
+        }, 
+        follow => 1 
+        }, 
+        $dir 
+    );
+    
+    return( sort( @files ) );
 }
 
 #-------------------------------------------------
@@ -139,31 +141,48 @@ use base qw( Pod::POM::View::HTML );
 # view_head1
 #-------------------------------------------------   
 sub view_head1 {
-	my ($self, $item) = @_;
-	
-	return(
-		 '<a name="', $item->title->present($self), '"></a>',
-		'<h1>',
-		$item->title->present($self),
-		"</h1>\n",
-		$item->content->present($self)
-	);
+    my ($self, $item) = @_;
+    
+    return(
+         '<a name="', $item->title->present($self), '"></a>',
+        '<h1>',
+        $item->title->present($self),
+        "</h1>\n",
+        $item->content->present($self)
+    );
 }
 
 #-------------------------------------------------
 # view_head2
 #-------------------------------------------------   
 sub view_head2 {
-	my ($self, $item) = @_;
-	
-	return(
-		 '<a name="', $item->title->present($self), '"></a>',
-		'<h2>',
-		$item->title->present($self),
-		"</h2>\n",
-		$item->content->present($self)
-	);
+    my ($self, $item) = @_;
+    
+    return(
+         '<a name="', $item->title->present($self), '"></a>',
+        '<h2>',
+        $item->title->present($self),
+        "</h2>\n",
+        $item->content->present($self)
+    );
 }
+
+sub view_seq_link_transform_path {
+    my($self, $page) = @_;
+
+    # right now the default transform doesn't check whether the link
+    # is not dead (i.e. whether there is a corresponding file.
+    # therefore we don't link L<>'s other than L<http://>
+    # subclass to change the default (and of course add validation)
+
+    # this is the minimal transformation that will be required if enabled
+    # $page = "$page.html";
+    # $page =~ s|::|/|g;
+    #print "page $page\n";
+    $page =~ s/^\w+\:\://;
+    return( $app_rootp . "/main/" . $page );
+}
+
 
 1;
 
@@ -181,12 +200,12 @@ to an installed Perl module.
 If the deployment method is mod_perl:
 
     <Location /pod >
-	    PerlSetVar root   				'/home/gantry/templates'
-     	PerlSetVar template_wrapper 	'pod_wrapper.tt'
-	    PerlSetVar pod_dir 				'/home/perl/lib/Gantry'
-	    
-	    SetHandler perl-script
-	    PerlHandler Gantry::Utils::PODViewer
+        PerlSetVar root                 '/home/gantry/templates'
+        PerlSetVar template_wrapper     'pod_wrapper.tt'
+        PerlSetVar pod_dir              '/home/perl/lib/Gantry'
+        
+        SetHandler perl-script
+        PerlHandler Gantry::Utils::PODViewer
     </Location>
 
 
@@ -220,6 +239,8 @@ $cgi->dispatch;
 =over 4
 
 =item do_main
+
+=item init
 
 =back
 

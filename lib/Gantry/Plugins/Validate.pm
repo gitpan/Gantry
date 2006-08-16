@@ -13,102 +13,102 @@ use Date::Calc qw( check_date );
 # is_date( $date )
 #-------------------------------------------------
 sub is_date { 
-	my( $site, $date ) = @_;
+    my( $site, $date ) = @_;
 
-	return( 0 ) if ( ! defined $date );
+    return( 0 ) if ( ! defined $date );
 
-	return( 0 ) if ( $date !~ /^\d{1,2}-\d{1,2}-\d{4}$/ );
+    return( 0 ) if ( $date !~ /^\d{1,2}-\d{1,2}-\d{4}$/ );
 
-	my ( $month, $day, $year ) = split( '-', $date ); 
-		
-	return( 0 ) if ( ! check_date( $year, $month, $day ) );
+    my ( $month, $day, $year ) = split( '-', $date ); 
+        
+    return( 0 ) if ( ! check_date( $year, $month, $day ) );
 
-	return( 1 );
+    return( 1 );
 } # END is_date 
 
 #-------------------------------------------------
 # is_email( $email )
 #-------------------------------------------------
 sub is_email {
-	my( $site, $email ) = @_;
-	
-	return( 0 ) if ( ! defined $email );
+    my( $site, $email ) = @_;
+    
+    return( 0 ) if ( ! defined $email );
 
-	return( 0 ) if ( $email !~ /\@/ );
-	
-	return( 0 ) if ( $email !~ /\./ );
+    return( 0 ) if ( $email !~ /\@/ );
+    
+    return( 0 ) if ( $email !~ /\./ );
 
-	return( 1 );
+    return( 1 );
 } # END is_email
 
 #-------------------------------------------------
 # is_float( $float )
 #-------------------------------------------------
 sub is_float {
-	my( $site, $float ) = @_;
+    my( $site, $float ) = @_;
 
-	return( 0 ) if ( ! defined $float );
+    return( 0 ) if ( ! defined $float );
 
-	return( 1 ) if ( is_integer( $float ) );
+    return( 1 ) if ( is_integer( $float ) );
 
-	return( 0 ) if ( $float !~ /^-?\d+\.\d+$/ );
+    return( 0 ) if ( $float !~ /^-?\d+\.\d+$/ );
 
-	return( 1 );
+    return( 1 );
 } # END is_float
 
 #-------------------------------------------------
 # is_ident( $ident )
 #-------------------------------------------------
 sub is_ident {
-	my( $site, $ident ) = @_;
+    my( $site, $ident ) = @_;
 
-	return( 0 ) if ( ! defined $ident );
+    return( 0 ) if ( ! defined $ident );
 
-	return( 0 ) if ( ! is_text( $ident ) );
+    return( 0 ) if ( ! is_text( $ident ) );
 
-	return( 0 ) if ( $ident =~ /\s/ );
+    return( 0 ) if ( $ident =~ /\s/ );
 
-	return( 1 );
+    return( 1 );
 } # END is_ident
 
 #-------------------------------------------------
 # is_integer( $int )
 #-------------------------------------------------
 sub is_integer {
-	my( $site, $int ) = @_;
+    my( $site, $int ) = @_;
 
-	return( 0 ) if ( ! defined $int );
+    return( 0 ) if ( ! defined $int );
 
-	return( 0 ) if ( $int !~ /^-?\d+$/ );
+    return( 0 ) if ( $int !~ /^-?\d+$/ );
 
-	return( 1 );
+    return( 1 );
 } # END is_integer
 
 #-------------------------------------------------
 # is_ip( $ip )
 #-------------------------------------------------
 sub is_ip {
-	my( $site, $ip ) = @_;
+    my( $site, $ip ) = @_;
 
-	return( 0 ) if ( ! defined $ip );
+    return( 0 ) if ( ! defined $ip );
 
-	return( 0 ) if ( $ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ );
+    return( 0 ) if ( $ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ );
 
-	return( 1 );
+    return( 1 );
 } # END is_ip
 
 #-------------------------------------------------
 # is_mac( $mac )
 #-------------------------------------------------
 sub is_mac {
-	my( $site, $mac ) = @_;
-	
-	return( 0 ) if ( ! defined $mac );
+    my( $site, $mac ) = @_;
+    
+    return( 0 ) if ( ! defined $mac );
 
-	# prolly needs to check more ...
-  	return( 0 ) if ( $mac !~ /^[0-9A-Fa-f:\.\-\ ]+$/m );
-				      
-	return( 1 );	
+    # prolly needs to check more ...
+    return( 0 ) if ( $mac !~ /^[0-9A-Fa-f:\.\-\ ]+$/m );
+                      
+    return( 1 );    
 
 } # END is_mac
 
@@ -116,50 +116,50 @@ sub is_mac {
 # is_number( $number )
 #-------------------------------------------------
 sub is_number {
-	my( $site, $number ) = @_;
+    my( $site, $number ) = @_;
 
-	return( 0 ) if ( ! defined $number );
+    return( 0 ) if ( ! defined $number );
 
-	return( 1 ) if ( is_integer( $number ) );
+    return( 1 ) if ( is_integer( $number ) );
 
-	return( 1 ) if ( is_float( $number ) );
+    return( 1 ) if ( is_float( $number ) );
 
-	return( 0 );
+    return( 0 );
 } # END is_number
 
 #-------------------------------------------------
 # is_text( $text )
 #-------------------------------------------------
 sub is_text {
-	my( $site, $text ) = @_;
+    my( $site, $text ) = @_;
 
-	return( 0 ) if ( ! defined $text );
+    return( 0 ) if ( ! defined $text );
 
-	return( 0 ) if ( length( $text ) < 1 );
+    return( 0 ) if ( length( $text ) < 1 );
 
-	return( 1 );
+    return( 1 );
 } # END is_text
 
 #-------------------------------------------------
 # is_time( $time )
 #-------------------------------------------------
 sub is_time {
-	my( $site, $time ) = @_;
+    my( $site, $time ) = @_;
 
-	return( 0 ) if ( ! defined $time );
+    return( 0 ) if ( ! defined $time );
 
-	return( 0 ) if ( $time !~ /^\d+:\d+(:\d+)?$/ );
+    return( 0 ) if ( $time !~ /^\d+:\d+(:\d+)?$/ );
 
-	my ( $hours, $minutes, $seconds ) = split( ':', $time );
+    my ( $hours, $minutes, $seconds ) = split( ':', $time );
 
-	return( 0 ) if ( ( $hours < 0 ) || ( $hours > 23 ) );
-	return( 0 ) if ( ( $minutes < 0 ) || ( $minutes > 59 ) );
+    return( 0 ) if ( ( $hours < 0 ) || ( $hours > 23 ) );
+    return( 0 ) if ( ( $minutes < 0 ) || ( $minutes > 59 ) );
 
-	if ( defined $seconds ) {
-		return( 0 ) if ( ( $seconds < 0 ) || ( $seconds > 59 ) );
-	}
+    if ( defined $seconds ) {
+        return( 0 ) if ( ( $seconds < 0 ) || ( $seconds > 59 ) );
+    }
 
-	return( 1 );
+    return( 1 );
 } # END is_time
 
 # EOF

@@ -4,6 +4,7 @@ use strict; use warnings;
 use Gantry::Utils::ModelHelper qw(
     db_Main
     retrieve_all_for_main_listing
+    get_listing
     get_form_selections
 );
 
@@ -11,7 +12,7 @@ use POSIX qw( strftime );
 
 use base 'Class::DBI::Sweet';
 
-my $db_options = { __PACKAGE__->_default_attributes };
+my $db_options = { __PACKAGE__->_default_attributes, AutoCommit => 0 };
 
 __PACKAGE__->_remember_handle('Main');
 
@@ -30,9 +31,14 @@ sub get_db_options {
 # This method is exported by Gantry::Utils::ModelHelper
 
 #-------------------------------------------------
-# $class->retrieve_all_for_main_listing
+# $class->get_listing
 #-------------------------------------------------
 # This method is exported by Gantry::Utils::ModelHelper
+
+#-------------------------------------------------
+# $class->retrieve_all_for_main_listing
+#-------------------------------------------------
+# This deprecated method is exported by Gantry::Utils::ModelHelper
 
 #-------------------------------------------------
 # $class->pretty_date( $strftime_format, $sql_date )
@@ -73,9 +79,9 @@ If it lives in mod_perl, it expects these to come
 from the apache conf file.  You might supply them like this:
 
     <Location / >
-	    PerlSetVar dbconn 'dbi:Pg:dbname=your_db_name'
-	    PerlSetVar dbuser 'your_user'
-	    PerlSetVar dbpass 'your_password'
+        PerlSetVar dbconn 'dbi:Pg:dbname=your_db_name'
+        PerlSetVar dbuser 'your_user'
+        PerlSetVar dbpass 'your_password'
     </Location>
 
 It then retrieves them roughly like this (the mod_perl version affects this):

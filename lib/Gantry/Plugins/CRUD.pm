@@ -97,48 +97,55 @@ sub use_clean_dates {
 # $self->add( $your_self, { put => 'your', data => 'here' } )
 #-------------------------------------------------
 sub add {
-	my ( $self, $your_self, $data ) = @_;
+    my ( $self, $your_self, $data ) = @_;
 
-	$your_self->stash->view->template( $self->template );
-	$your_self->stash->view->title( 'Add ' . $self->text_descr );
+    $your_self->stash->view->template( $self->template );
+    $your_self->stash->view->title( 'Add ' . $self->text_descr );
 
     my $params   = $your_self->get_param_hash();
 
-	# Redirect if user pressed 'Cancel'
-	if ( $params->{cancel} ) {
-        my $redirect = $self->_find_redirect( $your_self, $data );
+    # Redirect if user pressed 'Cancel'
+    if ( $params->{cancel} ) {
+        my $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                user_req    => 'add',
+                action      => 'cancel',
+            }
+        );
 
-		return $your_self->relocate( $redirect );
-	}
+        return $your_self->relocate( $redirect );
+    }
 
-	# get and hold the form description
-	my $form = $self->form->( $your_self, $data );
+    # get and hold the form description
+    my $form = $self->form->( $your_self, $data );
 
-	# Check form data
+    # Check form data
     my $show_form = 0;
 
     $show_form = 1 if ( keys %{ $params } == 0 );
 
-	my $results = Data::FormValidator->check(
-		$params,
-		form_profile( $form->{fields} ),
-	);
+    my $results = Data::FormValidator->check(
+        $params,
+        form_profile( $form->{fields} ),
+    );
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
 
     if ( $show_form ) {
-		# order is important, first put in the form...
-		$your_self->stash->view->form( $form );
+        # order is important, first put in the form...
+        $your_self->stash->view->form( $form );
 
-		# ... then add error results
-		if ( $your_self->method eq 'POST' ) {
-			$your_self->stash->view->form->results( $results );
-		}
-	}
-	else {
-		# remove submit button entry
-		delete $params->{submit};
+        # ... then add error results
+        if ( $your_self->method eq 'POST' ) {
+            $your_self->stash->view->form->results( $results );
+        }
+    }
+    else {
+        # remove submit button entry
+        delete $params->{submit};
 
         if ( $self->use_clean_dates ) {
             clean_dates( $params, $form->{fields} );
@@ -146,31 +153,45 @@ sub add {
 
         $self->add_action->( $your_self, $params, $data );
 
-		# move along, we're all done here
-        my $redirect = $self->_find_redirect( $your_self, $data );
-		return $your_self->relocate( $redirect );
-	}
+        # move along, we're all done here
+        my $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => 'submit',
+                user_req    => 'add'
+            }
+        );
+        return $your_self->relocate( $redirect );
+    }
 } # END: do_add
 
 #-------------------------------------------------
 # $self->edit( $your_self, { put => 'your', data => 'here' } );
 #-------------------------------------------------
 sub edit {
-	my ( $self, $your_self, $data ) = @_;
+    my ( $self, $your_self, $data ) = @_;
 
-	$your_self->stash->view->template( $self->template() );
-	$your_self->stash->view->title( 'Edit ' . $self->text_descr() );
+    $your_self->stash->view->template( $self->template() );
+    $your_self->stash->view->title( 'Edit ' . $self->text_descr() );
 
     my %params = $your_self->get_param_hash();
 
-	# Redirect if 'Cancel'
-	if ( $params{cancel} ) {
-        my $redirect = $self->_find_redirect( $your_self, $data );
-		return $your_self->relocate( $redirect );
-	}
+    # Redirect if 'Cancel'
+    if ( $params{cancel} ) {
+        my $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => 'cancel',
+                user_req    => 'edit',
+            }
+        );
+        return $your_self->relocate( $redirect );
+    }
 
-	# get and hold the form description
-	my $form = $self->form->( $your_self, $data );
+    # get and hold the form description
+    my $form = $self->form->( $your_self, $data );
 
     croak 'Your form callback gave me nothing' unless defined $form and $form;
 
@@ -178,71 +199,92 @@ sub edit {
 
     $show_form = 1 if ( keys %params == 0 );
 
-	# Check form data
-	my $results = Data::FormValidator->check(
-		\%params,
-		form_profile( $form->{fields} ),
-	);
+    # Check form data
+    my $results = Data::FormValidator->check(
+        \%params,
+        form_profile( $form->{fields} ),
+    );
 
-	$show_form = 1 if ( $results->has_invalid );
+    $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
 
-	# Form has errors
-	if ( $show_form ) {
-		# order matters, get form data first...
-		$your_self->stash->view->form( $form );
+    # Form has errors
+    if ( $show_form ) {
+        # order matters, get form data first...
+        $your_self->stash->view->form( $form );
 
-		# ... then overlay with results
-		if ( $your_self->method eq 'POST' ) {
-			$your_self->stash->view->form->results( $results );
-		}
-	
-	}
-	# Form looks good, make update
-	else {
-		
-		# remove submit button param
-		delete $params{submit};
+        # ... then overlay with results
+        if ( $your_self->method eq 'POST' ) {
+            $your_self->stash->view->form->results( $results );
+        }
+    
+    }
+    # Form looks good, make update
+    else {
+        
+        # remove submit button param
+        delete $params{submit};
 
         if ( $self->use_clean_dates ) {
             clean_dates( \%params, $form->{fields} );
         }
 
         $self->edit_action->( $your_self, \%params, $data );
-		
-		# all done, move along
-        my $redirect = $self->_find_redirect( $your_self, $data );
-		return $your_self->relocate( $redirect );
-	}
+        
+        # all done, move along
+        my $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => 'submit',
+                user_req    => 'edit'
+            }
+        );
+        return $your_self->relocate( $redirect );
+    }
 } # END: do_edit
 
 #-------------------------------------------------
 # $self->delete( $your_self, $confirm, { other => 'data' } )
 #-------------------------------------------------
 sub delete {
-	my ( $self, $your_self, $yes, $data ) = @_;
+    my ( $self, $your_self, $yes, $data ) = @_;
 
-	$your_self->stash->view->template( 'delete.tt' );
+    $your_self->stash->view->template( 'delete.tt' );
     $your_self->stash->view->title( 'Delete' );
 
-	if ( $your_self->params->{cancel} ) {
-        my $redirect = $self->_find_redirect( $your_self, $data );
-		return $your_self->relocate( $redirect );
-	}
+    if ( $your_self->params->{cancel} ) {
+        my $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => 'cancel',
+                user_req    => 'delete'
+            }
+        );
+        return $your_self->relocate( $redirect );
+    }
 
-	if ( ( defined $yes ) and ( $yes eq 'yes' ) ) {
+    if ( ( defined $yes ) and ( $yes eq 'yes' ) ) {
 
         $self->delete_action->( $your_self, $data );
 
-		# Move along, it's already dead
-        my $redirect = $self->_find_redirect( $your_self, $data );
-		return $your_self->relocate( $redirect );
-	}
-	else {
-		$your_self->stash->view->form->message (
-			'Delete ' . $self->text_descr() . '?'
+        # Move along, it's already dead
+        my $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => 'submit',
+                user_req    => 'delete'
+            }
         );
-	}
+        return $your_self->relocate( $redirect );
+    }
+    else {
+        $your_self->stash->view->form->message (
+            'Delete ' . $self->text_descr() . '?'
+        );
+    }
 }
 
 #-----------------------------------------------------------
@@ -250,14 +292,18 @@ sub delete {
 #-----------------------------------------------------------
 
 sub _find_redirect {
-    my ( $self, $your_self, $data ) = @_;
+    my ( $self, $args ) = @_;
+    my $your_self = $args->{ gantry_site };
+    my $data      = $args->{ data };
+    my $action    = $args->{ action };
+    my $user_req  = $args->{ user_req };
 
     my $retval;
 
     my $redirect_sub = $self->redirect;
 
     if ( $redirect_sub ) {
-        $retval = $redirect_sub->( $your_self, $data );
+        $retval = $redirect_sub->( $your_self, $data, $action, $user_req );
     }
     else {
         $retval = $your_self->location();
@@ -438,7 +484,7 @@ Make this true if you want your dates cleaned immediately before your
 add and edit callbacks are invoked.
 
 Cleaning sets any false fields marked as dates in the form fields list
-to undef.  This allows Class::DBI to correctly insert them as
+to undef.  This allows your ORM to correctly insert them as
 nulls instead of trying to insert them as blank strings (which is fatal,
 at least in Postgres).
 

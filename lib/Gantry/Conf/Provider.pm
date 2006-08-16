@@ -23,6 +23,25 @@ Gantry::Conf::Provider - Base class for all Gantry::Conf providers
 
 =head1 SYNOPSIS
 
+    package Gantry::Conf::Provider::SomeNewProvider; 
+    use strict; 
+    use warnings; 
+
+    use base 'Gantry::Conf::Provider'; 
+
+    use Carp; 
+
+    sub config { 
+        my $self    =   shift; 
+        my %config; 
+
+        # Retrieve your configuration here. 
+        # And return a hash ref 
+
+        return( \%config ); 
+
+    } 
+
 =head1 DESCRIPTION
 
 =head1 METHODS
@@ -30,8 +49,6 @@ Gantry::Conf::Provider - Base class for all Gantry::Conf providers
 =head1 SEE ALSO
 
 Gantry(3), Gantry::Conf(3), Gantry::Conf::Tutorial(3), Ganty::Conf::FAQ(3)
-
-=head1 LIMITATIONS
 
 =head1 AUTHOR
 

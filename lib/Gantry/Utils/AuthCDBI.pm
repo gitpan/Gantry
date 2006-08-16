@@ -45,11 +45,11 @@ This module expects to retrieve the database connection,
 username and password from the apache conf file like this:
 
 <Location / >
-	PerlOptions +GlobalRequest
-	
-	PerlSetVar auth_dbconn 'dbi:Pg:[database]'
-	PerlSetVar auth_dbuser 'myuser'
-	PerlSetVar auth_dbpass 'mypass'
+    PerlOptions +GlobalRequest
+    
+    PerlSetVar auth_dbconn 'dbi:Pg:[database]'
+    PerlSetVar auth_dbuser 'myuser'
+    PerlSetVar auth_dbpass 'mypass'
 </Location>
 
 Or, from the cgi engines constructor:
@@ -57,9 +57,9 @@ Or, from the cgi engines constructor:
     my $cgi = Gantry::Engine::CGI->new(
         locations => ...,
         config => {
-	        auth_dbconn =>  'dbi:Pg:[database]',
-	        auth_dbuser =>  'myuser',
-	        auth_dbpass =>  'mypass',
+            auth_dbconn =>  'dbi:Pg:[database]',
+            auth_dbuser =>  'myuser',
+            auth_dbpass =>  'mypass',
         }
     );
 
@@ -71,9 +71,9 @@ Or, from a script:
 
     Gangtry::Utils::DBConnHelper::Script->set_auth_db_conn(
         {
-	        auth_dbconn =>  'dbi:Pg:[database]',
-	        auth_dbuser =>  'myuser',
-	        auth_dbpass =>  'mypass',
+            auth_dbconn =>  'dbi:Pg:[database]',
+            auth_dbuser =>  'myuser',
+            auth_dbpass =>  'mypass',
         }
     );
 

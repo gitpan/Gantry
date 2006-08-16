@@ -24,7 +24,7 @@ sub set_dbh {
     my $class = shift;
     my $dbh   = shift;
     my $r     = 'Apache2::RequestRec';
-	
+    
     if ( not $Apache::ServerStarting ) {
         $r->pnotes( "dbh", $dbh );
     }
@@ -74,7 +74,7 @@ sub get_conn_info {
 sub get_auth_dbh {
     my $auth_dbh;
     my $r = 'Apache2::RequestRec';
-	
+    
     if ( not $Apache::ServerStarting ) {
         $auth_dbh = $r->pnotes( "auth_dbh" );
     }
