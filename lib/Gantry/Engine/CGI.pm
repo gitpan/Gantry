@@ -198,7 +198,7 @@ sub apache_request {
 sub base_server {
     my( $self ) = ( shift );
 
-    return( $ENV{HTTP_SERVER} );
+    return( $ENV{HTTP_SERVER} || $ENV{HTTP_HOST} );
     
 } # end base_server
 
@@ -276,11 +276,18 @@ sub engine {
 sub engine_init {
     my $self    = shift;
     my $cgi_obj = shift;
-
-    $cgi_obj->{params} = parse_env();
-
+ 
+    #$cgi_obj->{params} = parse_env();
+    $CGI::Simple::DISABLE_UPLOADS = 
+        $self->fish_config( 'disable_uploads' ) || 0;
+        
+    $CGI::Simple::POST_MAX = $self->fish_config( 'post_max' )  ||'20000000000';    
+        
+    my $c = CGI::Simple->new();
+    $cgi_obj->{params} = $c->Vars;
+    
     $self->cgi_obj( $cgi_obj );
-    $self->cgi( CGI::Simple->new( $cgi_obj->{params} ) );
+    $self->cgi( $c );
 
 } # END engine_init
 
@@ -298,10 +305,10 @@ sub err_header_out {
 sub fish_location {
     my $self = shift;
 
-    my $app_rootp = $self->fish_config( 'app_rootp' );
-    my $location  = $self->fish_config( 'location' );
+    my $app_rootp = $self->fish_config( 'app_rootp' ) || '';
+    my $location  = $self->fish_config( 'location' )  || '';
 
-    return $app_rootp . $location;
+    return( $app_rootp . $location );
 } # END fish_location
 
 #-------------------------------------------------
@@ -328,7 +335,10 @@ sub fish_path_info {
 sub fish_uri {
     my $self = shift;
 
-    return $ENV{ SCRIPT_NAME } . $ENV{ PATH_INFO };
+    my $sn = $ENV{SCRIPT_NAME} || '';
+    my $pi = $ENV{PATH_INFO}   || '';
+    
+    return( "${sn}${pi}" );
 } # END fish_uri
 
 #-------------------------------------------------
@@ -449,6 +459,7 @@ sub get_dbh {
 sub header_in {
     my( $self, $key ) = @_;
 
+    return $ENV{uc $key} || $ENV{$key} || '';
 } # end header_in
 
 #-------------------------------------------------
@@ -481,7 +492,15 @@ sub locations {
 sub redirect_response {
     my $self = shift;
 
-    print $self->cgi->redirect( $self->header_out->{location} );
+    my $cookies = '';
+    foreach my $cookie ( @{ $self->cookie_stash() } ) {
+        print "Set-Cookie: $cookie\n";
+    }
+    
+    my $p = {};
+    $p->{uri} = $self->header_out->{location};
+
+    print $self->cgi->redirect( $p );
 
 } # END redirect_response
 
@@ -578,9 +597,22 @@ sub send_error_output {
 sub send_http_header {
     my $self = shift;
 
-    print $self->cgi->header(
-            -type => $self->content_type,
-    );
+    my $cookies = '';
+    foreach my $cookie ( @{ $self->cookie_stash() } ) {
+        print "Set-Cookie: $cookie\n";
+    }
+    
+    my $a = $self->response_headers();
+    
+    foreach my $header ( @{ $a } ) {
+        print STDERR $header->{key} . "  " . $header->{value} . "\n";
+        print "$header->{key}: $header->{value}\n";
+    }
+
+    my $p = {};
+    $p->{type}    = $self->content_type;
+    
+    print $self->cgi->header( $p );
 
 } # send_http_header
 

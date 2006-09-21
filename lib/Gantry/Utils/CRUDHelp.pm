@@ -6,9 +6,10 @@ use base 'Exporter';
 our @EXPORT = qw(
     clean_dates
     form_profile
+    clean_params
 );
 
-# If a fields is a date and its value is false, make it undef.
+# If a field is a date and its value is false, make it undef.
 sub clean_dates {
     my ( $params, $fields ) = @_;
 
@@ -54,6 +55,33 @@ sub form_profile {
     return \%retval;
 }
 
+# If a field's type is not boolean, and its value is false, make that
+# value undef.
+sub clean_params {
+    my ( $params, $fields ) = @_;
+
+    foreach my $p ( keys %{ $params } ) {
+        delete( $params->{$p} ) if $p =~ /^\./;
+    }
+    
+    FIELD:
+    foreach my $field ( @{ $fields } ) {
+        my $name = $field->{name};
+
+        next FIELD unless ( defined $field->{ is } );
+        next FIELD unless ( defined $field->{ name } );
+        next FIELD unless ( defined $params->{ $name } );
+
+        if ( ( $field->{is} !~ /^bool/ )
+                and
+             ( not $params->{ $name } )
+           )
+        {
+            $params->{ $name } = undef;
+        }
+    }
+}
+
 1;
 
 __END__
@@ -74,10 +102,19 @@ Exports helper functions useful when writing CRUD plugins.
 
 =over 4
 
+=item clean_params
+
+Pass a hash of form parameters and the fields list from a
+C<Gantry::Plugins::AutoCRUD > style form method.  Any field with
+key is whose value is not boolean is examined in the params hash.  If its
+value is false, that value is changed to undef.  This keeps the ORM
+from trying to insert a blank string into a date and integer fields which
+is fatal, at least for DBIx::Class inserting into Postgres.
+
 =item clean_dates
 
 Pass a hash of form parameters and the fields list from a
-C<Gantry::Plugins::AutoCRUD > style _form method.  Any field with
+C<Gantry::Plugins::AutoCRUD > style form method.  Any field with
 key is whose value is date is examined in the params hash.  If its
 value is false, that value is changed to undef.  This keeps the ORM
 from trying to insert a blank string into a date field which is fatal,

@@ -45,6 +45,10 @@ L<How do I turn off templating to dump raw text?>
 
 =item *
 
+L<I turned off templating must I hand write all HTML?>
+
+=item *
+
 L<How do I use gantry's AutoCRUD?>
 
 =item *
@@ -192,6 +196,9 @@ Method 3: Check out Gantry from version control and then install
  > ./Build test
  > ./Build install
 
+Note that there are prerequisites.  Further note that during testing
+some tests are skipped with warnings if you don't have suggested
+prerequisites.  Installing the modules mentioned there is helpful.
 
 =head2 How do I install Gantry on Shared Hosting?
 
@@ -218,9 +225,27 @@ L<Gantry::Docs::Tutorial>.
 =head2 How do I turn off templating to dump raw text?
 
 You can choose the formatting of your choice as long as your choice is
-Template Toolkit or no formatting.  To choose the latter,
-when initially using Gantry (or an app which uses it)
-specify -TemplateEngine=Default.
+Template Toolkit or no formatting.  To choose the latter, in the use
+statement that initially loads Gantry (or more likely an app which uses it)
+specify -TemplateEngine=Default:
+
+    use Gantry qw{ -TemplateEngine=Default }
+
+Alternatively, you can turn off formatting for one page request in the
+relavent handler:
+
+    $self->template_disable( 1 );
+
+Even after you turn automated TT off, you can still use it:
+
+    $self->stash->view->template( 'your_temp_template.tt' );
+    my $partial_output = $self->do_process() || '';
+
+=head2 I turned off templating must I hand write all HTML?
+
+Use the C<Gantry::Utils::HTML> module to help you.  This will often
+result in cleaner code with fewer tag problems.  See its docs for
+details of the helper methods it provides.
 
 =head2 How do I use gantry's AutoCRUD?
 
@@ -235,7 +260,7 @@ text 'form.tt' which is the name of the default template for add/edit forms.
 If you want a different template, don't import form_name, instead implement
 your own form_name method.
 
-For the exported CRUD methods to work you must implement three methods:
+For the exported AutoCRUD methods to work you must implement three methods:
 
 =over 4
 
@@ -269,14 +294,15 @@ in Gantry::Plugins::AutoCRUD and provide your on helper module.
 
 =head2 What about retrieval?
 
-Your model should provide convenient retrieval methods.  Gantry's
-L<Gantry::Utils::CDBI> inherits from CDBI::Sweet, so it responds to all
-the standard Class::DBI methods (with the Sweet additions.
-Gantry::Utils::CDBI also has the poorly named
-retrieve_all_for_main_listing to return all rows in a pleasant order.
-
+Your model should provide convenient retrieval methods.
 If you use DBIx::Class, you can inherit from L<Gantry::Utils::DBIxClass>
 instead of from DBIx::Class to gain a couple of useful retrieval methods.
+
+Gantry's L<Gantry::Utils::CDBI> inherits from CDBI::Sweet, so it responds
+to all the standard Class::DBI methods (with the Sweet additions).
+
+Both Gantry::Utils::DBIxClass and Gantry::Utils::CDBI provide get_listing
+which is suitable for most main listings.
 
 =head2 What if AutoCRUD won't work for me?
 
@@ -476,13 +502,15 @@ different forms, for example.
 =head2 Can I use AutoCRUD and/or CRUD if I wrote my own models?
 
 This is really two questions.  First, 'Can I use AutoCRUD with hand
-written models?'  The answer is: Yes, so long as your model responds
-to dbi_commit, create and retrieve calls, the objects returned by
-retrieve respond to delete, and -- when your form is used for
-editing -- it expects a row object returned by your retrieve.
+written models?'  The answer is: Yes, so long as one of the following
+is true of your ORM.  (1) it responds to dbi_commit, create and retrieve
+calls, the objects returned by retrieve respond to delete, and -- when your
+form is used for editing -- it expects a row object returned by your retrieve.
+(2) you implement a helper similar to
+Gantry::Plugins::AutoCRUDHelper::DBIxClass.
 
 Second, 'Can I use CRUD if I wrote my own models?'  The answer is: Yes.
-For CRUD none of the above restrictions apply since it works even if
+For CRUD above restrictions don't apply since it works even if
 there is no model.
 
 =head2 How do I control error page appearance?
@@ -500,7 +528,7 @@ an array of error output lines.
 =head2 How can I let my users pick dates easily?
 
 Date entry is controlled by form.tt.  To make it work you need to do
-two things, both of them in them in your form method:
+four things, the first two of them in them in your form method:
 
 =over 4
 
@@ -526,6 +554,14 @@ Add a date_select_text key to the hash of each date field:
      date_select_text => 'Popup Calendar',
      # ...
  }
+
+=item 4.
+
+Add a uses element for Gantry::Plugins::Calendar to the controller:
+
+    controller Name {
+        uses Gantry::Plugins::Calendar;
+    }
 
 =back
 
@@ -641,9 +677,11 @@ Bigtop can generate all of this for you.
 
 =head1 How can I use Gantry's native models?
 
-The short answer is: use Bigtop.  Better yet, use the tentmaker and
-select Model Gantry on the 'Backends' tab.  Gantry's models require
-a lot of code.  They were designed to be generated.
+Perhaps a better answer a question: 'Why would you want to?'  If you have
+a good answer for that, the short answer to the original question is:
+use Bigtop.  Better yet, use the tentmaker and select Model Gantry on
+the 'Backends' tab.  Gantry's models require a lot of code.  They were
+designed to be generated.
 
 =head1 Deployment
 
@@ -832,7 +870,9 @@ Set this flag to a true value to turn off template processing.
 
 =item root
 
-The template root (in the TT sense) for the app.
+The template root (in the TT sense) for the app.  Gantry will add the
+installed location of the default templates which ship with it to the
+end of your root path.
 
 =item css_root
 
@@ -939,9 +979,19 @@ of coordination in the auth_groups and auth_group_members tables.
 
 =head2 How can my cron (and other) scripts use an app's models?
 
-For now, your script should use the provided helper:
+If you use DBIx::Class, do its normal thing:
 
- package Gantry::Utils::Helper::Script;
+ my $schema = Your::Schema->connect(
+    'dbi:Pg:dbname=yourdb;host=127.0.0.1', 'user', 'pass'
+ );
+
+But note that Bigtop generates the schema as Model.pm, even though it is
+not a model and no models inherit from it.
+
+If you use any ORM which uses the DBConn scheme (see Gantry::Docs::DBConn),
+your script should use the provided helper:
+
+ use Gantry::Utils::Helper::Script;
 
  Gantry::Utils::Helper::Script->set_conn_info(
      {
@@ -974,8 +1024,9 @@ see the need for auth, you do in fact need it.
 
 =head1 Summary
 
-If you have other questions, send them in.  Maybe some day this will be
-a genuine FAQ.
+If you have other questions, send them in to the gantry mailing list --
+details on joining can be found on http://usegantry.org.  Maybe some day
+this will be a genuine FAQ.
 
 =head1 Author
 

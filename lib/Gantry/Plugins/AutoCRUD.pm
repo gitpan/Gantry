@@ -3,7 +3,7 @@ package Gantry::Plugins::AutoCRUD;
 use strict;
 use Data::FormValidator;
 
-use Gantry::Utils::CRUDHelp qw( clean_dates form_profile );
+use Gantry::Utils::CRUDHelp qw( clean_params form_profile );
 
 use Exporter;
 use Carp;
@@ -100,7 +100,7 @@ sub do_add {
         # remove submit button entry
         delete $params->{submit};
 
-        clean_dates( $params, $form->{fields} );
+        clean_params( $params, $form->{fields} );
 
         # let subclass massage the params, but only if it wants to
         if ( $self->can( 'add_pre_action' ) ) {
@@ -187,7 +187,7 @@ sub do_edit {
         # remove submit button param
         delete $params{submit};
 
-        clean_dates( \%params, $form->{fields} );
+        clean_params( \%params, $form->{fields} );
 
         # allow child module to make changes
         if ( $self->can( 'edit_pre_action' ) ) {

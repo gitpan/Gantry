@@ -1,33 +1,3 @@
-DBIx::Class support should:
-    be converted to let DBIx::Class handle the primary keys (if possible)
-    be more careful with commits
-
-AutoCRUD should undef all blank form param fields before doing edit updates.
-It does this for dates, because those caused problems with Class::DBI, but
-it should apply to all fields.
-
-Based on initial user feedback we need to resolve some issues:
-    The prereq list is far too long, while many modules have dependencies
-    those modules may not be needed by users.  We should install them,
-    but skip their tests.
-        This is mostly done Class::DBI is no longer on the list.
-        Template Toolkit was retained since all but the simplest samples
-        in the docs rely on it.
-
-    We need a better list of web install directories (possibly with hidden
-    shortcut words for us).
-        Done.  Now there is a default (which is our dev/prod dir) and
-        a chance to type something.
-        I'm not sure if this gives them the chance to skip install.
-        We probably need a 'type space to skip' or some such.
-
-    We need a more complete README.
-        Fleshed out some.
-
-    The auth test offered to the user is doomed to fail.
-        Now they just have to have a database with the proper schema.
-        This is unlikely to succeed, but at least it's more sensible.
-
 Phil Crow Thu May 11 12:05:59 CDT 2006
 Tim suggested a Gantry notes section to be features on usegantry.org.
 I like the idea and here are some notes that need writing:
@@ -47,6 +17,43 @@ Gantry::Utils::Model needs some more features:
         cascading delete
 
 DONE:
+    DBIx::Class support should:
+        be converted to let DBIx::Class handle the primary keys (if possible)
+        be more careful with commits
+
+    CRUD should also have a new flag no_clean_params which if set turns off
+    the default behavior of calling clean_params for you.
+
+    AutoCRUD should undef all blank form param fields before doing edit updates.
+    It does this for dates, because those caused problems with Class::DBI, but
+    it should apply to all fields (except booleans).
+
+    Based on initial user feedback we need to resolve some issues:
+        The prereq list is far too long, while many modules have dependencies
+        those modules may not be needed by users.  We should install them,
+        but skip their tests.
+            This is mostly done Class::DBI is no longer on the list.
+            Template Toolkit was retained since all but the simplest samples
+            in the docs rely on it.
+
+        We need a better list of web install directories (possibly with hidden
+        shortcut words for us).
+            Done.  Now there is a default (which is our dev/prod dir) and
+            a chance to type something.
+            I'm not sure if this gives them the chance to skip install.
+            We probably need a 'type space to skip' or some such.
+
+        We need a more complete README.
+            Fleshed out some.
+
+        The auth test offered to the user is doomed to fail.
+            Now they just have to have a database with the proper schema.
+            This is unlikely to succeed, but at least it's more sensible.
+
+    DBIx::Class support should:
+        be converted to let DBIx::Class handle the primary keys (if possible)
+        be more careful with commits
+
     Abstract out all references to the apache request object.  This object
     is subject to mod_perl api changes.  Further, other systems don't have
     this option.  What we need is a way to set config variables and have

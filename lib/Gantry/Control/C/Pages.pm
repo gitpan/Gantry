@@ -464,6 +464,16 @@ Gantry::Plugins::CRUD callback.
 
 =back
 
+There is also one method designed to be called by template wrappers.
+
+=over 4
+
+=item site_links
+
+Returns site nav links and their text.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control(3), Gantry::Control::C::Users(3), Gantry::Control::C::Groups(3),

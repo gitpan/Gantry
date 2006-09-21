@@ -10,6 +10,10 @@ One of the problems with separating models from the rest of any application
 is how to inform the model of the database connection information.  This
 document explains how that information makes its way to the model.
 
+This document does not apply to DBIx::Class, which has a cleaner way
+of moving this information from conf to code.  See
+Gantry::Plugins::DBIxClassConn for how Gantry works with dbic.
+
 =head1 Environments (a.k.a. Engines)
 
 Gantry supports plugable engines.  Currently there are engines for CGI

@@ -6,11 +6,16 @@ use base qw( HTTP::Server::Simple::CGI );
 use Symbol;
 
 my $engine_object;
+my $net_server;
 
 sub set_engine_object {
     my $self       = shift;
     $engine_object = shift;
+}
 
+sub set_net_server {
+    my $self       = shift;
+    $net_server    = shift;
 }
 
 sub handler {
@@ -23,10 +28,9 @@ sub handler {
 
 sub handle_request_test {
     my ( $self, $request ) = @_;
-    my $method = 'GET';
-    if ( $request =~ s/^(POST|GET)\:// ) {
-        $method = $1;
-    }
+
+    my $method = 'GET'; # always GET for tests
+    $request =~ s/^(POST|GET)\://;
     
     my( $uri, $args ) = split( /\?/, $request );
     
@@ -61,9 +65,22 @@ sub handle_request_test {
     
 }
 
+sub net_server {
+    $net_server ? $net_server : '';    
+}
+
+sub setup_server_url {
+    $ENV{SERVER_URL}
+    ||= ( 
+        "http://" 
+        . ( $ENV{SERVER_NAME} || '' ) 
+        . ":" . $ENV{SERVER_PORT} . "/" 
+    );
+}
+
 sub handle_request {
     my ( $self  ) = @_;
-
+    
     # divert STDOUT to another handle that stores the returned data
     my $out_handle      = gensym;
     my $out             = tie   *$out_handle, "Gantry::Server::Tier";
@@ -98,7 +115,7 @@ EO_FAILURE_RESPONSE
     select $original_handle;
 
     print "HTTP/1.0 $success_code\n" . $out->get_output();
-    
+
 }
 
 package Gantry::Server::Tier;
@@ -107,7 +124,7 @@ use strict; use warnings;
 sub get_output {
     my $self = shift;
 
-    return $self->[1];
+    return $self->[1] || '';
 }
 
 sub TIEHANDLE {
@@ -208,6 +225,20 @@ This method functions as a little web server processing http requests
 This method pretends to be a web server, but only handles a single request
 before returning.  This is useful for testing your Gantry app without
 having to use sockets.
+
+=item net_server
+
+Retrieves the defined Net::Sever engine type
+
+=item set_net_server
+
+optionaly you can set a Net::Sever engine type ( see Net::Server ).
+
+ $server->set_net_server( 'Net::Server::PreForkSimple' );
+
+=item setup_server_url
+
+Builds and sets the SERVER_URL environment variable.
 
 =back
 

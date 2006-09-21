@@ -1,6 +1,6 @@
 use strict;
 
-use Test::More tests => 12;
+use Test::More tests => 17;
 use Test::Exception;
 use File::Spec;
 
@@ -224,4 +224,114 @@ is_deeply(
         reset      => 2,
     },
     'level fishing - third level'
+);
+
+#-------------------------------------------------------------------------
+# Configuring in main gantry.conf file (simple) 
+#-------------------------------------------------------------------------
+$gconf = File::Spec->catfile( qw( t conf flat config_in_main_gantry.conf ) );
+
+$using_conf = Gantry::Conf->retrieve(
+    {
+        instance    => 'config_in_main_simple',
+        config_file => $gconf,
+    }
+);
+
+is_deeply(
+    $using_conf,
+    {
+        foo         =>  1,
+        bar         =>  2,
+        baz         =>  3,
+    },
+    'config in main - simple' 
+);
+
+#-------------------------------------------------------------------------
+# Configuring in main gantry.conf file (with global) 
+#-------------------------------------------------------------------------
+$gconf = File::Spec->catfile( qw( t conf flat config_in_main_gantry.conf ) );
+
+$using_conf = Gantry::Conf->retrieve(
+    {
+        instance    => 'config_in_main_with_global',
+        config_file => $gconf,
+    }
+);
+
+is_deeply(
+    $using_conf,
+    {
+        foo         =>  2,
+        bar         =>  4,
+        baz         =>  5,
+    },
+    'config in main - with globals'
+);
+
+#-------------------------------------------------------------------------
+# Configuring in main gantry.conf file (with shares) 
+#-------------------------------------------------------------------------
+$gconf = File::Spec->catfile( qw( t conf flat config_in_main_gantry.conf ) );
+
+$using_conf = Gantry::Conf->retrieve(
+    {
+        instance    => 'config_in_main_with_shares',
+        config_file => $gconf,
+    }
+);
+
+is_deeply(
+    $using_conf,
+    {
+        foo         =>  2,
+        bar         =>  3,
+        baz         =>  2,
+    },
+    'config in main - with shares'
+);
+
+#-------------------------------------------------------------------------
+# Using simple include from within master conf file 
+#-------------------------------------------------------------------------
+$gconf = File::Spec->catfile( qw( t conf flat include_test.conf ) );
+
+$using_conf = Gantry::Conf->retrieve(
+    {
+        instance    => 'simple_include',
+        config_file => $gconf,
+    }
+);
+
+is_deeply(
+    $using_conf,
+    {
+        foo         =>  2,
+        bar         =>  3,
+        baz         =>  4,
+    },
+    'simple include'
+);
+
+#-------------------------------------------------------------------------
+# Master file add include t/conf/flat/gantry.d/*.conf 
+#-------------------------------------------------------------------------
+$gconf = File::Spec->catfile( qw( t conf flat include_test3.conf ) );
+
+$using_conf = Gantry::Conf->retrieve(
+    {
+        instance    => 'glob_include',
+        config_file => $gconf,
+    }
+);
+
+is_deeply(
+    $using_conf,
+    {
+        foo         =>  2,
+        bar         =>  3,
+        baz         =>  4,
+    },
+    'glob include'
 );

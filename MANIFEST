@@ -72,6 +72,7 @@ lib/Gantry/Plugins/Calendar.pm
 lib/Gantry/Plugins/CRUD.pm
 lib/Gantry/Plugins/DBIxClassConn.pm
 lib/Gantry/Plugins/Validate.pm
+lib/Gantry/Plugins/Static.pm
 lib/Gantry/Server.pm
 lib/Gantry/Stash.pm
 lib/Gantry/Stash/Controller.pm
@@ -127,6 +128,11 @@ t/conf/02flat.t
 t/conf/03httpt
 t/conf/flat/badgantry.conf
 t/conf/flat/badgantry2.conf
+t/conf/flat/config_in_main_gantry.conf
+t/conf/flat/include_test.conf
+t/conf/flat/include_test2.conf
+t/conf/flat/include_test3.conf
+t/conf/flat/gantry.d/test.conf
 t/conf/flat/gantry.conf
 t/conf/flat/incommon.conf
 t/conf/flat/levels.conf

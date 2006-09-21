@@ -44,7 +44,7 @@ a great help to developers.
 No matter what a web application does, it shares an obvious trait with
 all other web apps: the web.  Users will interact with our web apps
 through their browsers.  The details of the interaction may differ
-depending on whether we use mod_perl, cgi, or something else, but
+depending on whether we use mod_perl, CGI, or something else, but
 the fact remains that all the data coming into and out of our apps
 travels in http requests.
 

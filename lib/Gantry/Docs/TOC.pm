@@ -18,7 +18,7 @@ Describes the history, features, and motivation behind Gantry.
 
 Explains how database connection information flows from app configuration
 to DBI.  The process should be seamless for app developers, but if you
-need to work on the engines or add support for in ORMs, you may find
+need to work on the engines or add support for ORMs, you may find
 useful information here.
 
 =item FAQ.pm

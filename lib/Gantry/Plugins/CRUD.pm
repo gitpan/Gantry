@@ -4,7 +4,7 @@ use strict;
 use Carp;
 use Data::FormValidator;
 
-use Gantry::Utils::CRUDHelp qw( clean_dates form_profile );
+use Gantry::Utils::CRUDHelp qw( clean_dates clean_params form_profile );
 
 #-----------------------------------------------------------
 # Constructor
@@ -86,7 +86,12 @@ sub text_descr {
 
 sub use_clean_dates {
     my $self = shift;
-    return $self->{use_clean_dates}
+    return $self->{use_clean_dates};
+}
+
+sub turn_off_clean_params {
+    my $self = shift;
+    return $self->{turn_off_clean_params};
 }
 
 #-----------------------------------------------------------
@@ -147,8 +152,13 @@ sub add {
         # remove submit button entry
         delete $params->{submit};
 
-        if ( $self->use_clean_dates ) {
-            clean_dates( $params, $form->{fields} );
+        if ( $self->turn_off_clean_params ) {
+            if ( $self->use_clean_dates ) {
+                clean_dates( $params, $form->{ fields } );
+            }
+        }
+        else {
+            clean_params( $params, $form->{ fields } );
         }
 
         $self->add_action->( $your_self, $params, $data );
@@ -225,8 +235,13 @@ sub edit {
         # remove submit button param
         delete $params{submit};
 
-        if ( $self->use_clean_dates ) {
-            clean_dates( \%params, $form->{fields} );
+        if ( $self->turn_off_clean_params ) {
+            if ( $self->use_clean_dates ) {
+                clean_dates( \%params, $form->{ fields } );
+            }
+        }
+        else {
+            clean_params( \%params, $form->{ fields } );
         }
 
         $self->edit_action->( $your_self, \%params, $data );
@@ -333,6 +348,7 @@ Gantry::Plugins::CRUD - helper for somewhat interesting CRUD work
         template        => 'your.tt',  # defulats to form.tt
         text_descr      => 'database row description',
         use_clean_dates => 1,
+        turn_off_clean_params => 1,
     );
 
     sub do_add {
@@ -348,7 +364,7 @@ Gantry::Plugins::CRUD - helper for somewhat interesting CRUD work
         $row->dbi_commit();
     }
 
-    # Similarly for do_edit
+    # Similarly for do_delete
 
     sub do_delete {
         my ( $self, $doomed_id, $confirm ) = @_;
@@ -480,15 +496,28 @@ message.
 
 =item use_clean_dates (optional, defaults to false)
 
+This is ignored unless you turn_off_clean_params, since it is redundant
+when clean_params is in use.
+
 Make this true if you want your dates cleaned immediately before your
 add and edit callbacks are invoked.
 
 Cleaning sets any false fields marked as dates in the form fields list
 to undef.  This allows your ORM to correctly insert them as
 nulls instead of trying to insert them as blank strings (which is fatal,
-at least in Postgres).
+at least in PostgreSQL).
 
 For this to work your form fields must have this key: C<<is => 'date'>>.
+
+=item turn_off_clean_params (optional, defaults to false)
+
+By default, right before an SQL insert or update, the params hash from the
+form is passed through the clean_params routine which sets all non-boolean
+fields which are false to undef.  This prevents SQL errors with ORMs that
+can correctly translate blank strings into nulls for non-string types.
+
+If you really don't want this routine, set turn_off_clean_params.  If you
+turn it off, you can use_clean_dates, which only sets false dates to undef.
 
 =back
 
@@ -568,7 +597,7 @@ designed to give you maximum flexibility, while doing the most repetative
 things in a reasonable way.  It is perfectly good use of this module to
 have only one method which calls edit.  On the other hand, you might have
 two methods that call edit on two different instances, two methods
-taht call add on those same instances and a method that calls delete on
+that call add on those same instances and a method that calls delete on
 one of the instances.  Mix and match.
 
 =head1 SEE ALSO

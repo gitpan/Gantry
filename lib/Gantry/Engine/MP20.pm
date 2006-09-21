@@ -17,7 +17,7 @@ use Apache2::Response ();
 use Gantry::Conf;
 use Gantry::Utils::DBConnHelper::MP20;
 
-use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
+use vars qw( @ISA @EXPORT ); 
 
 ############################################################
 # Variables                                                #
@@ -63,8 +63,6 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     success_code
 );
 
-@EXPORT_OK  = qw( );
-                    
 ############################################################
 # Functions                                                #
 ############################################################
@@ -466,14 +464,17 @@ sub set_req_params {
 #-------------------------------------------------
 sub status_const {
     my( $self, $status ) = @_;
-    
-    return Apache2::Const::DECLINED         if uc $status eq 'DECLINED';
-    return Apache2::Const::OK               if uc $status eq 'OK';
-    return Apache2::Const::REDIRECT         if uc $status eq 'REDIRECT';
-    return Apache2::Const::FORBIDDEN        if uc $status eq 'FORBIDDEN';
-    return Apache2::Const::SERVER_ERROR     if uc $status eq 'SERVER_ERROR';
-    return Apache2::Const::HTTP_BAD_REQUEST if uc $status eq 'HTTP_BAD_REQUEST';
-    return Apache2::Const::HTTP_UNAUTHORIZED if uc $status eq 'HTTP_UNAUTHORIZED';
+
+    # Upper case our status 
+    $status = uc($status); 
+
+    return Apache2::Const::DECLINED         if $status eq 'DECLINED';
+    return Apache2::Const::OK               if $status eq 'OK';
+    return Apache2::Const::REDIRECT         if $status eq 'REDIRECT';
+    return Apache2::Const::FORBIDDEN        if $status eq 'FORBIDDEN';
+    return Apache2::Const::SERVER_ERROR     if $status eq 'SERVER_ERROR';
+    return Apache2::Const::HTTP_BAD_REQUEST if $status eq 'HTTP_BAD_REQUEST';
+    return Apache2::Const::HTTP_UNAUTHORIZED if $status eq 'HTTP_UNAUTHORIZED';
     
     die( "Undefined constant $status" );
 

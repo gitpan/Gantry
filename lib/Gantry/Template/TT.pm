@@ -57,8 +57,8 @@ sub do_process {
     
     # Process through template tookit
     else {
-        if ( not defined $tt{ $self->location } ) {
-            $tt{ $self->location } = Template->new({
+        if ( not defined $tt{ $self->uri } ) {
+            $tt{ $self->uri } = Template->new({
                 WRAPPER         => $self->template_wrapper,
                 INCLUDE_PATH    => $self->root,         
                 DEFAULT         => $self->template_default,
@@ -74,10 +74,10 @@ sub do_process {
             if ! $self->stash->view->template();
 
         my $page;
-        $tt{ $self->location }->process( $self->stash->view->template, 
+        $tt{ $self->uri }->process( $self->stash->view->template, 
             { self => $self, site => $self, view => $self->stash->view }, 
             \$page 
-        ) || die( "Template Error: " . $tt{ $self->location }->error ); 
+        ) || die( "Template Error: " . $tt{ $self->uri }->error ); 
         
         return( $page );
     }

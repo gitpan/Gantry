@@ -4,7 +4,45 @@ package Gantry::Docs::QuickStart;
 
 Gantry::Docs::QuickStart - Getting your first Gantry app up and running
 
+=head1 Off and running
+
+The easiest way to build a Gantry app with with bigtop:
+
+    bigtop -n AppName list of tables
+
+Choose a suitable name and list the tables you've already thought of.
+When you think of more later, they will be easy to add.
+
+If you have sqlite in your path, bigtop will build a database for you.
+Then all you need to do is change to the directory it made for your app
+and start the stand alone server.
+
+    cd AppName
+    ./app.server
+
+If you don't use sqlite (or bigtop could not find it in your path), change
+to the directory bigtop built for you.  Create a database called app.db with
+your database engine, populate the database, and start the app.server.  With
+Postgres that looks like this:
+
+    cd AppName
+    createdb app.db -U postgres
+    psql app.db -U regular_user < docs/schema.postgres
+    ./app.server -d Pg -u regular_user -p password
+
+For MySQL, try this instead:
+
+    cd AppName
+    msyqladmin create app.db -u root -p
+    mysql -u root -p app.db < docs/schema.mysql
+    ./app.server -d=mysql --u=regular_user -p='secret'
+
+Then the app is running, you can view it by pointing your browser
+to any of the URLs app.server printed on startup.
+
 =head1 A Simple Greeting
+
+This section is for those who prefer a less magical experience.
 
 All you need for a gantry app is a module which uses Gantry and has
 a method called do_something (usually do_main is a good first choice):

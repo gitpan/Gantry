@@ -436,6 +436,17 @@ where to go when a button driven action is complete.
 
 =back
 
+There is also one method designed to be called by templates (especially
+wrappers).
+
+=over 4
+
+=item site_links
+
+Returns nav links and their text.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control::C::Users(3), Gantry::Control(3), Gantry::Control::Users(3),

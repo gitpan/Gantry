@@ -11,7 +11,7 @@ use Apache::Request;
 use Gantry::Conf;
 use Gantry::Utils::DBConnHelper::MP13;
 
-use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
+use vars qw( @ISA @EXPORT ); 
 
 ############################################################
 # Variables                                                #
@@ -57,8 +57,6 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     success_code
 );
 
-@EXPORT_OK  = qw( );
-                    
 ############################################################
 # Functions                                                #
 ############################################################
@@ -251,7 +249,7 @@ sub get_arg_hash {
 # $self->get_auth_dbh( )
 #-------------------------------------------------
 sub get_auth_dbh {
-    Gantry::Utils::DBConnHelper::MP13->get_auth_dbh;
+    return Gantry::Utils::DBConnHelper::MP13->get_auth_dbh;
 }
 
 #-------------------------------------------------
@@ -309,7 +307,7 @@ sub set_cached_config {
 # $self->get_dbh( )
 #-------------------------------------------------
 sub get_dbh {
-    Gantry::Utils::DBConnHelper::MP13->get_dbh;
+    return Gantry::Utils::DBConnHelper::MP13->get_dbh;
 }
 
 #-------------------------------------------------
@@ -449,14 +447,17 @@ sub set_req_params {
 #-------------------------------------------------
 sub status_const {
     my( $self, $status ) = @_;
-    
-    return DECLINED         if uc $status eq 'DECLINED';
-    return OK               if uc $status eq 'OK';
-    return REDIRECT         if uc $status eq 'REDIRECT'; 
-    return FORBIDDEN        if uc $status eq 'FORBIDDEN'; 
-    return AUTH_REQUIRED    if uc $status eq 'AUTH_REQUIRED';
-    return AUTH_REQUIRED    if uc $status eq 'HTTP_UNAUTHORIZED';
-    return SERVER_ERROR     if uc $status eq 'SERVER_ERROR';
+  
+    # Upper case our status 
+    $status = uc $status; 
+
+    return DECLINED         if $status eq 'DECLINED';
+    return OK               if $status eq 'OK';
+    return REDIRECT         if $status eq 'REDIRECT'; 
+    return FORBIDDEN        if $status eq 'FORBIDDEN'; 
+    return AUTH_REQUIRED    if $status eq 'AUTH_REQUIRED';
+    return AUTH_REQUIRED    if $status eq 'HTTP_UNAUTHORIZED';
+    return SERVER_ERROR     if $status eq 'SERVER_ERROR';
 
     die( "Undefined constant $status" );
 

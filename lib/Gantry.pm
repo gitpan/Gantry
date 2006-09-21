@@ -4,11 +4,13 @@ use strict;
 use Gantry::Stash;
 use Gantry::Init;
 use CGI::Simple;
+use File::Spec;
+use POSIX qw( strftime );
 
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.38';
+our $VERSION = '3.39';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -184,8 +186,9 @@ sub relocate {
 sub get_cookies {
     my ( $self, $want_cookie ) = ( shift, shift );
 
-    my $client = $self->header_in( 'Cookie' ); 
-
+    my $client = 
+        $self->header_in( 'Cookie' ) || $self->header_in( 'HTTP_COOKIE' ); 
+    
     return () if ( ! defined $client ); #|| ! $raw ); 
     
     my %cookies; 
@@ -225,12 +228,7 @@ sub set_cookie {
     # Only required fields in the cookie.
     my $cookie = sprintf( "%s=%s; ", $$options{name}, $$options{value} );
 
-    # these are all optional. and should be created as such.
-    if ( defined $$options{expire} ) {
-        $$options{expire} = 0 if ( $$options{expire} !~ /^\d+$/ );
-        $cookie .= strftime(    "expires=%a, %d-%b-%Y %H:%M:%S GMT; ", 
-                                gmtime( time + $$options{expire} ) );
-    }
+
 
     $cookie .= sprintf( "path=%s; ", $$options{path} )  
         if ( defined $$options{path} );
@@ -239,13 +237,47 @@ sub set_cookie {
     $cookie .= 'secure' 
         if ( defined $$options{secure} && $$options{secure} );
 
-    # Always use this method, its safe for redirect and error and
-    # normal pages as well. .
-    $self->err_header_out( 'Set-Cookie', $cookie );
+    # these are all optional. and should be created as such.
+    if ( defined $$options{expire} ) {
+        $$options{expire} = 0 if ( $$options{expire} !~ /^\d+$/ );
+        $cookie .= strftime(    "expires=%a, %d-%b-%Y %H:%M:%S GMT; ", 
+                                gmtime( time + $$options{expire} ) );
+    }
+
+    $cookie =~ s/\;\s*$/ /;
+
+    $self->err_header_out( 'Set-Cookie', $cookie ); # mp13 mp20
+    $self->cookie_stash( $cookie ); # cgi
 
     return();
     
 } # end set_cookies
+
+sub cookie_stash {
+    my ( $self, $p ) = @_;
+
+    $self->{__COOKIE_STASH__} = [] 
+        unless defined $self->{__COOKIE_STASH__};
+    
+    if ( defined $p ) {
+        push( @{ $self->{__COOKIE_STASH__} }, $p );
+    }
+    return( $self->{__COOKIE_STASH__} );
+        
+} # end method
+     
+sub response_headers {
+    my ( $self, $ref ) = @_;
+
+    $self->{__RESPONSE_HEADERS__} = [] 
+        unless defined $self->{__RESPONSE_HEADERS__};
+    
+    if ( defined $ref ) {
+        push( @{ $self->{__RESPONSE_HEADERS__} }, { $ref } );
+    }
+    return( $self->{__RESPONE_HEADERS__} );
+        
+} # end method
 
 #-------------------------------------------------
 # $self->cleanroot( $uri, $root )
@@ -274,35 +306,59 @@ sub import {
         # Import the proper engine
         if ( /^-Engine=(\S+)/ ) { 
             $engine = "Gantry::Engine::$1";
-            
-            eval "use $engine"; 
-            if ( $@ ) {
-                die "unable to load engine $1 ($@)";
-            }   
+            my $engine_file = File::Spec->catfile( 
+                'Gantry', 'Engine', "${1}.pm" 
+            );
+
+            eval {
+                require $engine_file;
+                import $engine;
+            };
+            if ( $@ ) { die qq/Could not load engine "$engine", "$@"/ }
         }
         
         # Load Template Engine
         elsif ( /^-TemplateEngine=(\S+)/ ) {
             $tplugin = "Gantry::Template::$1";
-            eval "use $tplugin";
-            if ($@) { die qq/Couldn't load plugin "$tplugin", "$@"/ }
-                    
+            my $tfile   = File::Spec->catfile( 
+                'Gantry', 'Template', "${1}.pm" 
+            );
+
+            eval {
+                require $tfile;
+                import $tplugin;
+            };
+            if ($@) { die qq/Could not load plugin "$tplugin", "$@"/ }
         }
     
         else {
             $plugin = "Gantry::Plugins::$_";
-            eval "use $plugin";
-            if ($@) { die qq/Couldn't load plugin "$plugin", "$@"/ }
+            my $plugin_file = File::Spec->catfile( 
+                'Gantry', 'Plugins', "${_}.pm" 
+            );
+
+            eval {
+                 require $plugin_file;
+                 import $plugin;
+            };
+            if ($@) { die qq/Could not load plugin "$plugin", "$@"/ }
         
         }
     }
     
     # Load Default template plugin if one hasn't been defined
     if ( ! $tplugin && ! $class->can( 'do_action' ) ) {
-        eval "use $DEFAULT_PLUGIN_TEMPLATE";
-        if ($@) { 
-            die qq/Couldn't load Default template plugin, "$@"/ 
-        }
+        my( $tengine ) = ( $DEFAULT_PLUGIN_TEMPLATE =~ m!::(\w+)$! );
+        my $def_tengine_file = File::Spec->catfile( 
+            'Gantry', 'Template', "${tengine}.pm" 
+        );
+
+        eval {
+            require $def_tengine_file;
+            import $DEFAULT_PLUGIN_TEMPLATE;
+        };
+        if ($@) { die qq/Could not load Default template engine, "$@"/ }
+        
     }   
 
 }
@@ -325,6 +381,9 @@ sub init {
     my ( $self, $r_or_cgi ) = @_; 
 
     $self->engine_init( $r_or_cgi );
+
+    # set post_max - used for apache request object
+    $self->post_max( $self->fish_config( 'post_max' ) || '20000000' );
 
     $self->uri( $self->fish_uri() );
     $self->location( $self->fish_location() );
@@ -352,6 +411,7 @@ sub init {
     $self->tmp_root( $self->fish_config( 'tmp_root' ) );
     
     # set application uri variables
+    $self->web_rootp( $self->fish_config( 'web_rootp' ) );
     $self->app_rootp( $self->fish_config( 'app_rootp' ) );
     $self->img_rootp( $self->fish_config( 'img_rootp' ) );
     $self->css_rootp( $self->fish_config( 'css_rootp' ) );
@@ -369,8 +429,6 @@ sub init {
     # set default date format
     $self->date_fmt( $self->fish_config( 'date_fmt' ) || '%b %d, %Y' );
     
-    # set post_max - used for apache request object
-    $self->post_max( $self->fish_config( 'post_max' ) || '2000000' );
     
     # set request body paramater variables
     $self->set_req_params();
@@ -615,6 +673,17 @@ sub app_rootp {
     return( $self->{__APP_ROOTP__} );
         
 } # end app_rootp
+
+#-------------------------------------------------
+# $self->web_rootp( value )
+#-------------------------------------------------
+sub web_rootp {
+    my ( $self, $p ) = @_;
+
+    $self->{__WEB_ROOTP__} = $p if ( defined $p );
+    return( $self->{__WEB_ROOTP__} );
+        
+} # end web_rootp
 
 #-------------------------------------------------
 # $self->img_rootp( value )
@@ -1092,6 +1161,14 @@ method then the value for the requested cookie is returned.
 This method can be called repeatedly and it will create the cookie
 and push it into the response headers.
 
+=item cookie_stash
+
+used to store/buffer cookies.
+
+=item response_headers
+
+used to store/buffer the response headers.
+
 =item r - The Apache Request 
 
  $r = $self->r; 
@@ -1221,6 +1298,14 @@ the root URI location for the web application.
 
 Set/get for the img_rootp value. This value is used to identify the
 the root URI location for the web application images.
+
+=item web_rootp
+
+ $self->web_rootp( 'html' );
+ $web_rootp = $self->web_rootp;
+
+Set/get for the web_rootp value. This value is used to identify the
+the root URI location for the web files.
 
 =item css_rootp
 

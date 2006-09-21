@@ -353,6 +353,16 @@ Decides where to go after a button press.
 
 =back
 
+One method is provided for templates to call.
+
+=over 4
+
+=item site_links
+
+Provides the site nav links for use at the top and/or bottom of the page.
+
+=back
+
 =head1 SEE ALSO
 
 Gantry::Control(3), Gantry(3)

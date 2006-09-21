@@ -100,8 +100,29 @@ sub _load_configuration {
     $self->_check_file( $file, 'readonly' ); 
 
     # Get a Config::General object and have it read our configuration
-    # filename 
-    my $cfg         = Config::General->new( $file );
+    # filename. 
+    #
+    # We set these options: 
+    #   -UseApacheInclude       to allow "include /etc/foo.conf" from within
+    #                           a config file 
+    #
+    #   -IncludeGlob            to allow a user to do this in their main conf
+    #                                include /etc/gantry.d/*.conf
+    #
+    #   -IncludeDirectories     to allow a user to include a directory of 
+    #                           files without a glob, it loads them in ASCII
+    #                           order 
+    #
+    #   -IncludeRelative        to allow including relative files 
+    #
+    my $cfg         = Config::General->new( 
+                                -ConfigFile         =>  $file,
+                                -UseApacheInclude   =>  1,
+                                -IncludeGlob        =>  1,
+                                -IncludeDirectories =>  1,
+                                -IncludeRelative    =>  1,
+                      );
+
     my %main_config = $cfg->getall; 
 
     # Look for the instance 
@@ -360,6 +381,25 @@ sub _configure_main_conf {
     my $instance_ref    =   shift; 
     my $provider        =   shift;
     my @files           =   @_;
+
+    # Set hash merging precedence 
+    Hash::Merge::set_behavior( 'LEFT_PRECEDENT' ); 
+    Hash::Merge::set_clone_behavior(0);
+
+    # Make sure we have a configuration already 
+    $$self{__config__} ||= {};
+
+    # Make a copy of our instance ref, skipping any 'use' methods
+    my %temp_instance; 
+    foreach my $key ( keys( %{ $instance_ref } ) ) { 
+        next if $key eq 'use'; 
+        $temp_instance{$key} = $$instance_ref{$key}; 
+    }
+
+    $$self{__config__} = merge( $$self{__config__}, \%temp_instance );
+
+    # Return true 
+    return( 1 ); 
 
 } # END _configure_main_conf 
 

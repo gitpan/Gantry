@@ -156,12 +156,10 @@ Parameters:
 				
 				<!-- LABEL -->
 				<td class="shd" valign="top"[% style_str %] style="width: [%-
-					label_width || '30%' %]">
-					
-					[% field.label %]
-					
-					[% UNLESS field.optional or field.type == 'checkbox' 
-						-%]*[% END %]
+					label_width || '30%' %]">		
+					[%- field.label %]
+					[%- UNLESS field.optional 
+                            or field.type == 'checkbox' -%]*[% END %]
 				</td>
 				
 				<!-- FORM INPUT -->
@@ -171,86 +169,111 @@ Parameters:
 					[% IF field.type == 'select' %]
 						<select name="[% field.name %]">
                         
-						[% default_field  = '';
-                           database_field = '';
-                           param_field    = '';
-                           row_value      = ''; %]
-
-						[%- FOR option IN field.options %]
-							[% IF field.is == 'boolean' %]
+                        [%-# clear field_val_hash for each loop %]
+                        [%- field_val_hash = {} -%]
+                       
+						[%- FOR option IN field.options -%]
+							[%- IF field.is == 'boolean' -%]
 								[% IF view.form.row.${field.name} %]
 									[% row_value = 't' %]
 								[% ELSE %]
 									[% row_value = 'f' %]
 								[% END %]
-							[% ELSE %]
+							[%- ELSE -%]
 								[% row_value = view.form.row.${field.name} %]
-							[% END %]
-							[% IF option.value == self.params.${field.name} %]
-								[% param_field = option.value %]
-							[% ELSIF option.value == row_value %]
-								[% database_field = option.value %]
-							[% ELSIF option.value == field.default_value %]
-								[% default_field = option.value %]
-							[% END %]
-						[% END -%]
+							[%- END -%]
+                            
+							[%- IF ( option.value == self.params.${field.name} 
+                                && self.params.defined("${field.name}") ) %]
+								[%- field_val_hash.param_field = option.value %]
+							[%- ELSIF option.value == row_value %]
+                     			[%- field_val_hash.database_field = option.value %]
+							[%- ELSIF option.value == field.default_value %]
+								[%- field_val_hash.default_field = option.value %]
+							[%- END %]
+						[%- END -%]
 
-						[% selected_value = param_field 
-							|| database_field || default_field %]
-
-						[% FOR option IN field.options %]
-							<option value="[% option.value %]"
+                        [%- IF field_val_hash.defined('param_field');
+                               selected_value = field_val_hash.param_field;
+                           ELSIF field_val_hash.defined('database_field');
+                               selected_value = field_val_hash.database_field;
+                           ELSE;
+                               selected_value = field_val_hash.default_field;
+                           END;
+                        -%]
+                        
+						[%- FOR option IN field.options %]
+                            <option value="[% option.value %]"
 							 [% IF ( option.value == selected_value );
 							 	"selected='selected'"; 
 							 	END;
 							 %]
 							>
-							[% option.label || option.value %]
+							[%- option.label || option.value %]
 							</option> 
-						[% END %]
+						[%- END %]
 						</select>
 						
-					[% ELSIF field.type == 'textarea' %]
-						
+					[%- ELSIF field.type == 'textarea' %]
+                        [%- IF self.params.defined( "${field.name}" );
+                               input_value = self.params.${field.name};
+                           ELSIF view.form.row.${field.name}.defined;
+                               input_value = view.form.row.${field.name};
+                           ELSE;
+                               input_value = field.default_value;
+                           END;
+                        -%]    						
 						<textarea name="[% field.name %]" id="[% field.id %]"
 							rows="[% field.rows || '0' %]"
 							cols="[% field.cols || '0' %]"
-						>[%- self.params.${field.name} 
-							|| view.form.row.${field.name}
-							|| field.default_value -%]</textarea>
+						>[%- input_value -%]</textarea>
 							
-					[% ELSIF field.type == 'checkbox' %]
+					[%- ELSIF field.type == 'checkbox' %]
                         <input type="checkbox"
                             name="[% field.name %]"
                             value="[% field.value %]"
                             [%- IF field.checked -%]checked[%- END -%]
                         />
 									
-					[% ELSIF field.type == 'html' %]
+					[%- ELSIF field.type == 'html' -%]
 						[% field.html %]
 					
-					[% ELSIF field.type == 'date' %]
-						[%- mydate = self.params.${field.name}
-                              || view.form.row.${field.name} -%]
-						
+					[%- ELSIF field.type == 'date' -%]
+                        [%- IF self.params.defined("${field.name}");
+                               input_value = self.params.${field.name};
+                           ELSIF view.form.row.${field.name}.defined;
+                               input_value = view.form.row.${field.name};
+                           ELSE;
+                               input_value = field.default_value;
+                           END;
+                        -%]
+       						
                         <div dojoType="dropdowndatepicker"
-                            date="[% mydate.replace( '-', '/' ) %]"
+                            date="[% input_value.replace( '-', '/' ) %]"
                             fieldName="[% field.name %]">
                         </div>
 						
-					[% ELSE %]
+					[%- ELSE -%]
+                        [%- IF self.params.${field.name}.defined;
+                               input_value = self.params.${field.name};
+                           ELSIF view.form.row.${field.name}.defined;
+                               input_value = view.form.row.${field.name};
+                           ELSE;
+                               input_value = field.default_value;
+                           END;
+                        -%]
+   
 						<input type="[% field.type %]" 
 							size="[% field.display_size || 30 %]"
-							value="[% self.params.${field.name} 
-								|| view.form.row.${field.name}  %]" 
+							value="[% input_value  %]" 
 							name="[% field.name %]"
 						 />
-						[% IF field.date_select_text %]
+						[%- IF field.date_select_text -%]
 							[% popup = "datepopup('$field.name')" %]
 							<a href="javascript://" onClick="[% popup %]" >
 							[% field.date_select_text %]
 							</a>
-						[% END %]
+						[%- END %]
 					[% END %]
 				</td>
 			</tr>
