@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.39';
+our $VERSION = '3.40';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -491,7 +491,7 @@ sub uri {
     my ( $self, $p ) = @_;
 
     $self->{__URI__} = $p if ( defined $p );
-    return( $self->{__URI__} );
+    return( $self->{__URI__} || '' );
         
 } # end uri
 
@@ -502,7 +502,7 @@ sub location {
     my ( $self, $p ) = @_;
 
     $self->{__LOCATION__} = $p if ( defined $p );
-    return( $self->{__LOCATION__} );
+    return( $self->{__LOCATION__} || '' );
         
 } # end location
 
@@ -522,7 +522,7 @@ sub path_info {
     my ( $self, $p ) = @_;
 
     $self->{__PATH_INFO__} = $p if ( defined $p );
-    return( $self->{__PATH_INFO__} );
+    return( $self->{__PATH_INFO__} || '' );
         
 } # end path_info
 
@@ -599,7 +599,7 @@ sub root {
     my ( $self, $p ) = @_;
 
     $self->{__ROOT__} = $p if ( defined $p );
-    return( $self->{__ROOT__} );
+    return( $self->{__ROOT__} || '' );
         
 } # end root
 
@@ -610,7 +610,7 @@ sub css_root {
     my ( $self, $p ) = @_;
 
     $self->{__CSS_ROOT__} = $p if ( defined $p );
-    return( $self->{__CSS_ROOT__} );
+    return( $self->{__CSS_ROOT__} || '' );
         
 } # end css_root
 
@@ -621,7 +621,7 @@ sub tmp_root {
     my ( $self, $p ) = @_;
 
     $self->{__TMP_ROOT__} = $p if ( defined $p );
-    return( $self->{__TMP_ROOT__} );
+    return( $self->{__TMP_ROOT__} || '' );
 
 } # end tmp_root
 
@@ -632,7 +632,7 @@ sub tmp_rootp {
     my ( $self, $p ) = @_;
 
     $self->{__TMP_ROOTP__} = $p if ( defined $p );
-    return( $self->{__TMP_ROOTP__} );
+    return( $self->{__TMP_ROOTP__} || '' );
 
 } # end tmp_rootp
 
@@ -643,7 +643,7 @@ sub editor_rootp {
     my ( $self, $p ) = @_;
 
     $self->{__EDITOR_ROOTP__} = $p if ( defined $p );
-    return( $self->{__EDITOR_ROOTP__} );
+    return( $self->{__EDITOR_ROOTP__} || '' );
 
 } # end editor_rootp
 
@@ -654,7 +654,7 @@ sub img_root {
     my ( $self, $p ) = @_;
 
     $self->{__IMG_ROOT__} = $p if ( defined $p );
-    return( $self->{__IMG_ROOT__} );
+    return( $self->{__IMG_ROOT__} || '' );
         
 } # end img_root
 
@@ -670,7 +670,7 @@ sub app_rootp {
 
         $self->{__APP_ROOTP__} = $p;
     }
-    return( $self->{__APP_ROOTP__} );
+    return( $self->{__APP_ROOTP__} || '' );
         
 } # end app_rootp
 
@@ -681,7 +681,7 @@ sub web_rootp {
     my ( $self, $p ) = @_;
 
     $self->{__WEB_ROOTP__} = $p if ( defined $p );
-    return( $self->{__WEB_ROOTP__} );
+    return( $self->{__WEB_ROOTP__} || '' );
         
 } # end web_rootp
 
@@ -697,7 +697,7 @@ sub img_rootp {
 
         $self->{__IMG_ROOTP__} = $p;
     }
-    return( $self->{__IMG_ROOTP__} );
+    return( $self->{__IMG_ROOTP__} || '' );
         
 } # end img_rootp
 
@@ -713,7 +713,7 @@ sub css_rootp {
 
         $self->{__CSS_ROOTP__} = $p;
     }
-    return( $self->{__CSS_ROOTP__} );
+    return( $self->{__CSS_ROOTP__} || '' );
         
 } # end css_rootp
 
@@ -724,7 +724,7 @@ sub page_title {
     my ( $self, $p ) = @_;
 
     $self->{__PAGE_TITLE__} = $p if ( defined $p );
-    return( $self->{__PAGE_TITLE__} );
+    return( $self->{__PAGE_TITLE__} || '' );
         
 } # end uri
 

@@ -1,5 +1,9 @@
 This file documents the revision history for Perl extension Gantry
 
+3.40 Fri Sep 22 08:14:15 CDT 2006
+    - Restored and expanded warning avoidance from Gantry.pm accessors.
+      If you ask for a path, you no longer get undef.  At least you get ''.
+
 3.39 Thu Sep 21 14:20:17 CDT 2006
     - switched plugin, engine loading from string eval to require
     - added cookie support to the cgi engine.
