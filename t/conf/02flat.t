@@ -5,14 +5,31 @@ use Test::Exception;
 use File::Spec;
 
 BEGIN {
-    eval { require Gantry::Conf; };
-    my $skip_all = 1 if ( $@ );
+    my $skip_all = 0;
+    my @missing;
+    eval {
+        require Config::General;
+    };
+    if ( $@ ) {
+        $skip_all = 1;
+        push @missing, 'Config::General';
+    }
+
+    eval {
+        require Hash::Merge;
+    };
+    if ( $@ ) {
+        $skip_all = 1;
+        push @missing, 'Hash::Merge';
+    }
 
     SKIP: {
-        skip "couldn't use Gantry::Conf (missing dependencies?)", 12
+        skip "Gantry::Conf requires @missing", 17
                 if $skip_all;
     }
     exit 0 if $skip_all;
+
+    require Gantry::Conf;
 
     # If Gantry::Conf ever decides to export add this:
     # use Gantry::Conf;

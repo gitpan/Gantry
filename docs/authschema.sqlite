@@ -1,0 +1,36 @@
+create table "auth_users" (
+    "id"            INTEGER PRIMARY KEY AUTOINCREMENT, 
+    "user_id"       INTEGER UNSIGNED NOT NULL DEFAULT '0',
+    "active"        bool,
+    "user_name"     varchar,
+    "passwd"        varchar,
+    "crypt"         varchar,
+    "first_name"    varchar,
+    "last_name"     varchar,
+    "email"         varchar
+);
+
+create table "auth_groups" (
+    "id"            INTEGER PRIMARY KEY AUTOINCREMENT,
+    "name"          varchar,
+    "ident"			varchar,
+	"description"   text
+
+
+create table "auth_pages" (
+    "id"            INTEGER PRIMARY KEY AUTOINCREMENT,
+    "user_perm"     int4,
+    "group_perm"    int4,
+    "world_perm"    int4,
+    "owner_id"      int4,
+    "group_id"      int4,
+    "uri"           varchar,
+    "title"         varchar
+);
+
+create table "auth_group_members" (
+    "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
+    "user_id"   int4,
+    "group_id"  int4
+);
+

@@ -48,17 +48,28 @@ by Config::General and looks something like this:
         use appearance
     </instance>
 
+    <instance right_here>
+        var   value
+        color blue
+    </instance>
+
+    include /etc/gantry.d/*.conf
+
+Then in /etc/gantry.d/app3.conf:
+
     <instance app3>
         ConfigureVia FlatFile Config::Tiny /path/to/conf
         ConfigureVia HTTP Config::General http://conf.oc.com/conf
     </instance>
 
-Each application instance has a section in this file.  This allows not only
-multiple apps, but also multiple instances of the same app running in the
-same server.  The instance name must be unique and is what the app uses to
-find its conf.
+Each application instance has a section in this file, unless its instance
+can be gleaned from /etc/gantry.d.  This allows not only multiple apps, but
+also multiple instances of the same app running in the same server.  The
+instance name must be unique and is what the app uses to find its conf.
 
-The core of any instance's configuration is usually the ConfigureVia
+In the instance block, you may choose to define conf variables and their
+values directly (as the C<right_here> instance does above).  Otherwise,
+the core of any instance's configuration is the ConfigureVia
 statement(s).  The form of these statments vary by the configuration
 method.
 
@@ -137,7 +148,7 @@ your configuration information from traveling in the clear.
 
 Normally, you get the default merely by omitting the ConfigureVia statement
 from an instance block.  Then the configuration must be included
-directly in the Gantry::Conf conf file in the <instance> block.
+directly in Gantry::Conf format in the <instance> block.
 
 =back
 
@@ -201,6 +212,14 @@ Any shared blocks used by the instance in the order they appear.
 
 =back
 
+Note that you may use C<include> at any point passing it a shell style
+file glob.  Any matching files will be included at that point as if typed
+there.  This is highly convenient for separating config information into
+separate files by app.  Then your master config file (/etc/gantry.conf)
+might be as simple as:
+
+    include /etc/gantr.d/*.conf
+
 =head1 USING A CONFIGURATION
 
 Once you have a configuration for your applications, you can load the
@@ -211,7 +230,7 @@ conf easily through the C<<Gantry::Conf->retrieve method>>:
     my $conf = Gantry::Conf->retrieve(
         {
             instance    => 'app1',
-            config_file => '/etc/gantry.d/standard.conf',
+            config_file => '/etc/gantry.confs/standard.conf',
         }
     );
 

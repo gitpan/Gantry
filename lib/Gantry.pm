@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.40';
+our $VERSION = '3.41';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -267,15 +267,15 @@ sub cookie_stash {
 } # end method
      
 sub response_headers {
-    my ( $self, $ref ) = @_;
+    my ( $self, $key, $value ) = @_;
 
-    $self->{__RESPONSE_HEADERS__} = [] 
+    $self->{__RESPONSE_HEADERS__} = {} 
         unless defined $self->{__RESPONSE_HEADERS__};
     
-    if ( defined $ref ) {
-        push( @{ $self->{__RESPONSE_HEADERS__} }, { $ref } );
+    if ( defined $key ) {
+        $self->{__RESPONSE_HEADERS__}{ $key } = $value;
     }
-    return( $self->{__RESPONE_HEADERS__} );
+    return( $self->{__RESPONSE_HEADERS__} );
         
 } # end method
 
@@ -1163,11 +1163,20 @@ and push it into the response headers.
 
 =item cookie_stash
 
-used to store/buffer cookies.
+Used by set_cookie to store/buffer cookies for the CGI engine.
+Not intended for direct calls.
 
 =item response_headers
 
-used to store/buffer the response headers.
+Dual use accessor.
+
+Parameters:
+    key
+    value
+
+Returns: always returns the hash of headers
+
+Omit the key and value for pure getter behavior.
 
 =item r - The Apache Request 
 

@@ -114,6 +114,34 @@ sub gupdate_or_create {
                 resultset( $class->table )->update_or_create( @_ );
 }
 
+sub ssearch {
+    my $class  = shift;
+    my $schema = shift;
+
+    return $schema->resultset( $class->table )->search( @_ );
+}
+
+sub sfind {
+    my $class  = shift;
+    my $schema = shift;
+
+    return $schema->resultset( $class->table )->find( @_ );
+}
+
+sub sfind_or_create {
+    my $class  = shift;
+    my $schema = shift;
+
+    return $schema->resultset( $class->table )->find_or_create( @_ );
+}
+
+sub supdate_or_create {
+    my $class  = shift;
+    my $schema = shift;
+
+    return $schema->resultset( $class->table )->update_or_create( @_ );
+}
+
 1;
 
 =head1 NAME
@@ -172,7 +200,7 @@ optional get_value_method on the relevant foreign table model class.
 
 =item stringify_self
 
-This is an overload callback used when database row objects are used in
+This is an overload callback used when database row objects are in
 string context.  The one here calls id on the row object.  Children should
 override if their primary key is not a single column called 'id'.
 
@@ -217,6 +245,33 @@ These methods let you say:
 For these methods to work, the invoking controller must use
 Gantry::Plugins::DBIxClassConn.  It handles dbic connections and exports
 get_schema which all of the g methods call.
+
+Alternatively, if you are in a script, you may use other similar methods:
+
+    my $schema = AddressBook::Model->connect(
+        $conf->{ dbconn },
+        $conf->{ dbuser },
+        $conf->{ dbpass },
+    );
+
+    my @rows => $TABLE_NAME->ssearch( $schema, ... );
+
+These methods expect a valid dbic schema as their first argument.
+The available s* methods are:
+
+=over 4
+
+=item screate
+
+=item ssearch
+
+=item sfind
+
+=item sfind_or_create
+
+=item supdate_or_create
+
+=back
 
 =head1 AUTHOR
 

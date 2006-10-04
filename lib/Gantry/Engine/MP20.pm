@@ -387,6 +387,7 @@ sub redirect_response {
     my $self     = shift;
 
     return $self->status_const( 'REDIRECT' );
+
 } # END redirect_response
 
 #-------------------------------------------------

@@ -1,5 +1,11 @@
 This file documents the revision history for Perl extension Gantry
 
+3.41 Wed Oct  4 14:58:22 CDT 2006
+    - Corrected response header handling in CGI engine.
+    - Corrected Gantry::Conf so it won't be tested if it can't be used.
+    - Added main.tt to the MANIFEST.  Bigtop uses it for defaul pages.
+    - Trie again to make prompts visible during CPAN shell install.
+
 3.40 Fri Sep 22 08:14:15 CDT 2006
     - Restored and expanded warning avoidance from Gantry.pm accessors.
       If you ask for a path, you no longer get undef.  At least you get ''.

@@ -109,12 +109,13 @@ sub _custom_code {
         my $count = 0;
         my ( %dir_hash, @choices );
 
+        print "\n\nGantry comes with a set of default templates that\n"
+            . "need to be written to disk. A typical location for these\n"
+            . "templates is your web server document root.\n\n"
+            . "Enter a directory [$p->{install_web_directories}{default}]\n";
+
         my $choice = $self->prompt(
-    ( "\n\nGantry comes with a set of default templates that\n"
-    . "need to be written to disk. A typical location for these\n"
-    . "templates is your web server document root.\n\n"
-    . "Press enter to use the default directory or specify another\n"
-    . "directory." ),
+            " ",
             $p->{install_web_directories}{default},
         );
         
@@ -132,15 +133,14 @@ sub _custom_code {
         $tmpl_dir =~ s/\/$//g;
             
         if( $tmpl_dir && $tmpl_dir ne '__skip__' ) {
+
+            print "\n\nDirectory doesn't exist. Create $tmpl_dir? [y]\n";
             
             if ( ! -d $tmpl_dir ) {
-                my $create = $self->y_n(  
-                    "Directory doesn't exist. Create $tmpl_dir?",
-                    'y'
-                );
-                exit unless $create =~ /^y/i; 
+                my $create = $self->y_n(  " ", 'y' );
+                exit unless $create;
             }
-            
+
             # write Init.pm file with install options
 
             my $init_pkg = << "EO_INIT";

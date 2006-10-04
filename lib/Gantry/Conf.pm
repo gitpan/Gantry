@@ -420,9 +420,9 @@ Gantry::Conf - Gantry's Flexible Configuration System
   # Retrieve an instance from an alternate configuration file
   # other than /etc/gantry.conf 
   my $conf2 = Gantry::Conf->retrieve({ 
-                                       instance    => 'special', 
-                                       config_file => '/etc/special.conf' 
-                                     });
+          instance    => 'special', 
+          config_file => '/etc/special.conf' 
+  });
 
 =head1 DESCRIPTION
 
@@ -461,18 +461,14 @@ have been warned. The possible arguments are:
 This is the unique name of the "instance" of this application.  This is
 typically the only option given to retrieve() and is what is used to
 bootstrap the rest of the configuration process.  This "instance" name
-must match an entry in the main configuration file. 
+must match an entry in the configuration file. 
 
 =item config_file => '/path/to/file.conf' 
 
 By default Gantry::Conf looks at the file /etc/gantry.conf for its 
-bootstrapping information.  This options allows you to override this default
+bootstrapping information.  This option allows you to override this default
 behavior and have the system reference any file you desire.  Note the file
 still must conform to the syntax of the main gantry.conf. 
-
-=item instance => '/uri' 
-
-FIXME: Need to define this, Phil? 
 
 =back 
 

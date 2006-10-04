@@ -8,7 +8,8 @@ docs/mainlist.png
 docs/overview.pod
 docs/princips.pod
 docs/README
-docs/schema.sql
+docs/authschema.sql
+docs/authschema.sqlite
 docs/tutorial_outline.sxw
 lib/Gantry.pm
 lib/Gantry/Init.pm
@@ -109,6 +110,7 @@ root/css/default.css
 root/delete.tt
 root/editor_init.ttc
 root/form.tt
+root/main.tt
 root/form_ajax.tt
 root/paging.ttc
 root/pod.tt

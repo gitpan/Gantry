@@ -1,3 +1,6 @@
+When form.tt reports missing fields, it should use the label of the field
+and not the name.
+
 Phil Crow Thu May 11 12:05:59 CDT 2006
 Tim suggested a Gantry notes section to be features on usegantry.org.
 I like the idea and here are some notes that need writing:

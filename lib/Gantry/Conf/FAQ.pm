@@ -62,7 +62,7 @@ development environment.  Take this configuration example:
 
 By separating out our production and dev database information into shared
 blocks we can essentially switch between our production and dev environments
-by simplyl changing the instance we are using. If you were working on a script
+by simply changing the instance we are using. If you were working on a script
 this would be a simple matter of running: 
 
   $ script.pl --instance=app1-dev 
@@ -75,7 +75,17 @@ instead of:
 
 =item How is Gatnry::Conf helpful in production? 
 
-TODO 
+Gantry::Conf has several advantages in a production environment.  First,
+it provides a single place for all config information, if you commit to
+it.  Even if you don't commit to it for all apps, it still provides
+control to the installing admin over how and where conf information is
+stored.  For instance, the admin could put the config information directly
+into /etc/gantry.conf, or into a separate file in /etc/gantry.d.  She
+could even set up a secure web server where all boxes would go to get
+their conf.
+
+The short answer is, Gantry::Conf is flexible and production environments
+benefit from flexibility.
 
 =item How do I pass my instance information into my application? 
 
@@ -91,12 +101,12 @@ adding an C<--instance> option to pass in the instance's name.
 =item PerlSetVar
 
 In a mod_perl environment you could use a PerlSetVar, possibly named 
-C<Instance>, to pull in this value for your application. 
+C<GantryConfInstance>, to pull in this value for your application. 
 
 =item ModPerl::ParamBuilder 
 
 Again in a mod_perl environment, another option would be to use 
-ModPerl::ParamBuilder to pass the instance name in. 
+ModPerl::ParamBuilder to pass the instance name.
 
 =item Hard coded 
 
@@ -108,11 +118,18 @@ but this will greatly reduce the flexibility you have.
 
 =item How do I add a different provider for an existing ConfigVia method?
 
-TODO 
+Place your provider module in the Gantry::Conf::Provider::Method::*
+namespace.  Make sure your public API matches the existing providers
+which use the same method.  For instance the flat file providers all
+implement a config method which is called as a class method and receives
+a file name.
 
 =item How do I add to the ConfigVia methods?
 
-TODO 
+If none of the existing provider methods will do, you need to work in
+Gantry::Conf.  In particular, you need to augment the dispatch hash with
+the name of your provisioning method and a sub name which will handle it.
+Then you need to implement the method you put in C<%dispatch>.
 
 =back 
 

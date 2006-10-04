@@ -295,8 +295,7 @@ sub engine_init {
 # $self->err_header_out( $header_key, $header_value )
 #-------------------------------------------------
 sub err_header_out {
-    my( $self, $k, $v ) = @_;
-
+    # Gantry.pm calls this for mod_perl's benefit.
 } # end err_header_out
 
 #-------------------------------------------------
@@ -468,8 +467,10 @@ sub header_in {
 sub header_out {
     my( $self, $k, $v ) = @_;
         
-    $self->{__HEADERS_OUT__}->{$k} = $v if defined $k;  
-    return( $self->{__HEADERS_OUT__} );
+    # $self->{__HEADERS_OUT__}->{$k} = $v if defined $k;  
+    # return( $self->{__HEADERS_OUT__} );
+
+    return $self->response_headers( $k, $v );
 
 } # end header_out
 
@@ -498,7 +499,7 @@ sub redirect_response {
     }
     
     my $p = {};
-    $p->{uri} = $self->header_out->{location};
+    $p->{uri} = $self->response_headers->{location};
 
     print $self->cgi->redirect( $p );
 
@@ -601,12 +602,11 @@ sub send_http_header {
     foreach my $cookie ( @{ $self->cookie_stash() } ) {
         print "Set-Cookie: $cookie\n";
     }
+
+    my $header_for = $self->response_headers();
     
-    my $a = $self->response_headers();
-    
-    foreach my $header ( @{ $a } ) {
-        print STDERR $header->{key} . "  " . $header->{value} . "\n";
-        print "$header->{key}: $header->{value}\n";
+    foreach my $variable ( keys %{ $header_for } ) {
+        print "$variable: $header_for->{ $variable }\n";
     }
 
     my $p = {};
@@ -953,6 +953,9 @@ Returns the db handle (if there is one).
 Does nothing but meet the engine API.  mod_perl engines use this.
 
 =item $self->header_out( $header_key, $header_value )
+
+Deprecated, merely calls response_headers (defined in Gantry.pm)
+for you, which you should have done yourself.
 
 Change the value of a response header, or create a new one.
 
