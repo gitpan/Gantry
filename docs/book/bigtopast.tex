@@ -1,0 +1,457 @@
+\chapter{Bigtop's AST}
+\label{chap:bigtopast}
+
+This chapter goes into excruciating detail about the AST which the
+Bigtop grammar builds.  With knowledge of parsing from the previous
+chapter, what is here, and the advice in the next chapter, you should
+be able to roll your own Bigtop backend.
+
+In addition to the big first section on the AST, there is a smaller
+second section about the lookup hash.  It doesn't have all the data
+from the AST, but it is easier to use for the data it holds.
+
+\section{The AST}
+
+Every Bigtop parse tree is an object blessed into the \verb+bigtop_file+ class.
+Below, we will tour all of its children.  First, I want to provide
+general statements and advice.
+
+Many AST nodes have an \verb+__IDENT__+ attribute.  These are generated
+for certaing node types as they are added to the tree.  They are invariant
+once issued for the life of the parse tree.  Their presence allows tentmaker
+to rename nodes and to more easily access the tree at depth.  They are not
+generally shown, but you may call \verb+show_idents+ on the AST to see a
+dump of them.  This is useful for testing things like tentmaker which need
+to manipulate the tree.  Otherwise finger counting ensues (and intimate
+knowledge of parse order is required).
+
+Every node in the AST has a \verb+__PARENT__+ attribute storing a reference
+to its parent node -- except the root \verb+bigtop_file+ node.  These are
+not shown below, since they are ever present and uniformly uninteresting.
+This is not to say that they are not useful.  On the contrary, they are very
+useful.  It is so useful to know things about your parent, that Parser.pm
+provides many helper methods which do essentially that.  I have now said more
+than I should have about the lowly parent links.
+
+When working on a backend, it is often useful to see what is in the
+current node (say inside a \verb+walk_postorder+ action method).  You
+could use a standard tool like Data::Dumper, but that is usually frustrating.
+The problem is that every node in the AST has that pesky \verb+__PARENT__+
+reference.  This means that a dump anywhere will dump the whole tree.  The
+resulting data is usually overwhelming.  To cure this, there is a helper
+method called \verb+dumpme+ provided for each AST package.  The closer you
+are to the leaves of the tree, the more helpful this is.
+
+Now, without further ado, here are the children of the \verb+bigtop_file+ in
+a small textual tree:
+
+\begin{verbatim}
+    application __NAME__ __BODY__:
+        block(s?):
+            app_statement __KEYWORD__ __ARGS__ 
+            app_config_block __BODY__:
+                app_config_statement
+                    __KEY__
+                    __ARGS__
+            table_block __IDENT__ __NAME__ __TYPE__ __BODY__:
+                table_element_block
+                    __IDENT__ __NAME__ __ARGS__ __TYPE__ __BODY__:
+                        field_statement __KEYWORD__ __DEF__:
+                            field_statement_def __ARGS__
+            join_table __IDENT__ __NAME__ __BODY__:
+                join_table_statement
+                    __KEYWORD__
+                    __DEF__
+            controller_block __IDENT__ __NAME__ __TYPE__ __BODY__:
+                controller_method __IDENT__ __NAME__ __TYPE__ __BODY__:
+                    method_body __KEYWORD__ __ARGS__
+                controller_config_block __BODY__:
+                    controller_config_statement __KEYWORD__ __ARGS__
+                controller_literal_block __IDENT__ __BACKEND__ __BODY__
+                controller_statement __KEYWORD__ __ARGS__
+            literal_block __IDENT__ __BACKEND__ __BODY__
+            seq_block __IDENT__ __NAME__ __TYPE__ __BODY__
+\end{verbatim}
+
+I've compressed the above tree so it will be smaller, and therefore more
+useful -- I hope it's useful.  The compression works like this.  The
+node name at the top level is application.  It has two keys listed
+after it: \verb+__NAME__+ and \verb+__BODY__+.  The later is followed by
+a colon meaning that it has children.  The children appear below at
+one deeper level of indentation.  If a node does not have children, it
+will either be a string (like a \verb+__NAME__+ or \verb+__IDENT__+) or
+an \verb+arg_list+.  In the latter case, the name will be \verb+__ARGS__+.
+See the subsection below called \verb+Arg Lists+ for help with those.
+Names in lower case are class names into which children are blessed.
+
+So the heart of the application is in the \verb+block(s?)+ child.
+Its children are legal at the top level of the application block.  They
+are:
+
+\begin{tabular}{l|l}
+Name & What it represents \\
+\hline
+\verb+app_statement+    & A regular statement like authors                 \\
+\verb+app_config_block+ & The app level configuration variable/value pairs \\
+\verb+table_block+      & A table block                                    \\
+\verb+controller_block+ & A controller block                               \\
+\verb+join_table+       & A three way join table                           \\
+\verb+literal_block+    & A literal statement for one or more backends     \\
+\verb+seq_block+        & A sequence block (for Postgres sequences)        \\
+\end{tabular}
+
+Some of these have interesting children, which are themselves nodes in the
+tree.  They are \verb+app_config_block+, \verb+table_block+,
+\verb+controller_block+, \verb+join_table+, and \verb+literal_block+.
+
+\subsection*{App Config Blocks}
+
+The app section of a Bigtop file may have one config block which specifies
+any configuration information needed by the application (there are
+also controller level config blocks, see below).  Each statement in a
+config block has a arbitrary keyword (except that it must be a valid
+identifier), a value, and an optional \verb+=> no_accessor+ (which turns
+off accessor generation for the keyword).
+
+Each of these statements is represented as an element of the
+\verb+app_config_block+ \verb+__BODY__+ array.  Each statement has an AST
+node with \verb+__KEYWORD__+ and \verb+__ARGS__+ keys.
+
+\subsection*{Table Blocks}
+
+The core of Bigtop is the definition of tables in the app's SQL database.
+Each table block becomes a node in the AST with \verb+__IDENT__+,
+\verb+__NAME__+, and \verb+__BODY__+ keys.  (The \verb+__TYPE__+ is
+no longer used and may be dropped from the grammar.)
+
+There are two types of body elements in a table: statements and field blocks.
+While these should probably be separated into different classes, they
+are not.  Both are blessed into the \verb+table_element_block+ class.
+
+Since the \verb+table_element_block+ class is overloaded, not all keys
+apply to both types.  In particular, here are the keys which apply to
+statements:
+
+\begin{tabular}{l|l}
+Key             & Meaning                                 \\
+\hline
+\verb+__TYPE__+ & Always the statement keyword            \\
+\verb+__ARGS__+ & An arg list of values for the statement \\
+\end{tabular}
+
+For statements, the \verb+__BODY__+ key is a synonym for the statement
+keyword (for what reason I really can't say).
+
+Here are the keys for field blocks:
+
+\begin{tabular}{l|l}
+Key              & Meaning                                   \\
+\hline
+\verb+__TYPE__+  & Always `field'                            \\
+\verb+__NAME__+  & The name of the field                     \\
+\verb+__IDENT__+ & The internal, invariant name of the field \\
+\verb+__BODY__+  & An array (ref) of field statements        \\
+\end{tabular}
+
+The body elements are blessed into the \verb+field_statement+ class,
+which has two keys: \verb+__KEYWORD__+ and \verb+__DEF__+.  The later
+key stores a node blessed into the \verb+field_statement_def+ class.
+These have one key: \verb+__ARGS__+.  This class provides convenience
+functions for dealing with the arg list.
+
+\subsection*{Controller Blocks}
+
+Controller blocks are the most intersting elements of the app block.
+They have these basic keys:
+
+\begin{tabular}{l|l}
+Key              & Meaning                                            \\
+\hline
+\verb+__IDENT__+ & The internal, invariant name of the controller     \\
+\verb+__NAME__+  & The name of the controller module (minus .pm)      \\
+\verb+__TYPE__+  & Whatever follows `is' in the controller definition \\
+\verb+__BODY__+  & An array of elements inside the block              \\
+\end{tabular}
+
+What makes controller blocks more interesting than table blocks is the
+extra variety of things which can go in them.  In addition to statements
+and methods -- which have their table analogs -- literal statements
+and config blocks are legal in controller blocks.  Each of these
+is thankfully blessed into its own class.
+
+The class names of \verb+__BODY__+ elements are: \verb+controller_statement+,
+\verb+controller_method+, \verb+controller_literal_block+, and
+\verb+controller_config_block+.  I've listed them here in order of
+importance.  I'll discuss them in that order as well.
+
+\subsubsection*{Controller Statements}
+
+Statements are simple, having only two keys: \verb+__KEYWORD__+ and
+\verb+__ARGS__+.
+
+\subsubsection*{Controller Methods}
+
+Controller methods are themselves blocks.  As such they have top level
+keys similar to controller blocks:
+
+\begin{tabular}{l|l}
+Key              & Meaning                                             \\
+\hline
+\verb+__IDENT__+ & The internal, invariant name of the method          \\
+\verb+__NAME__+  & The name of the method                              \\
+\verb+__TYPE__+  & Whatever follows `is' in the method definition      \\
+\verb+__BODY__+  & An single element blessed as a \verb+method_body+   \\
+\end{tabular}
+
+Inside a method, there can only be statements.  All of these are in
+the \verb+method_body+ object store in the \verb+__BODY__+ attribute.
+
+A \verb+method_body+ is itself an array reference storing hashes with
+two keys: \verb+__KEYWORD__+ and \verb+__ARGS__+.
+
+The \verb+method_body+ package in Parser.pm and various backends provide
+many useful routines for dealing with a method's statements so this
+package is unlikely to go the way of the other \verb+*_body+ rule packages.
+Those were mostly eliminated for lack of utility.  This one survived the cuts.
+
+\subsubsection*{Controller Literal Statements}
+
+Like app level literals, these allow literal text to be dumped directly
+into the output of one or more backends.  While called blocks in the
+grammar, they are really statements.  They have three keys (as all
+literals do):
+
+\begin{tabular}{l|l}
+Key                & Meaning                                               \\
+\hline
+\verb+__IDENT__+   & The internal, invariant name of the statement         \\
+\verb+__BACKEND__+ & The type of the literal, so backends can find the     \\
+                   & ones they care about                                  \\
+\verb+__BODY__+    & The literal text to insert into some backend's output \\
+\end{tabular}
+
+\subsubsection*{Controller Config Blocks}
+
+These allow additional config information to be defined on a controller
+by controller basis.  They also allow for global config information to
+be overridden for individual controllers.  There is only one key in
+a \verb+controller_config_block+: \verb+__BODY__+.  It is an array
+(ref) of nodes blessed into the \verb+controller_config_statement+ class.
+These each have two keys: \verb+__KEYWORD__+ and \verb+__ARGS__+.
+
+\subsection*{Join Table Blocks}
+
+Join table blocks represent many-to-many relationships between other
+tables.  They have the standard keys \verb+__IDENT__+ and \verb+__NAME__+.
+The name is the name of the implicit table which will have foreign keys
+for each table on the end of the many-to-many relationship.  The only
+other key is \verb+__BODY__+ which holds an array (ref) of statements
+blessed into the \verb+join_table_statement+ class.  These have only
+two keys: \verb+__KEYWORD__+ and \verb+__DEF__+.  The later is an arg
+list, but it must have exactly one pair in it, since join tables only
+support two statements and both require a single pair.
+
+\subsection*{Literal Statements}
+
+Literals are always simple statements, but I called them blocks when I
+thought a brace delimited block would be an easier way to handle them.
+The name stuck.  The have only three keys:
+
+\begin{tabular}{l|l}
+Key                & Meaning                                               \\
+\hline
+\verb+__IDENT__+   & The internal, invariant name of the statement         \\
+\verb+__BACKEND__+ & The type of the literal, sometimes the backend type,  \\
+                   & which cares about the literal (like SQL)              \\
+\verb+__BODY__+    & The literal text to insert into some backend's output \\
+\end{tabular}
+
+Now that we have seen all of the AST classes, it is time to look briefly
+at arg lists.
+
+\subsection*{Arg Lists}
+
+Most values in Bigtop AST nodes are stored as \verb+arg_list+ objects.
+These are really just arrays.  Each element in an \verb+arg_list+ array
+is either a simple string or a hash with a single key and its string value
+(called a pair).
+
+As we will see in the next chapter, the \verb+arg_list+ class provides
+convenience routines for manipulating its values.
+
+Note that \verb+walk_postorder+ never visits \verb+arg_list+ nodes.
+So, in a certain practical sense, they aren't really AST nodes.  They are
+owned by leaves which must fish in and manipulate them.  While this is
+not a standard way to think of a tree, I like it.  In my mind the
+arg lists have become a kind of sub-leaf of the tree.
+
+\section{The lookup hash}
+
+While you could do everything directly with the AST, that is not very
+convenient.  Walking up parent links and down according to the information
+above is not ideal.  Thus, Bigtop also hides away a quick lookup hash in a
+dark corner of the AST structure.  It doesn't have everything and what it
+does have is not always ideally designed, but it is much easier to use than
+a corresponding trip through the full AST.
+
+This section describes the lookup hash and how to use it.  The first step
+is finding the lookup hash.  It is available via hash peeking (shame on me)
+on the AST like so:
+
+\begin{verbatim}
+my $lookup = $tree->{application}{lookup};
+\end{verbatim}
+
+Feel free to dump this structure, but don't be surprised if it fills your
+terminal buffer.  There are five top level keys in the hash.  Each one
+stores a hash.  Here's what's in them:
+
+\begin{tabular}{l|l}
+Key                   & Subhash keyed by...  \\
+\hline
+\verb+app_statements+ & statement keyword    \\
+\verb+configs+        & config variable name \\
+\verb+tables+         & table name           \\
+\verb+join_tables+    & join table name      \\
+\verb+controllers+    & controller name      \\
+\end{tabular}
+
+The app statements and configs keys store the values for their statements.
+The others store subhashes.
+
+\subsection*{Tables}
+
+Each `tables' subhash hash these keys:
+
+\begin{tabular}{l|l}
+Key                    & Value                                           \\
+\hline
+\verb+sequence+        & the name of the table's sequence (often absent) \\
+\verb+foreign_display+ & the foreign display string                      \\
+\verb+fields+          & sub hash keyed by field name                    \\
+\end{tabular}
+
+I've omitted the spurious \verb+data+ key from this list.  It is an artifact
+of my parsing laziness.  If you need your data statements, work with the AST.
+
+\subsubsection*{Fields}
+
+Each `fields' subhash is keyed by the field name and stores a hash of that
+field's statements.  Each element in the hash is keyed by the statement's
+keyword and stores the arg list for that statement.
+
+\subsection*{Join Tables}
+
+The contents of join table subhashes is the most complex.  I customized
+it to make it easier to generate many-to-many relationship code and SQL.
+It is easiest to understand it by example.
+
+Suppose your Bigtop input contains these join table blocks:
+
+\begin{verbatim}
+join_table job_skill { joins job => skill; }
+join_table fox_sock  { joins fox => sock; names foxes => socks; }
+\end{verbatim}
+
+Then the \verb+join_tables+ key in the lookup hash will have this value:
+
+\begin{verbatim}
+    join_tables => {
+        skill => { joins => { job   => 'job_skill' } },
+        job   => { joins => { skill => 'job_skill' } },
+        fox   => { joins => { sock  => 'fox_sock'  },
+                   name  => 'socks' },
+        sock  => { joins => { fox   => 'fox_sock'  },
+                   name  => 'foxes' },
+                                                                                  }
+\end{verbatim}
+
+So there is one subhash for each end of each many-to-many relationship.
+These are keyed by the owning table.  They store at least a \verb+joins+
+key.  Its value is a hash showing the table at the other end of the
+many-to-many and the intermediary table.  If the user has requested
+custom names -- to avoid simple `s' suffixes -- there will also be a
+name key, whose value is the user's name choice.
+
+\subsection*{Controllers}
+
+Like table blocks, `controllers' have various elements inside them (in
+fact they have more choices than tables).  Here's how they show up in
+the lookup hash:
+
+\begin{tabular}{l|l}
+Key & What is stores \\
+\hline
+\verb+type+       & whatever follows `is' in the controller definition \\
+\verb+statements+ & a hash like the app level statements hash          \\
+\verb+configs+    & a hash like the app level config hash              \\
+\verb+methods+    & a hash keyed by method name                        \\
+\end{tabular}
+
+\subsubsection*{Methods}
+
+Methods have two keys in the lookup hash:
+
+\begin{tabular}{l|l}
+Key & What is stores \\
+\hline
+\verb+type+       & whatever follows `is' in the method definition \\
+\verb+statements+ & a hash like the app level statements hash      \\
+\end{tabular}
+
+\subsection*{Using the lookup hash}
+
+Now that you know all the things that are in the lookup hash, let's see
+an example of what you can do with it.  Suppose you are in the
+\verb+method_body+ package of a controller generating backend and need to
+know the label of a field called \verb+phone_number+ in your controller's
+table.  First, find out the name of your controller:
+
+\begin{verbatim}
+my $controller_name = $self->get_controller_name();
+\end{verbatim}
+
+The Parser provides \verb+get_controller_name+ in the \verb+method_body+
+package, so you don't have to wander through your ancestors to find the
+controller's name.
+
+Once you know your controller name, you can use the lookup hash to find the
+name of the controlled table:
+
+\begin{verbatim}
+my $controlled_table = $lookup->{controllers}
+                                {$controller_name}
+                                {statements}
+                                {controls_table}
+                                [0];
+\end{verbatim}
+
+Notice that vertical alignment is quite helpful in keeping track of where
+you are in the lookup hash.  Also notice the \verb+[0]+ which returns
+the first element from the values array.  Most statements only have
+one value, but all values are stored as arg lists.
+
+Since this is a common need of method bodies, there is even a method
+in Parser.pm's \verb+method_body+ package that does exactly the above.
+So, we could replace it with:
+
+\begin{verbatim}
+my $controlled_table = $self->get_table_name( $lookup );
+\end{verbatim}
+
+Now we can use the table name to find the fields:
+
+\begin{verbatim}
+my $field_label = $lookup->{tables}
+                           {$controlled_table}
+                           {fields}
+                           {phone_number}
+                           {label}
+                           [0];
+\end{verbatim}
+
+Of course, some error checking would be in order.  But my purpose here
+is to show off the lookup hash.
+
+The next chapter will lead you through building your own Bigtop backend
+by showing examples of backends that come with Bigtop.

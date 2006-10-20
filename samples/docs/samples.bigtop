@@ -1,0 +1,37 @@
+config {
+    engine CGI;
+    template_engine TT;
+    SQL SQLite {  }
+    SQL Postgres {  }
+    SQL MySQL {  }
+    CGI Gantry { gen_root 1; with_server 1; flex_db 1; }
+    Control Gantry { dbix 1; }
+    Model GantryDBIxClass {  }
+    SiteLook GantryDefault { no_gen 1; }
+}
+app Gantry::Samples {
+    config {
+        dbconn `dbi:SQLite:dbname=app.db` => no_accessor;
+        template_wrapper `genwrapper.tt` => no_accessor;
+        doc_rootp `/static` => no_accessor;
+        doc_root html => no_accessor;
+    }
+    controller FileUpload is stub {
+        rel_location fileupload;
+        page_link_label `File Upload`;
+        method do_main is stub {
+        }
+    }
+    controller AjaxRequest is stub {
+        page_link_label `Ajax Request`;
+        rel_location ajaxrequest;
+        method do_version is stub {
+        }
+        method do_badcontent is stub {
+        }
+        method do_content is stub {
+        }
+    }
+    literal PerlTop
+        `use lib qw( ../lib );`;
+}

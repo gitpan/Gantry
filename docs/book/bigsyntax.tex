@@ -1,0 +1,496 @@
+\chapter{Bigtop Syntax}
+\label{chap:bigsyntax}
+
+This chapter follows up on the previous chapter by providing Bigtop source
+file syntax documentation.  While tentmaker is frequently convenient, and
+it sure types more accurately than I do, it can be tedious for some edits.
+In those cases, a good text editor can be a life extender.
+
+The definitive word on what statements can appear in a Bigtop file is
+maintained by Bigtop::Keywords.  It is used by all the current backends
+and thus provides a standard place to make the definitions.  I refered
+to it heavily while writing this.  If you are writing a backend, it is
+vital for everyone's sanity that you place your keywords there instead
+of in some ad hoc place.
+
+\section{Basic Structure}
+
+Bigtop files have a basic structure.  At the top level, there are two
+blocks:
+
+\begin{verbatim}
+config {
+}
+app Name {
+}
+\end{verbatim}
+
+Inside the blocks there are statements and blocks.  Statements usually have
+a single keyword followed by a value and a semi-colon (literal statements
+are an exception to that rule, see below).  Block structures vary depending
+where they appear.  It is easier to understand this with an example.
+Here is the smallest one that bigtop or tentmaker will make with the new
+flag:
+
+\begin{verbatim}
+config {
+    engine CGI;
+    template_engine TT;
+    Init Std {  }
+    SQL SQLite {  }
+    SQL Postgres {  }
+    SQL MySQL {  }
+    CGI Gantry { gen_root 1; with_server 1; flex_db 1; }
+    Control Gantry { dbix 1; }
+    Model GantryDBIxClass {  }
+    SiteLook GantryDefault {  }
+}
+app Test {
+    config {
+        dbconn `dbi:SQLite:dbname=app.db` => no_accessor;
+        template_wrapper `genwrapper.tt` => no_accessor;
+    }
+    table tbl1 {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field ident {
+            is varchar;
+            label Ident;
+            html_form_type text;
+        }
+        field description {
+            is varchar;
+            label Description;
+            html_form_type text;
+        }
+        field created {
+            is datetime;
+        }
+        field modified {
+            is datetime;
+        }
+        foreign_display `%ident`;
+    }
+    controller Tbl1 is AutoCRUD {
+        controls_table tbl1;
+        rel_location tbl1;
+        text_description tbl1;
+        page_link_label Tbl1;
+        method do_main is main_listing {
+            cols ident, description;
+            header_options Add;
+            row_options Edit, Delete;
+            title Tbl1;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id, created, modified;
+            extra_keys
+                legend => `$self->path_info =~ /edit/i ? 'Edit' : 'Add'`;
+        }
+    }
+}
+\end{verbatim}
+
+Here we see the basic structure of a bigtop file, the remaining sections in
+this chapter explain all of the legal syntax which can go in that structure.
+
+\section{The config Block}
+
+In normal use, a config section can have only two statements
+(there are deprecated statements not covered here):
+
+\begin{tabular}{l|l}
+Keyword & Example Values \\
+\hline
+\verb+engine+ & CGI, MP13, or MP20 (the later two are for \verb+mod_perl+) \\
+\verb+template_engine+ & TT or Default \\
+\end{tabular}
+
+The \verb+engine+ is the framework engine you will use.  Gantry supports
+CGI -- which also works for Fast/CGI -- and \verb+mod_perl+ 1.3 and 2.0.
+Use MP13 or MP20 for \verb+mod_perl+.
+
+The \verb+template_engine+ is the framework template engine you will use.
+Gantry support TT -- for Template Toolkit -- or Default.  The Default
+template engine does absolutely nothing, thus allowing you complete control
+over what is returned to the browser.
+
+Blocks in the Bigtop config block have two names and a set of statements
+in braces.  The set of statements could be empty.  Use statements to tweak
+what the backend will generate.  This chapter will not cover the statements,
+since they are already fully discussed in Chapter \ref{chap:backends}.
+
+The names of a backend block give its type (or family) and its name.
+Again, all of those are discussed in Chapter \ref{chap:backends}.
+If you work in the Bigtop, just use the type and backend names
+as discussed there.  For example. if you want MySQL output, include
+this block:
+
+\begin{verbatim}
+    SQL MySQL {}
+\end{verbatim}
+
+SQL is the backend type, there are others of the same type: Postgres and
+SQLite.  MySQL is the name of the backend.  Consult tentmaker for a list
+of all backends installed on your system.  The remaining chapters in this
+part of the book explain how to write your own backend.
+
+\section{The app Block }
+
+The app block of a bigtop file is far more interesting than the top level
+config block.  It contains the configuration information for the app,
+together with a description of its tables and controllers.  This section
+has subsections for each block type in the app block.  But let's start
+with a subsection on app level statements.
+
+\subsection*{App Statements}
+
+As with the top level config block, the app block can have statements.
+We will now cover the same ground as the `App Level Statements' subsection
+of Chapter \ref{chap:tentref}, but with a focus on Bigtop syntax rather
+than where to click in tentmaker.
+
+Note that there are different types of statement values.  In general,
+statements may accept comma separated lists of values.  Each element in
+that list may be a single item or a pair.  If it is a single item,
+it must either be a number, a valid Perl ident, or be enclosed in backquotes.
+Yes, I said backquotes.  These make it easier to embed Perl's other quotes.
+I figure you shouldn't need Perl's backquotes in a web app.
+
+Pairs are separated with fat commas: \verb+=>+.  These are not related
+to commas.  In Perl, a fat comma is a comma which forces its left argument
+to string context.  In Bigtop a fat comma makes a hash with a single key.
+
+The \verb+authors+ statement provides a good example of value variety:
+
+\begin{verbatim}
+    authors `Phil Crow` => `philcrow2000@yahoo.com`, `Joe Doe`, Bill;
+\end{verbatim}
+
+There are three items in this list.  The first one is a pair.  The other
+two a single values.  OK, so Bill isn't quite so helpful as the first item
+in the list, but it is legal.  Note the use of backquotes to hide spaces,
+at signs, or anything else Perl wouldn't like in an identifier.
+
+Note that other statements may or may not allows mulitple values and/or
+pairs as indicated in the table:
+
+\begin{tabular}{l|l|l}
+Keyword & Meaning & Values \\
+\hline
+\verb+location+         & Base URL absolute from doc root & one string \\
+\verb+authors+          & Who works on the app & multiple strings or pairs\\
+\verb+contact_us+       & How to join the app & one string \\
+\verb+copyright_holder+ & Who owns the app & one string \\
+\verb+license_text+     & Exact text & one string \\
+\verb+uses+             & Modules used in base module & multiple module names\\
+\end{tabular}
+
+Note that most of these will have no effect after initial generation.
+All of them except \verb+location+ and \verb+uses+ only put things into
+stub code.  Stub code is never overwritten.  It is possible that the
+README will be updated with these values on regeneration, but most people
+turn off Init generation.
+
+\verb+uses+ will be effective after initial generation, but only because
+it puts things into the GEN module.  It will not put use statments into the
+stub after it is written.
+
+\subsection*{Literals}
+
+Literals allow you to put literal text directly into generated output.
+In order to control which backends use your literal content, literals have a
+type.  So they look something like this:
+
+\begin{verbatim}
+    literal SQL `INSERT INTO tbl1 ( ident ) VALUES ( 'somename' );`;
+\end{verbatim}
+
+The type of this literal is `SQL,' meaning that only SQL backends will
+respond to it.  At present all literals have a single type, so all SQL
+backends will use all literals of that type.
+
+The value of each literal must be enclosed in backquotes and will be used
+as is, with one exception.  If you don't have trailing whitespace, one new
+line will be added to the literal.
+
+The `Literal' subsubsection of Chapter \ref{chap:tentref} has a complete
+list of the literal types and where their output goes.
+
+\subsection*{Tables}
+
+A table block looks basically like this:
+
+\begin{verbatim}
+    table name {
+    }
+\end{verbatim}
+
+Inside the block you may use table statements or include field blocks
+(described below).  Here are the legal statements:
+
+\begin{tabular}{l|l|l}
+Keyword & Meaning & Values \\
+\hline
+\verb+no_gen+  & Boolean for skip this table & Perl truth \\
+\verb+not_for+ & Backend types which skip this table & SQL, Model, or both \\
+\verb+sequence+         & Name of sequence block for this table & one ident \\
+\verb+data+ & Initial SQL data (repeatable) & list of column value pairs \\
+\verb+foreign_display+  & How other tables see our rows & one string \\
+\verb+model_base_class+ & What model inherits from & one module \\
+\end{tabular}
+
+Note that boolean statements evaluate their values for Perl truth.  Usually,
+I use \verb+1+ for true and leave the statement out for false.
+
+To list both \verb+not_for+ choices, put them in a list (order doesn't matter):
+
+\begin{verbatim}
+        not_for SQL, Model;
+\end{verbatim}
+
+Most statements in Bigtop must be unique within their block, but data
+statements are an exception.  Repeat these to create as many rows as your
+table needs:
+
+\begin{verbatim}
+    data ident => INPROG, descr => `Working on it`;
+    data ident => BILLED, descr => `Bill has been sent`;
+\end{verbatim}
+
+Duplicating other statements leads to unpredictable results, which may
+include fatal errors or corrupted output.
+
+\subsubsection*{Fields}
+
+Fields describe columns in SQL tables and entry elements on HTML forms
+where users supply that data.  They allow these statements:
+
+\begin{tabular}{l|l|l}
+Keyword & Meaning & Values \\
+\hline
+\verb+no_gen+  & Boolean for skip this field & Perl truth \\
+\verb+not_for+ & Backends which skip this field & SQL, Model, or both \\
+\verb+is+ & SQL column definition clauses & a list of strings, see below \\
+\verb+refers_to+ & Foreign table this field refers to & one table name \\
+\verb+label+ & On screen label for field & one string \\
+\verb+non_essential+ & Boolean for delayed fetch & Perl truth, see below \\
+\verb+date_select_text+ & Link text for popup calendar & one string \\
+\end{tabular}
+
+In addition to those statements, there are a set of statements which are
+passed through to the form template.  These all have the \verb+html_form_+
+prefix, which is stripped before passing the data to the template.  The
+names are completely governed by the template, but they should be listed
+in Bigtop::Keywords and must be registered by a backend.
+
+Here are all of the form template statements, without their prefix:
+
+\begin{tabular}{l|l|l}
+Keyword & Meaning & Values \\
+\hline
+\verb+type+  & form element type & one of text, textarea, or select \\
+\verb+optional+ & Boolean for whether the user can skip it & Perl truth \\
+\verb+constraint+ & Data::FormValidator constraint & one string \\
+\verb+default_value+ & Default form element value & one string \\
+\verb+cols+ & cols attribute of textarea HTML element & one positive int \\
+\verb+rows+ & rows attribute of textarea HTML element & one positive int \\
+\verb+display_size+ & size attribute of text HTML element & one positive int \\
+\verb+options+ & pull down menu choices & list of label => value pairs \\
+\end{tabular}
+
+I would have chosen \verb+size+ instead of \verb+display_size+, but
+Template Toolkit has a virtual method called \verb+size+.
+
+You may have as many values for the \verb+html_form_options+ statement
+as you like.  All of them must be pairs where the key is a string, number,
+or ident and the value is also a string, number, or ident.  The key will
+be the visible label of the option in the menu.  The value will be used
+in the database.  Careful use of these can eliminate the need for certain
+coding tables.
+
+\subsection*{Join Tables}
+
+Join tables represent a many-to-many relationship between two tables
+defined elsewhere in the bigtop file.  They actually become a third
+table with foreign keys to the tables at the ends of the many-to-many
+relationship.  The name of the \verb+join_table+ block is the name of the
+third table.
+
+Join table blocks can only have two statements.  The \verb+joins+ statement
+is required.
+
+\begin{tabular}{l|l|l}
+Keyword & Meaning & Values \\
+\hline
+\verb+joins+ & which tables are being joined & one of pair of table names \\
+\verb+names+ & what the relationship should be called & one of pair of names \\
+\end{tabular}
+
+If you don't supply a \verb+names+ statement, the many-to-many relationships
+are named by taking the end point tables and appending `s' to their names.
+You can change that by including a \verb+names+ statement.  Note that if you
+want to name one table, you must name both tables.  Here's a complete
+example:
+
+\begin{verbatim}
+    join_table fox_sock {
+        joins fox => sock;
+        names foxes => socks;
+    }
+\end{verbatim}
+
+\subsection*{Controllers}
+
+Controller blocks describe controller modules.  Most of these control
+one table through using its model.  They may have statements, just like
+other blocks.  They may also have method blocks, contol level literals
+and control level config blocks.  The later have their own subsections
+below.  Here are the controller level statements:
+
+\begin{tabular}{l|l|l}
+Keyword & Meaning & Values \\
+\hline
+\verb+no_gen+ & boolean for skip this controller & Perl truth \\
+\verb+location+ & absolute location to this controller & one path \\
+\verb+rel_location+ & location for this controller relative to root controller
+                    & \\
+                & & one path \\
+\verb+controls_table+ & name of controlled table & one table name \\
+\verb+uses+ & modules used by this controller & list of installed modules \\
+\verb+text_description+ & for AutoCRUD on screen prompting & one string \\
+\verb+page_link_label+ & Nav link label for page & one string \\
+\end{tabular}
+
+If you don't want the GEN module for the controller to be regenerated,
+set \verb+no_gen+ to one (or your favorite true value).  Remember that
+the stub is never regenerated, unless it is missing.
+
+You must have either a \verb+location+ or a \verb+rel_location+.  If you
+use a \verb+location+, it may be any valid URL; \verb+rel_locations+ will
+have the app's root location prepended.
+
+If you don't want the page to appear in site navigation links, don't include
+a \verb+page_link_label+.
+
+With the statements out of the way, let's look at the other things which
+can go inside a controller block.
+
+\subsubsection*{Methods}
+
+Methods are full blocks, complete with types.  They look like this:
+
+\begin{verbatim}
+        method do_something is stub { ... }
+\end{verbatim}
+
+The type can be anything your Control backend understands.  Currently that
+includes \verb+stub+ (which has only an opening comment, a declaration,
+and parameter handling), \verb+main_listing+, \verb+AutoCRUD_form+, and
+\verb+CRDU_form+.  The later make forms for use with Gantry's CRUD schemes.
+
+Method statements are all legal no matter what type of method you have,
+but they are likely to be ignored if you use them where they don't apply.
+Thus, there is an extra column in the following table (as there is in
+tentmaker):
+
+\begin{tabular}{l|l|l|l}
+Keyword & Applies to & Meaning & Values \\
+\hline
+\verb+no_gen+ & All & Skip this method & Perl truth \\
+\verb+extra_args+ & All & extra params sub should accept
+              & list of backquoted variable names (with sigils) \\
+\verb+cols+   & \verb+main_listing+ & columns in main listing
+              & list of field names \\
+\verb+cols_labels+ & \verb+main_listing+ & column labels
+              & list of column labels \\
+\verb+cols+   & \verb+main_listing+ & columns in main listing
+              & list of field names \\
+\verb+header_options+ & \verb+main_listing+ & main table heading options (Add)
+              & list of options \\
+\verb+row_options+ & \verb+main_listing+ & options for each main table row
+              & list of options \\
+\verb+title+ & \verb+main_listing+ & browser title for main listing page
+              & one string \\
+\verb+html_template+ & \verb+main_listing+ & what to use instead of results.tt
+              & one template name \\
+\verb+extra_keys+ & \verb+forms+ & extra keys for returned form hash
+              & list of key/value pairs \\
+\verb+fields+ & \verb+forms+ & list of fields to include on form
+              & list of field names \\
+\verb+all_fields_but+ & \verb+forms+ & list of fields to exclude from form
+              & list of field names \\
+\verb+fields+ & \verb+forms+ & name attribute of HTML form element
+              & one ident \\
+\end{tabular}
+
+Normally, main listing columns are labeled with their fields' labels.
+If you want to override the label, just for the main listing, supply
+\verb+col_labels+.  If your list runs out before the \verb+cols+ list,
+the extras are again named for their fields.
+
+The \verb+header_options+ values are similar to \verb+authors+ values
+at the app level.  They can be single idents, like Add.  But they can
+also be pairs, where the value is the URL to hit when the user chooses
+the option.  By default the URL is the current controller with
+\verb+/option+ appended.  This leads to the \verb+do_option+ method.
+So, the default URL is formed by tacking the lower case of the option name
+onto the end of the current location.
+
+The \verb+row_options+ are similar to \verb+header_options+, but they
+apply at the end of each row in the main listing.  There is one difference:
+the default locations have the current row id appended to the URL.
+If you supply non-default URLs, be sure to manually add \verb+$id+.
+
+\subsubsection*{Controller Literals}
+
+There are two types of literals which may appear inside controller blocks.
+Like app level literals, they have a type name and a string.
+
+\begin{tabular}{l|l}
+Type & Destination \\
+\hline
+Location & inside httpd.conf Location block for the controller \\
+GantryLocation & inside GantryLocation block in Gantry::Conf file \\
+\end{tabular}
+
+These will be ignored unless you use a backend which understands them.
+The HttpdConf Gantry backned understands \verb+Location+, while
+the Gantry Conf backend understands \verb+GantryLocation+.
+
+Remember to put the literal value in a backquoted string (bare idents
+are not allowed).  Also remember that if your literal value does not
+have trailing whitespace, the backend will add one trailing blank line.
+
+\subsubsection*{Controller Configs}
+
+As the app level has a config block, so does each controller, even though
+we almost always use the one at the app level and almost never use them
+at the controller level.  These blocks allow you to provide config info
+that only one controller understands, or to override global config info
+with specific values for the benefit of individual controllers.
+
+The syntax for these is exactly like their app level cousins, except that
+the block must be placed inside a controller to affect just that controller.
+There is no way to have some config information that is available to
+a subset of controllers.  It is either at the app level for all or in
+a controller block for one.
+
+\subsection*{Sequences}
+
+Sequences are only understood by Postgres.  Though sequences need to be
+represented by a block, it must be empty.  Eventually, we may add sequence
+statements to control minimum values and the like.  For now you get a
+default sequence:
+
+\begin{verbatim}
+    sequence name {}
+\end{verbatim}
+
+Now that you have seen all the syntax Bigtop has to offer, I wish you
+happy editing.  It is frequently useful to pair the knowledge of this
+chapter with a good understanding of tentmaker to gain the greatest
+efficiencies.  The clicking in tentmaker can be tedious, but it has
+some deep magic.  Typing in an editor requires careful attention to
+syntax, but makes mass edits easier.  Use the style that makes sense.

@@ -1,0 +1,625 @@
+\chapter{Parsing Background}
+\label{chap:parsing}
+
+This chapter introduces the basics of parsing theory, as implemented by
+Parse::RecDescent, so everyone has a chance to write backends for
+Bigtop.  The remaining chapters in this part of the book explain
+how to apply the parsing knowledge from this chapter so you can write
+backends.
+
+Now there is much more to parsing than I can say here.  Whole books are
+written that only cover parts of the field.  Here I will focus on the
+things you need to know to work with Bigtop as a backend author.
+
+In particular, this chapter sticks to recursive descent parsing, since
+that is what Bigtop uses.  Further, we are aiming for the particular
+recursive descent parser: Parse::RecDescent.
+
+If you want to study parsing at greater length I recommend the Dragon book,
+Compilers: Principles, Techniques, and Tools by Alfred Aho, Ravi Sethi, and
+Jeffrey D. Ullman.  This classic has a recent new edition.  The first chapter
+is especially important to understanding how to parse.
+
+\section{Parsing a Small Language}
+
+Instead of taking an abstract approach to parsing, I'll focus on Bigtop.
+To start, imagine that Bigtop were simpler, so simple that it had only one
+block type: field.  Further, let's limit ourselves to just two statements:
+\verb+refers_to+ and \verb+html_form_type+.  Once we can parse that, it's
+not really so big a leap to understand how Bigtop::Parser uses
+bigtop.grammar to parse the full Bigtop language.
+
+To start, our language will only allow something like:
+
+\begin{verbatim}
+field name {
+    refers_to foreign_table;
+    html_form_type select;
+}
+\end{verbatim}
+
+That is, each legal block will begin with the literal `field' followed
+by a name and a block.  Inside the block will be one or more statements
+made up of a keyword followed by a value and ending with a semi-colon.
+For now only two keywords will be allowed.  Further, let's limit the
+legal values for the \verb+html_form_type+ to \verb+select+, \verb+text+,
+or \verb+textarea+.  Even though Bigtop does not make that limitation,
+it will show you a bit more about parsing.
+
+Let's start at the bottom level and work up.  Fundamentally, we need
+to know what a valid name looks like.  For now, we'll use our valid name
+definition to match both keywords and \verb+refers_to+ values.  In Bigtop
+valid names -- also called identifiers -- begin with a letter and are
+followed by one or more letters, numbers, or underscores.  (Some of them can
+also include double colons to align them with Perl class names, but that's
+getting ahead of our simple example.)
+
+Here's the bigtop.grammar rule which defines valid identifiers:
+
+\begin{verbatim}
+IDENT : /^\w[\w\d_]*/
+\end{verbatim}
+
+This is as simple as a Parse::RecDescent rule can be.  On the left side
+of the colon is the internal name of what we are defining.  Since it
+is at the lowest possible level, I named it in all caps.  These are called
+tokens in parsing theory.  Everything in the language is first matched
+as a token.  The colon separates an item being defined from the legal
+values it describes.  Here, the right hand side is just a regex.  (Astute
+readers will note that \verb+\w+ allows numbers, which are not actually
+valid identifiers.  Bigtop users are left with broken output if they
+use leading numbers, since the grammar does not complain.  But, this long
+time bug doesn't seem to cause users much grief.)
+
+Grammar rules are also called productions.  IDENT has a single production.
+Later, we will see grammar elements which can take several forms.  Each
+legal form is described by a separate production (or alternative).
+
+To limit \verb+html_form_types+, we need a rule like this:
+
+\begin{verbatim}
+HF_TYPE : 'select' | 'text' | 'textarea'
+\end{verbatim}
+
+The token for these legal types is \verb+HF_TYPE+ (the name is arbitrary).
+The value can be \verb+select+ or \verb+text+ or \verb+textarea+.  So,
+the pipe symbol \verb+|+ is used in grammar rules just as it is in regexes:
+to represent alternatives.  Just as in regexes, alternatives in recursive
+descent parsing are checked one at a time in the order listed.  As
+soon as one matches the others are not tried.  This may seem odd to those
+familiar with yacc style parsing, where the length of the matched string
+matters.  Here the length is not considered, since only one production
+is tried at a time.
+
+Parse::RecDescent literals are surrounded by single quotes like the various
+form types are in the \verb+HF_TYPE+ definition.
+
+Now that we have defined our tokens, we can move up a step and define
+statements:
+
+\begin{verbatim}
+field_statement : 'refers_to' IDENT ';'
+                | 'html_form_type' HF_TYPE ';'
+\end{verbatim}
+
+This says that each field statement must begin with either \verb+refers_to+
+or \verb+html_form_type+ and refers to statements should be tried first.
+After \verb+refers_to+, the first production requires any valid \verb+IDENT+
+followed by a literal semi-colon.  The \verb+IDENT+ is the name of the
+foreign table this field points to.
+
+If the refers to production cannot match for any reason, the next
+alternative production is tried.  In this case that is the
+\verb+html_form_type+ statement which must have a valid \verb+HF_TYPE+
+and then a literal semi-colon.
+
+Now a field block may contain zero or more statements.  In Parse::RecDescent
+notation that gives a new rule like this:
+
+\begin{verbatim}
+field_body : field_statement(s?)
+\end{verbatim}
+
+Count modifiers go in parentheses.  This is meant to look like
+old style paper forms which asked for information like `Dependent(s).'  Here,
+adding \verb+(s)+ means the item is required, but may be repeated.  Whereas,
+\verb+field_statement(?)+ means that the statement is optional, but
+there can be at most one.  Combining these into the suffix \verb+(s?)+
+yields the meaning: repeatable but optional.
+
+We have a worked our way up to the body of a field block.  It
+may contain zero or more statements which are either \verb+refers_to+
+or \verb+html_form_type+.  Note that the grammar itself does not prevent
+multiple statements with the same keyword.  It is up to the backend, or
+in some cases the user, to notice duplicated statements.
+
+The last step is then straightforward:
+
+\begin{verbatim}
+field_block     : 'field' IDENT '{' field_body '}'
+\end{verbatim}
+
+This reiterates our original definition.  A field block starts with the
+literal \verb+field+, then has a name and a brace delimited block.
+Putting this all together yields the following grammar:
+
+\begin{verbatim}
+#!/usr/bin/perl
+use strict;
+
+use Parse::RecDescent;
+
+my $grammar = q{
+    field_block     : 'field' IDENT '{' field_body '}'
+                    | <error>
+
+    field_body      : field_statement(s?)
+
+    field_statement : 'refers_to' IDENT ';'
+                    | 'html_form_type' HF_TYPE ';'
+
+    HF_TYPE         : 'select' | 'text' | 'textarea'
+
+    IDENT           : /^\w[\w\d_]*/
+};
+
+my $sample_block = << 'EO_SAMPLE';
+field name {
+    refers_to another_table;
+    html_form_type select;
+}
+EO_SAMPLE
+
+my $parser = Parse::RecDescent->new( $grammar );
+$parser->field_block( $sample_block );
+\end{verbatim}
+
+This simple script is now a validator for the field block subset we
+are using as our example.  There are several things to note about it.
+First, the alternative production \verb+<error>+, tells Parse::RecDescent
+to report an error if the field block cannot match.  This is a compile
+error.
+
+Second, to turn a string into a grammar, pass it to the constructor of
+Parse::RecDescent.  Third, take the parser returned by that constructor
+and call the top level grammar element on it as a method.  To see
+something more interesting, introduce a syntax error into the sample
+block -- say by adding an extra semi-colon after the \verb+refers_to+
+statement.  Then the validating script will report the error, like this:
+
+\begin{verbatim}
+
+       ERROR (line 2): Invalid field block: Was expecting '}' but found ";"
+                       instead
+\end{verbatim}
+
+Now let's walk through what Parse::RecDescent does as it parses the
+sample above.  Recursive descent parsers are driven by their grammars
+rather than by the input.  So, when asked to parse a field block, the
+above grammar begins with the first production for a field block.  Only
+if that fails will it ever consider the second production (the error
+in this case).  That production begins with a literal \verb+field+.
+Since that is the first thing in the input, it is consumed and the parse
+moves on to look for an ident.  Before doing that, all whitespace at the
+front of the input string is removed.  Whitespace consumption is repeated
+at every opportunity (you could turn that off, but I never did for Bigtop).
+This is why tentmaker cannot preserve whitespace.
+
+The next token must be an IDENT.  The rule for IDENT says it must
+start with a word character which is then followed immediately by
+any number of word characters, digits, or underscores (including zero of those).
+\verb+name+ answers to that description.  Now the parser
+looks for an opening brace.  Seeing one it proceeds.
+
+If at any point the next item expected by the current production does not
+match, the production is abandoned, everything it had consumed is returned
+unharmed to the input, and the next one is tried.  If there are no more
+productions to try the parse ends in failure.  To make sure that failure
+is reported, there should be one or more \verb+<error>+ productions.
+
+Parsing continues by looking for a \verb+field_body+, which has its own
+rules.  It can be zero or more \verb+field_statements+.  So, parsing
+moves to that rule.  It has two productions.  The first one demands to start
+with a literal \verb+refers_to+ -- that works -- followed
+by any IDENT, which \verb+another_table+ matches.  Finally, it demands
+a semi-colon.  Seeing that, the \verb+field_statement+ rule succeeds with
+its first alternative, without even looking at the other option.
+
+This moves the parse back to the \verb+field_body+ rule which goes looking
+for another statement.  This time the next available token is
+\verb+html_form_type+ which can't match \verb+refers_to+, but can
+start the second production.  To succeed there, it would have to
+be followed by one of the options in the \verb+HF_TYPE+ definition,
+which \verb+select+ is.  That is followed by a semi-colon, so
+the \verb+field_statement+ is matched using the second production.
+
+Again the parse proceeds to look for a field statement.  This time the
+next available token is an ending brace, so neither \verb+field_statement+
+production can even get started.  This is our first failure.
+The \verb+field_statement+ rule fails, since it couldn't take either keyword
+from the front of the remaining input.
+
+Not to worry, that statement was optional (as all of them are).  Thus,
+having accepted as many statements as it could, the \verb+field_body+
+rule reports success.  With that success the ball is back in the
+\verb+field_block+ court, which looks for -- and finds -- the closing brace.
+The production is successful.  Since it was the top rule requested, the whole
+parse is a success.
+
+You can have Parse::RecDescent walk you through a parse by adding this
+statement above the grammar in the sample above:
+
+\begin{verbatim}
+$::RD_TRACE = 1;
+\end{verbatim}
+
+I won't show the output here, because it would rehash the previous discussion
+and because it is so verbose.  But, that verbosity is just what I need
+to find errors in the grammar.
+
+There are a few things between the above example and Bigtop's grammar.
+The obvious one is the expansion to cover all the other blocks.  Another
+one is doing something useful, rather than just returing a successful
+status.
+
+The full grammar ships with the Bigtop distribution as \verb+bigtop.grammar+
+in the \verb+lib/Bigtop/+ subdirectory.  So, we what we need to see here is
+how to make a grammar produce something useful.  That is the subject of the
+next section.
+
+\section{Abstract Syntax Trees}
+
+In the previous section, we developed a small grammar for a subset
+of the Bigtop language.  Here, we aim to build a useful data structure
+describing the user's input.  That data structure will be an abstract
+syntax tree (AST).  Such a tree represents the input in a readily useable
+form.  Every Bigtop backend is handed the AST.  From it, the backend must
+build its output.  The next section explains how the tree can be walked
+to produce output.
+
+The easiest way to get an AST from Parse::RecDescent is to turn on
+\verb+autotree+.  We do this be adding one pseudo-statement at the top of
+our grammar:
+
+\begin{verbatim}
+my $grammar = q{
+    <autotree>
+    field_block : ...
+\end{verbatim}
+
+Bigtop uses \verb+<autotree>+ sparingly.  That is actually one of its nice
+advantages: it can contribute to the parse tree when nothing interesting
+is happening, but still leave you full control when you need it.
+
+Adding autotree as shown above and the following:
+
+\begin{verbatim}
+my $ast = $parser->field_block( $sample_block );
+
+use Data::Dumper;
+$Data::Dumper::Indent = 1;
+warn Data::Dumper->Dump( [ $ast ], [ qw( ast ) ] );
+\end{verbatim}
+
+to the example script shown above yields:
+
+\begin{verbatim}
+$ast = bless( {
+  '__STRING3__' => '}',
+  '__STRING2__' => '{',
+  '__RULE__' => 'field_block',
+  'field_body' => bless( {
+    '__RULE__' => 'field_body',
+    'field_statement(s?)' => [
+      bless( {
+        '__STRING2__' => ';',
+        '__RULE__' => 'field_statement',
+        'IDENT' => bless( {
+          '__VALUE__' => 'another_table'
+        }, 'IDENT' ),
+        '__STRING1__' => 'refers_to'
+      }, 'field_statement' ),
+      bless( {
+        '__STRING2__' => ';',
+        'HF_TYPE' => bless( {
+          '__VALUE__' => 'select'
+        }, 'HF_TYPE' ),
+        '__RULE__' => 'field_statement',
+        '__STRING1__' => 'html_form_type'
+      }, 'field_statement' )
+    ]
+  }, 'field_body' ),
+  'IDENT' => bless( {
+    '__VALUE__' => 'name'
+  }, 'IDENT' ),
+  '__STRING1__' => 'field'
+}, 'field_block' );
+\end{verbatim}
+
+Reading this takes a bit of work.  First, notice that the top level
+returned value is an object blessed into the \verb+field_block+ class.
+Carefully scanning the indentation, we see that the attributes of this
+object are rather generic.  First, \verb+__STRING1__+, \verb+__STRING2__+,
+and \verb+__STRING3__+ represent the literals from the production: the word
+`field' and the opening and closing brace.  Second, the \verb+__RULE__+
+is \verb+field_body+, which is the name (the left hand side of the colon)
+for this rule.  The interesting parts are the \verb+field_body+ and
+the \verb+IDENT+.  The later has a \verb+__VALUE__+ which is the name
+of the field (it happens to be named \verb+name+).
+
+The \verb+field_body+ is a subtree for that rule.  Its \verb+__RULE__+ name
+is \verb+field_body+.  Its only other key is \verb+field_statement(s?)+
+which stores an array (which could have been empty) of statements inside
+the block.  In our example there were two of those.  Each one is
+blessed into the \verb+field_statement+ class and has that as its
+\verb+__RULE__+ name.  Other than their \verb+__STRING2__+'s which
+store their semi-colons, they have nothing in common.
+
+While autotrees are easy to get, they are often less useful than a custom
+tree.  Custom trees can have just the things we need and none of the
+useless trivia, like the presence of a required semi-colon.
+
+Let's personalize our tree.  To do this, we add actions to the end of
+each production.  In those actions we build our own objects with a bit
+more care than the autotree process can give.
+
+When Parse::RecDescent accepts a production, it performs whatever action
+is at the end of it.  If nothing is there it does the default thing.  If
+autotree is on, the default adds an object for the rule as we saw in the dump
+above.  So we want to add our own actions.  Let's again start at the bottom.
+
+\begin{verbatim}
+IDENT : /^\w[\w\d_]*/  { $item[1] }
+\end{verbatim}
+
+This asks Parse::RecDescent to return the first item matched as a literal
+(it numbers its \verb+item+ array from 1, to better approximate how other
+parsers work, notably yacc).  This already simplifies the generated tree by
+trading
+
+\begin{verbatim}
+'IDENT' => bless( {
+  '__VALUE__' => 'another_table'
+}, 'IDENT' ),
+\end{verbatim}
+
+for
+
+\begin{verbatim}
+'IDENT' => 'another_table',
+\end{verbatim}
+
+A similar change has a similar affect for \verb+HF_TYPE+, but we have
+to spread out the productions, so we can put the action on each one.
+
+\begin{verbatim}
+    HF_TYPE         : 'select'    { $item[1] }
+                    | 'text'      { $item[1] }
+                    | 'textarea'  { $item[1] }
+\end{verbatim}
+
+We can now move up the tree to \verb+field_statement+.  This will be
+a bit more intersting.
+
+\begin{verbatim}
+field_statement : 'refers_to' IDENT ';' {
+                        bless {
+                            __KEYWORD__ => 'refers_to',
+                            __VALUE__   => $item{ IDENT },
+                        }, 'field_statement'
+                   }
+                | 'html_form_type' HF_TYPE ';' {
+                        bless {
+                            __KEYWORD__ => 'html_form_type',
+                            __VALUE__   => $item{ HF_TYPE },
+                        }, 'field_statement'
+                   }
+\end{verbatim}
+
+Again, each production needs its own action.  This time, I used the
+named \verb+item+ hash provided by Parse::RecDescent to fish out the values
+for the field statements.  This prevents problems with miscounting and
+allows for easier changes if new tokens are added earlier in the production
+requirments.
+
+Stepping up again, we could write an action for \verb+field_body+, but
+I usually don't do that, since the only extraneous key is \verb+__RULE__+.
+So, I make my last change at the top after the successful \verb+field_block+
+production.
+
+\begin{verbatim}
+field_block     : 'field' IDENT '{' field_body '}' {
+  bless {
+      __NAME__ => $item{ IDENT },
+      __BODY__ => $item{ field_body }{ 'field_statement(s?)' },
+  }, 'field'
+                  }
+\end{verbatim}
+
+This actually cuts the \verb+field_body+ out of the final AST altogether.
+Since that rule's only purpose was to collect zero or more statements,
+we no longer need it.  I wish I could tell you that I thought to do that
+when I first wrote Bigtop, but I did not.  It's tree could be a lot
+simpler than it turned out.  Perhaps one day I will give it an overhaul.
+
+With this last piece in place, our tree is now quite a bit simpler:
+
+\begin{verbatim}
+$ast = bless( {
+  '__BODY__' => [
+      bless( {
+        '__KEYWORD__' => 'refers_to',
+        '__VALUE__' => 'another_table'
+      }, 'field_statement' ),
+      bless( {
+        '__KEYWORD__' => 'html_form_type',
+        '__VALUE__' => 'select'
+      }, 'field_statement' )
+    ]
+  }, 'field_body' ),
+  '__NAME__' => 'name'
+}, 'field' );
+\end{verbatim}
+
+\section{Walking an AST}
+
+Once you have a parse tree, and Bigtop is happy to provide one (though it
+won't be as simple as the ones above), you can generate what you need from
+it.  The key to doing that is walking the tree.  Bigtop::Parser provides
+a method called \verb+walk_postorder+ to do that.  It visits each node in
+the parse tree in post order (also known as depth first order).
+This means that all children are visited before their parent.
+
+You don't need to write your own walker, but seeing an example will help you
+understand how to use the provided \verb+walk_postorder+.  So I will
+show one for our simplified field only grammar.
+
+The first thing to realize is that the nodes in the parse tree are
+blessed into Perl classes.  To work on those nodes, we can supply packages
+with the names of the classes.  Then the method names will be the same for
+all classes, but will do different things based on which node type their
+package understands.
+
+Again, I'll start small and build up to a full set of walking routines.
+First consider this pair which merely notes where it is in the tree:
+
+\begin{verbatim}
+package field;
+use strict;
+
+sub walk_postorder {
+    my $self = shift;
+
+    foreach my $child ( @{ $self->{ __BODY__ } } ) {
+        $child->walk_postorder;
+    }
+
+    warn "I walked a field called $self->{__NAME__}\n";
+}
+
+package field_statement;
+use strict;
+
+sub walk_postorder {
+    my $self = shift;
+
+    warn "  I walked a field statement $self->{__KEYWORD__}\n";
+}
+\end{verbatim}
+
+I can start the walk at the top level with this statement:
+
+\begin{verbatim}
+$ast->walk_postorder();
+\end{verbatim}
+
+This will begin in the \verb+field+ pacakge which first loops over
+each child, asking it to walk.  Then it handles its own behavior.
+For non-binary trees, the only other sensible order is pre-order where
+the parent performs its action first, then calls on the children to do
+their bit.  This is inconvenient for parser backends, since what the
+parent elects to do is often determined by the children's responses.
+
+Now we need to introduce user specified actions to replace the warn
+statements above.  We want to change the call to something more like:
+
+\begin{verbatim}
+my $deparsed = $ast->walk_postorder( 'deparse' );
+\end{verbatim}
+
+This needs to ask each node to perform the \verb+deparse+ action on itself
+after its children have done the same.  So, we need to revise our
+\verb+walk_postorder+ routines to perform the requested action.
+
+\begin{verbatim}
+#... as before
+my $ast = $parser->field_block( $sample_block );
+
+my $deparsed = $ast->walk_postorder( 'deparse' );
+
+print $deparsed;
+
+package field;
+use strict;
+
+sub walk_postorder {
+    my $self   = shift;
+    my $action = shift;
+
+    my @child_output;
+    foreach my $child ( @{ $self->{ __BODY__ } } ) {
+        my $one_child_output = $child->walk_postorder( $action );
+        push @child_output, $one_child_output if defined $one_child_output;
+    }
+
+    if ( $self->can( $action ) ) {
+        return $self->$action( \@child_output );
+    }
+    else {
+        return;
+    }
+}
+
+sub deparse {
+    my $self         = shift;
+    my $child_output = shift;
+
+    local $" = "\n";
+
+    return << "EO_FIELD";
+field $self->{ __NAME__ } {
+@{ $child_output }
+}
+EO_FIELD
+}
+
+package field_statement;
+use strict;
+
+sub walk_postorder {
+    my $self   = shift;
+    my $action = shift;
+
+    if ( $self->can( $action ) ) {
+        return $self->$action();
+    }
+    else {
+        return;
+    }
+}
+
+sub deparse {
+    my $self = shift;
+
+    return "    $self->{ __KEYWORD__ } $self->{ __VALUE__ };";
+}
+\end{verbatim}
+
+The result is a deparser for our little subset of Bigtop.  The actual
+module Bigtop::Deparser does something similar for the whole Bigtop
+grammar.  But, there is one key difference between modules like
+Bigtop::Deparser and the approach above.  Bigtop relies on mixins.
+
+Not everyone is aware that Perl allows multiple package statements in any
+script or module, but it does.  Further, by using a package statement in your
+module, you can add (or mix in) code to any package.  This provides tremendous
+freedom, which must be used carefully.  Bigtop uses this idea throughout.
+Inside the Parser.pm is a set of package statements.  This is where
+shared methods like \verb+walk_postorder+ are defined.  Bigtop::Deparser,
+and all of the backends, then inject their own methods into those packages
+by using their own package statements.  Most of those injected methods
+are callbacks for \verb+walk_postorder+.  If the methods should be shared
+by the backends, they belong in either Parser.pm or in their backend type
+module (like SQL.pm, Control.pm, etc.).
+
+With an aggressive mixin scheme like this, everyone must be on their toes
+to avoid namespace collisions.  This is key when you write a backend.
+Programs like tentmaker will load all the available backends on the system
+at the same time.  Any subs with the same names in the AST packages will
+result in redefinitions (and the warnings that follow from them).  The
+solution is to use a unique prefix or suffix to avoid collisions.  There
+are times when I think this system is unwise, but the power is hard to match.
+
+Now that you know the basics of grammars, abstract syntax trees, and
+their traversals, you are ready for the rest of this part of the book
+which shows how to build your own Bigtop backends.

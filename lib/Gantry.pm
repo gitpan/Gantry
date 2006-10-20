@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.41';
+our $VERSION = '3.42';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 
@@ -71,7 +71,9 @@ sub handler : method {
         
     # Call do_error and Return 
     if( $@ ) {
-        return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
+        my $e = $@;
+
+        return( $self->cast_custom_error( $self->custom_error( $e ), $e ) );
     }
 
     # set http headers
@@ -80,22 +82,36 @@ sub handler : method {
 
     # Call do_process, defined within the template plugin
     eval {
-        my $response_page =  $self->do_process( );
+        my $response_page = '';
+        $response_page    = $self->do_process( );
+
+        my $status = $self->status() ? $self->status() : 200;
+
+        if ( $status < 400 ) {
             
-        #$self->content_length( length( $response_page ) );
+            $self->send_http_header();
+            $self->print_output( $response_page );
         
-        # call engine plugin to send headers 
-        $self->send_http_header( );
-        $self->print_output( $response_page );
+        }
+        else {
+            $self->cast_custom_error( $response_page ) if $response_page;
+        }
     };
 
     if( $@ ) {
-        $self->do_error( $@ );
-        return( $self->cast_custom_error( $self->custom_error( $@ ), $@ ) );
+        my $e = $@;
+        
+        $self->do_error( $e );
+        return( $self->cast_custom_error( $self->custom_error( $e ), $e ) );
     }
     
-    # Return OK
-    return $self->success_code;
+    # Return status code unless Engine is CGI
+    if ( $self->engine eq 'Gantry::Engine::CGI' ) {
+        return();        
+    }
+    else {
+        return( $self->status() ? $self->status() : $self->success_code );
+    }
     
 } # end handler
 
@@ -406,11 +422,13 @@ sub init {
     my $app_root = $self->fish_config( 'root' );
 
     $self->root( join ':', $app_root, Gantry::Init::base_root() );
+    $self->doc_root( $self->fish_config( 'doc_root' ) );
     $self->css_root( $self->fish_config( 'css_root' ) );
     $self->img_root( $self->fish_config( 'img_root' ) );
     $self->tmp_root( $self->fish_config( 'tmp_root' ) );
     
     # set application uri variables
+    $self->doc_rootp( $self->fish_config( 'doc_rootp' ) );
     $self->web_rootp( $self->fish_config( 'web_rootp' ) );
     $self->app_rootp( $self->fish_config( 'app_rootp' ) );
     $self->img_rootp( $self->fish_config( 'img_rootp' ) );
@@ -686,6 +704,28 @@ sub web_rootp {
 } # end web_rootp
 
 #-------------------------------------------------
+# $self->doc_rootp( value )
+#-------------------------------------------------
+sub doc_rootp {
+    my ( $self, $p ) = @_;
+
+    $self->{__DOC_ROOTP__} = $p if ( defined $p );
+    return( $self->{__DOC_ROOTP__} || '' );
+        
+} # end doc_rootp
+
+#-------------------------------------------------
+# $self->doc_root( value )
+#-------------------------------------------------
+sub doc_root {
+    my ( $self, $p ) = @_;
+
+    $self->{__DOC_ROOT__} = $p if ( defined $p );
+    return( $self->{__DOC_ROOT__} || '' );
+        
+} # end doc_root
+
+#-------------------------------------------------
 # $self->img_rootp( value )
 #-------------------------------------------------
 sub img_rootp {
@@ -769,6 +809,13 @@ sub set_auth_model_name {
     $model = $self->get_auth_model_name() unless $model;
 
     $self->{__MODELS__}{__AUTH_USERS__} = $model;
+
+    my @pieces    = split /::/, $model;
+    my $base      = pop @pieces;
+
+    my $file_name = File::Spec->catfile( @pieces, "$base.pm" );
+
+    require $file_name;
 }
 
 #-------------------------------------------------
@@ -876,6 +923,16 @@ sub protocol {
         
 } # end protocol
 
+#-------------------------------------------------
+# $self->is_post()
+#-------------------------------------------------
+sub is_post {
+    my ( $self ) = @_;
+    
+    return( $self->method eq 'POST' ? 1 : 0 );
+        
+} # end is_post
+
 ##-------------------------------------------------
 ## $self->get_conf( )
 ##-------------------------------------------------
@@ -931,13 +988,15 @@ sub custom_error {
     $request_dump =~ s/(?:^|\n)(\s+)/&trim( $1 )/ge;
     $request_dump =~ s/</&lt;/g;
 
+    my $status = $self->status || 'Bad Request';
+    
     my $page = $self->_error_page();
     
     $page =~ s/##DIE_MESSAGE##/$die_msg/sg;
     $page =~ s/##PARAM_DUMP##/$param_dump/sg;
     $page =~ s/##REQUEST_DUMP##/$request_dump/sg;
     $page =~ s/##RESPONSE_DUMP##/$response_dump/sg;
-    $page =~ s/##STATUS##/Forbidden/sg;
+    $page =~ s/##STATUS##/$status/sg;
     $page =~ s/##PAGE_TITLE##/$self->page_title/sge;
     
     return( $page );
@@ -1292,6 +1351,14 @@ files on disk.
 Set/get for the img_root value. This value is used to locate the
 application image files on disk.
 
+=item doc_root
+
+ $self->doc_root( '/home/tkeefer/myapp/root' );
+ $doc_root = $self->doc_root;
+
+Set/get for the doc_root value. This value is used to locate the
+application root directory on disk.
+
 =item app_rootp
 
  $self->app_rootp( '/myapp' );
@@ -1314,6 +1381,14 @@ the root URI location for the web application images.
  $web_rootp = $self->web_rootp;
 
 Set/get for the web_rootp value. This value is used to identify the
+the root URI location for the web files.
+
+=item doc_rootp
+
+ $self->doc_rootp( 'html' );
+ $doc_rootp = $self->doc_rootp;
+
+Set/get for the doc_rootp value. This value is used to identify the
 the root URI location for the web files.
 
 =item css_rootp
@@ -1489,6 +1564,10 @@ For internal use.  Makes a new stash.  The old one is lost.
 
 For internal use in cleaning up Data::Dumper output for presentation on
 the default custom_error page.
+
+=item is_post
+
+returns a true value (1) if client request is of post method. 
 
 =item schema_base_class
 

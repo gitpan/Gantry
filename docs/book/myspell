@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+use strict; use warnings;
+
+my $file       = shift;
+my $skip_file  = shift;
+my @misspelled = split /\n/, `spell $file`;
+
+my %skip;
+
+if ( $skip_file ) {
+    open my $SKIP_FILE, "<", $skip_file or die "Couldn't read $skip_file $!\n";
+    %skip = map { chomp; $_ => 1 } <$SKIP_FILE>;
+    close $SKIP_FILE;
+}
+else {
+    %skip       = (
+        bigtop           => 1,
+        Bigtop           => 1,
+        CPAN             => 1,
+        html             => 1,
+        gunzip           => 1,
+        tentmaker        => 1,
+        TentMaker        => 1,
+        perl             => 1,
+        Perl             => 1,
+        subsubsection    => 1,
+        backend          => 1,
+        backends         => 1,
+        Backend          => 1,
+        Backends         => 1,
+        blib             => 1,
+        includegraphics  => 1,
+        postgres         => 1,
+        Postgres         => 1,
+        sqlite           => 1,
+        SQLite           => 1,
+    );
+}
+
+foreach my $missed ( @misspelled ) {
+    next if ( $skip{ $missed } );
+    print "$missed\n";
+}

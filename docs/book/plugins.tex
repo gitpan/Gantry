@@ -1,0 +1,81 @@
+\chapter{Plugins}
+\label{chap:plugins}
+
+Gantry is extensible in many ways.  Most of the time it is enough to just
+use regular modules in the regular way.  But there are times when a bit
+more is required for proper function.  This chapter explains how we
+implement plugins which change -- or more likely, augment -- the behavior
+of Gantry site objects.
+
+Most plugins alter the behavior of Gantry site objects by mixing in
+methods.  This is easy to do.
+
+To have an example, suppose that a database we don't control gives us
+data in feet, but we need to show it to our customer in meters.  To make
+it easy to access this method in controller methods, we want the syntax
+to be like this:
+
+\begin{verbatim}
+    my $meters = $self->ft2m( $feet_from_database );
+\end{verbatim}
+
+But, we only want \verb+ft2m+ to be available, we don't want it by default.
+That rules out putting into Gantry.pm.  Further, while we could put it in
+our app's main module, that wouldn't help us if a different app needs the
+same conversion.  So, let's make a plugin:
+
+\begin{verbatim}
+package Gantry::Plugins::UnitConvert
+use strict;
+
+use Exporter;
+our @EXPORT = qw( ft2m );
+
+sub ft2m {
+    my $self = shift;
+    my $feet = shift;
+
+    return $feet * .3048;
+}
+\end{verbatim}
+
+The key is to write a method (which expects a Gantry site object as its
+invocant) and export it -- or mix it -- into the caller's namespace.
+Users then have an array of choices for how to use this plugin.
+
+They could include it in the same use statement where they choose an Engine:
+
+\begin{verbatim}
+    use GantryBased::App qw( -Engine=MP13 -TemplateEngine=TT UnitConvert );
+\end{verbatim}
+
+But that puts it in all the modules of the whole app.  Likely, it will make
+more sense to use it more sparingly, in the modules which actually need it.
+So, it should probably go near the top of the module that needs it:
+
+\begin{verbatim}
+package GantryBased::App::Dist
+use strict;
+#...
+use Gantry::Plugins::UnitConvert qw( ft2m );
+\end{verbatim}
+
+Note that the user does not have to mention the \verb+ft2m+ method by name,
+but it will help future readers who wonder where that method came from.
+You could also choose to have your plugin export only upon request, by
+changing from \verb+@EXPORT+ to \verb+@EXPORT_OK+.  That seems a bit
+strange for most plugins, since their whole purpose in life is to inject
+their methods into your namespace, but some people may prefer it.  It does
+force users to ask for the methods.  That's good documentation.  It also
+makes more sense if there are more methods in the plugin, only some
+of which make sense together.
+
+Gantry's plugins are generally mixins -- they export methods into their
+user's namespace.  This is a powerful way to share code across apps without
+worrying about inheritence.  If you stick to explicit imports, it is still
+fairly easy to track down the origin of the code.
+
+The only plugin that doesn't export is Gantry::Plugins::CRUD which has
+an object oriented approach.  It is in the Plugins namespace due to its
+similarity with Gantry::Plugins::AutoCRUD which does export a number of
+methods.

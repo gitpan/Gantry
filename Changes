@@ -1,10 +1,26 @@
 This file documents the revision history for Perl extension Gantry
 
+3.42 Thu Oct 19 10:05:57 CDT 2006
+    - Added Samples.
+    - Missing and Invalid fields on form.tt now have their labels in the
+      error message instead of their names.
+    - Gantry.pm's set_auth_model now requires the model for you.
+    - CRUD add, edit, and delete methods now allow their invokers to set
+      $self->stash->view->title to override default window and table titles.
+    - Added support for generic errors on form.tt (not just missing or
+      invalid).
+    - Added field type 'display' to form.tt for fields which should be
+      displayed, but not in an input element.
+    - Added content key to form.tt's fields hashes.  This helps when you have
+      a Question #. Text label for input elements, but don't want all that
+      text reported in errors.
+    - Added file upload.
+
 3.41 Wed Oct  4 14:58:22 CDT 2006
     - Corrected response header handling in CGI engine.
     - Corrected Gantry::Conf so it won't be tested if it can't be used.
     - Added main.tt to the MANIFEST.  Bigtop uses it for defaul pages.
-    - Trie again to make prompts visible during CPAN shell install.
+    - Tried again to make prompts visible during CPAN shell install.
 
 3.40 Fri Sep 22 08:14:15 CDT 2006
     - Restored and expanded warning avoidance from Gantry.pm accessors.

@@ -1,0 +1,58 @@
+CREATE TABLE job (
+    id SERIAL PRIMARY KEY,
+    title varchar,
+    description varchar,
+    created TIMESTAMP WITH TIME ZONE,
+    modified TIMESTAMP WITH TIME ZONE,
+    travel_percent varchar,
+    on_site varchar,
+    time_percent varchar
+);
+
+INSERT INTO job ( title, description, travel_percent, on_site, time_percent )
+    VALUES ( 'Jr. Meeting Attender', 'Attend meetings and work on projects', '5%', 'onsite', 'fulltime' );
+
+INSERT INTO job ( title, description, travel_percent, on_site, time_percent )
+    VALUES ( 'Sr. Meeting Attender', 'Attend meetings and lead projects', '5%', 'onsite', 'fulltime' );
+
+INSERT INTO job ( title, description, travel_percent, on_site, time_percent )
+    VALUES ( 'Chief Financial Obfuscator', 'Top level financial manager', '5%', 'onsite', 'fulltime' );
+
+CREATE TABLE skill (
+    id SERIAL PRIMARY KEY,
+    ident varchar,
+    description varchar,
+    created TIMESTAMP WITH TIME ZONE,
+    modified TIMESTAMP WITH TIME ZONE
+);
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'mtg_convene', 'Convene and run meetings' );
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'mtg_attend', 'Attend meetings' );
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'good_drive', 'Hold valid driver license and have clean driving record' );
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'cook_book_max', 'Have 15+ years practical experience cooking books.' );
+
+CREATE TABLE position (
+    id SERIAL PRIMARY KEY,
+    ident varchar,
+    created TIMESTAMP WITH TIME ZONE,
+    modified TIMESTAMP WITH TIME ZONE,
+    job int4,
+    n_openings int4,
+    location varchar,
+    closes date,
+    boss varchar,
+    pay varchar
+);
+
+CREATE TABLE job_skill (
+    id SERIAL PRIMARY KEY,
+    job int4,
+    skill int4
+);

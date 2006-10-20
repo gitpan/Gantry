@@ -339,7 +339,7 @@ were exported by Gantry::Plugins::AutoCRUD.
 
 Finally, we need to put the data into the stash:
 
-        $self->stash->view->data( $retval );
+        $self->stash->view->data( $data );
     } # END do_main
 
 The only other piece of the controller is the form to use for add and
@@ -370,7 +370,8 @@ The following code produces this on the screen:
                 # other similar hashes ommitted
                 # see Complete Code Lsting
             ],
-        }
+        }; 
+
     } # END of form
 
     1;

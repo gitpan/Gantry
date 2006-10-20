@@ -105,7 +105,8 @@ sub add {
     my ( $self, $your_self, $data ) = @_;
 
     $your_self->stash->view->template( $self->template );
-    $your_self->stash->view->title( 'Add ' . $self->text_descr );
+    $your_self->stash->view->title( 'Add ' . $self->text_descr )
+            unless $your_self->stash->view->title;
 
     my $params   = $your_self->get_param_hash();
 
@@ -174,7 +175,7 @@ sub add {
         );
         return $your_self->relocate( $redirect );
     }
-} # END: do_add
+} # END: add
 
 #-------------------------------------------------
 # $self->edit( $your_self, { put => 'your', data => 'here' } );
@@ -183,7 +184,8 @@ sub edit {
     my ( $self, $your_self, $data ) = @_;
 
     $your_self->stash->view->template( $self->template() );
-    $your_self->stash->view->title( 'Edit ' . $self->text_descr() );
+    $your_self->stash->view->title( 'Edit ' . $self->text_descr() )
+            unless $your_self->stash->view->title;
 
     my %params = $your_self->get_param_hash();
 
@@ -257,7 +259,7 @@ sub edit {
         );
         return $your_self->relocate( $redirect );
     }
-} # END: do_edit
+} # END: edit
 
 #-------------------------------------------------
 # $self->delete( $your_self, $confirm, { other => 'data' } )
@@ -266,7 +268,8 @@ sub delete {
     my ( $self, $your_self, $yes, $data ) = @_;
 
     $your_self->stash->view->template( 'delete.tt' );
-    $your_self->stash->view->title( 'Delete' );
+    $your_self->stash->view->title( 'Delete' )
+            unless $your_self->stash->view->title;
 
     if ( $your_self->params->{cancel} ) {
         my $redirect = $self->_find_redirect(

@@ -1,0 +1,10 @@
+This directory has the source for the Gantry book and its figures.
+You need latex to build the book.  Then you can run the buildbook script.
+When you do that it will litter as latex is prone to do.
+
+The key files are:
+
+    outline  - a text file listing all the files the make up the book
+    book.tex - the top level tex file which describes the book
+    *.tex    - the chapters in the book
+    *.eps    - the figures for the book in encapsulated postscript form

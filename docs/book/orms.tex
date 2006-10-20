@@ -1,0 +1,189 @@
+\chapter{Object-Relational Modelers and Gantry}
+\label{chap:orms}
+
+One of the biggest trends of the last five years or so is the development
+of ORMs which are facades between generally object-oriented applications and
+the generally non-object relational databases which back them.  ORMs are
+nice, but there are too many to choose from when you get in the market.
+Gantry has its own ORM, though even we don't use it much.  It further
+supports DBIx::Class and Class::DBI (the former is preferred, since the
+later is a poor team player, when it comes to sharing the database handle
+with non-Class::DBI modules, all bets are off).
+
+But, chances are reasonably good that you either already use a different
+ORM or are wishing you could.  This chapter explains how to fully integrate
+your ORM into Gantry.  Once you do that, you can use it as easily as the
+supported ORMs (or even more easily if your ORM is really nicer).
+
+\section{Plugin Schemes}
+
+Our current prefered connection management scheme involves writing a
+plugin for the ORM.  This is what we use big DBIx::Class.
+
+To determine whether you need a plugin or a more tradtional approach reduces
+to this question: Does your ORM expect the models to handle connections?
+If the answer is yes, you need the old approach of the next section.
+If the models don't handle connection, you should make a plugin, so
+the controllers can handle it.
+
+Connection Plugin are simple, mostly because the controllers drive them.
+For instance, here is the operative code in the plugin for DBIx::Class:
+
+\begin{verbatim}
+package Gantry::Plugins::DBIxClassConn;
+use strict; use warnings;
+
+use base 'Exporter';
+
+our @EXPORT = qw( get_schema get_auth_schema );
+
+sub get_schema {
+    my $self = shift;
+
+    return $self->{__SCHEMA__} if defined $self->{__SCHEMA__};
+
+    my $base = $self->schema_base_class;
+
+    $self->{__SCHEMA__} = $base->connect(
+        $self->fish_config( 'dbconn' ),
+        $self->fish_config( 'dbuser' ),
+        $self->fish_config( 'dbpass' ),
+        $base->get_db_options
+    );
+
+    return $self->{__SCHEMA__};
+}
+\end{verbatim}
+
+This module exports a new method available through the site object called
+\verb+get_schema+.  It calls \verb+schema_base_class+ which the base
+controller for the app must implement to make the scheme work.  That
+method returns then name of the DBIx::Schema descendent for the app, the
+one responsible for loading all the models.
+
+Once the schema base class is known, it is a simple matter to call its
+connect method with config information taken from the site object by
+calling its \verb+fish_config+.  By using \verb+fish_config+, we allow
+the engine to pull the config information for us in the best way.
+That might be from Gantry::Conf, from elements of the config hash in
+a CGI object, or from PerlSetVars.  Using the method decouples our controller
+from how config information is provided.
+
+You might have noticed that the above plugin exports a second method.
+The \verb+get_auth_schema+ method is similar, and is used to get a second
+connection to an authentication database.
+
+Simple use of this plugin requires each method in the controller which
+want to use the databse to include code like this:
+
+\begin{verbatim}
+sub do_something {
+    #...
+    my $schema = $self->get_schema();
+    my $row    = $schema->resultset( 'mytable' )->find( $row_id );
+\end{verbatim}
+
+That becomes tedious, so Gantry::Utils::DBIxClass is provided as a model
+base class with sugar methods.  For example, the above can be written
+as:
+
+\begin{verbatim}
+use App::Model::mytable qw( $MYTABLE );
+
+sub do_something {
+    #...
+    my $row = $MYTABLE->gfind( $row_id );
+\end{verbatim}
+
+\section{Gantry's Connection Scheme}
+
+The first step in using a database is making a connection to it.  Each
+engine in Gantry employs a helper to ease that process.  The helpers
+live in the Gantry::Utils::DBConnHelper namespace.  They are responsible
+for fishing database connection information out of the configuration
+information and delivering it to Gantry::Utils::ModelHelper.
+
+Gantry::Model::Helper exports \verb+db_Main+ which is imported directly by
+Gantry::Utils::CDBI.  Our Class::DBI models (when we had them) all inherited
+from this base class, and so inherited that method.  If your ORM uses
+\verb+db_Main+ in the same way Class::DBI does, you can do the same.
+
+If you models must know their own connection information, you can probably
+figure out how to easily leverage \verb+db_Main+ from
+Gantry::Utils::ModelHelper into a robust
+mechanism for connecting to your database with normal configuration data.
+
+For those who are curious, Figure \ref{fig:dbconnseq} shows -- in outline
+form -- how data flows from config info to become a connected database
+handle.  All that remains is to make this \verb+db_Main+ available to
+your models, as discussed above.
+
+\begin{figure}
+\begin{verbatim}
+Gantry::Utils::ModelHelper->db_Main
+    Gantry::Utils::DBConnHelper::MP13->get_dbh
+    [ unless dbh ]
+        Gantry::Utils::DBConnHelper::MP13->get_conn_info
+            DBI->connect_cached
+        Gantry::Utils::DBConnHelper::MP13->set_dbh
+\end{verbatim}
+\caption{The call stack which draws connection info from config params and
+uses it to connect to a database.}
+\label{fig:dbconnseq}
+\end{figure}
+
+Caching of database handles is done at two or three levels.  The lowest
+level caching is shown in Figure \ref{fig:dbconnseq}, which limits config
+parameter lookups to once per page hit.  At the second level, \verb+DBI+
+is asked to \verb+connect_cached+.  Finally, you could add a module like
+\verb+Apache::DBI+, which globally limits connections.
+
+\section{Integrating an ORM with AutoCRUD}
+
+Once you can connect to the database, it is time to turn loose the power
+of Gantry and your ORM.  The chief place where they come together is
+in AutoCRUD.  There are two steps to making your ORM work with AutoCRUD:
+implementing a helper and letting AutoCRUD know about it.
+
+Letting AutoCRUD know about your helper is easy.  Simply implement this
+sub in your base controller:
+
+\begin{verbatim}
+sub get_orm_helper { return 'YourHelper'; }
+\end{verbatim}
+
+Traditionally, the helpers live in the Gantry::Plugins::AutoCRUDHelper::
+namespace, but you can put yours in any namespace.
+
+Implementing an AutoCRUD helper is not much harder.  The module needs
+class methods, which are described below.  All of the methods are invoked
+as class methods.
+
+\subsection*{insert}
+
+The first method is used by \verb+do_add+ and is called \verb+insert+.
+It receives the gantry site object and the hash of values for the new
+row.  It must return the new row.  If your ORM does not populate the
+id of the row, you should do that manually.
+
+\subsection*{retrieve}
+
+Next is retrieve.  It too is called with the gantry site object, but
+it receives the row id you should retrieve.  Return the row with that
+id.
+
+\subsection*{update}
+
+Next is update.  It is called with the gantry site object, the row AutoCRUD
+got from calling your retrieve method, and the hash of values that should
+go directly into the row.  Any return value is ignored.
+
+\subsection*{delete}
+
+Finally, delete is called with the gantry site object, and the doomed row.
+Any return value is ignored.
+
+Keep in mind that AutoCRUD is all about auto and that includes autocommit.
+You need to ensure that your helper routines commit to the database, if
+that is necessary.
+

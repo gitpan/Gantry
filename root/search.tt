@@ -130,7 +130,7 @@
         </tr>
         [% END %]
 
-        [% IF view.data.rows == '' and self.method == 'post' %]
+        [% IF NOT view.data.rows.0 AND self.method == 'POST' %]
         [% colspan = view.data.headings.size + view.data.header_options.size %]
             <tr><td colspan="[% colspan %]">No Data</td></tr>
         [% END %]

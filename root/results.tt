@@ -3,9 +3,16 @@
 
 [% colspan = ( view.data.headings.size || 0 ) 
 	+ ( view.data.header_options.size || 0 ) %]
+
 <h3>[% view.data.overheading %]</h3>
+
+[% IF view.data.search_fields %]
 <div class="box">
-       
+    <!-- ADD the search form generation code here -->
+</div>
+[% END %]
+
+<div class="box">       
 	<table id="results">
 		<tr>
 			[% FOREACH heading IN view.data.headings %]

@@ -68,7 +68,12 @@ sub special_sql {
 
     my %row;
 
-    $sth->bind_columns( \( @row{ @{ $sth->{NAME_lc} } } ) );
+    eval {
+        $sth->bind_columns( \( @row{ @{ $sth->{NAME_lc} } } ) );
+    };
+    if ( $@ ) {
+        die "Couldn't execute $sql\n\n$@";
+    }
 
     my @retvals;
 

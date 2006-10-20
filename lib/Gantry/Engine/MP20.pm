@@ -3,6 +3,7 @@ require Exporter;
 
 use strict;
 use Carp qw( croak );
+use File::Basename;
 
 use Apache2::Const -compile => qw(:common :http HTTP_UNAUTHORIZED);
 use Apache2::Access;
@@ -33,6 +34,7 @@ use vars qw( @ISA @EXPORT );
     engine
     engine_init
     err_header_out
+    file_upload
     fish_config
     fish_location
     fish_method
@@ -68,6 +70,38 @@ use vars qw( @ISA @EXPORT );
 ############################################################
 
 #-------------------------------------------------
+# $self->file_upload( param_name )
+#-------------------------------------------------
+sub file_upload {
+    my( $self, $param ) = @_;
+
+    die "param required" if ! $param;
+    
+    my $apr = $self->ap_req;
+    my $status = $apr->parse;
+
+    if ( $status ) { die "upload error: $status" };
+
+    my $upload = $apr->upload( $param );
+    
+    my $filename = $upload->filename;
+    $filename =~ s/\\/\//g;
+    
+    my( $name, $path, $suffix ) = fileparse( $filename, qr/\.[^.]*/ ); 
+    
+    return( {
+        unique_key => time . rand( 6 ),
+        name       => $name,
+        suffix     => $suffix,
+        fullname   => ( $name . $suffix ),
+        size       => ( $upload->size || 0 ),
+        mime       => $upload->type,
+        filehandle => $upload->fh,
+     } );
+
+}
+
+#-------------------------------------------------
 # $self->log_error( error )
 #-------------------------------------------------
 sub log_error {
@@ -83,11 +117,14 @@ sub log_error {
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
 
-    $self->log_error( $die_msg );
-    $self->r->custom_response(
-        $self->status_const( 'FORBIDDEN' ), $error_page );
-
-    return( $self->status_const( 'FORBIDDEN' ) );
+    my $status = ( $self->status() ? $self->status() 
+        : $self->status_const( 'BAD_REQUEST' ) );
+    
+    $self->r->log_error( 'custom ' . $die_msg );
+    
+    $self->r->custom_response( $status, $error_page );
+    
+    return( $status );
 }
 
 #-------------------------------------------------
@@ -474,7 +511,11 @@ sub status_const {
     return Apache2::Const::REDIRECT         if $status eq 'REDIRECT';
     return Apache2::Const::FORBIDDEN        if $status eq 'FORBIDDEN';
     return Apache2::Const::SERVER_ERROR     if $status eq 'SERVER_ERROR';
+    
+    return Apache2::Const::HTTP_BAD_REQUEST if $status eq 'BAD_REQUEST';
     return Apache2::Const::HTTP_BAD_REQUEST if $status eq 'HTTP_BAD_REQUEST';
+    
+    return Apache2::Const::HTTP_UNAUTHORIZED if $status eq 'UNAUTHORIZED';
     return Apache2::Const::HTTP_UNAUTHORIZED if $status eq 'HTTP_UNAUTHORIZED';
     
     die( "Undefined constant $status" );
@@ -663,6 +704,46 @@ module provide mnemonic names for the status codes.
 =item $self->server_root
 
 Returns the value set by the top-level ServerRoot directive
+
+=item $self->file_upload
+
+Uploads a file from the client's disk.
+
+Parameter: The name of the file input element on the html form.
+
+Returns: A hash with these keys:
+
+=over 4
+
+=item unique_key
+
+a unique identifier for this upload
+
+=item name
+
+the base name of the file
+
+=item suffix
+
+the extension (file type) of the file
+
+=item fullname
+
+name.suffix
+
+=item size
+
+bytes in file
+
+=item mime
+
+mime type of file
+
+=item filehandle
+
+a handle you can read the file from
+
+=back
 
 =back
 

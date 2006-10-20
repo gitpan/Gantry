@@ -12,6 +12,12 @@ create table "auth_users" (
 	 CONSTRAINT auth_users_pk PRIMARY KEY (user_id)
 );
 
+insert into auth_users
+( active, user_name, passwd, crypt, first_name, last_name, email )
+VALUES
+( 't', 'user1', 'for_test', 'fo5XAdfKx4dwQ', 'User', 'Number One',
+'uno@example.com' );
+
 create sequence "auth_groups_seq";
 create table "auth_groups" (
     "id"            int4 default nextval('auth_groups_seq'::text) NOT NULL,
@@ -19,6 +25,18 @@ create table "auth_groups" (
     "ident"			varchar,
 	"description"   text
 );
+
+insert into auth_groups ( name, ident, description )
+VALUES ( 'User_Admin', 'ADMIN', 'Allowed to manage users' );
+
+create sequence "auth_group_members_seq";
+create table "auth_group_members" (
+    "id"        int4 default nextval('auth_group_members_seq'::text) NOT NULL,
+    "user_id"   int4,
+    "group_id"  int4
+);
+
+insert into auth_group_members ( user_id, group_id ) VALUES ( 1, 1 );
 
 create sequence "auth_pages_seq";
 create table "auth_pages" (
@@ -30,12 +48,5 @@ create table "auth_pages" (
     "group_id"      int4,
     "uri"           varchar,
     "title"         varchar
-);
-
-create sequence "auth_group_members_seq";
-create table "auth_group_members" (
-    "id"        int4 default nextval('auth_group_members_seq'::text) NOT NULL,
-    "user_id"   int4,
-    "group_id"  int4
 );
 

@@ -1,0 +1,109 @@
+\chapter{Installation}
+\label{chap:install}
+
+While you can use Gantry just fine without Bigtop -- its code generation
+suite -- that's not as much fun.  So, this chapter will explain how to install
+both Gantry and Bigtop.
+
+If you have any trouble installing either Gantry or Bigtop, please post
+questions on the Gantry mailing list.  Go to http://www.usegantry.org
+and click on the Mailing List tab for instructions on joining.
+
+\section{Installing Gantry}
+
+The current stable release of Gantry is available from CPAN or from the
+front page of the project web site http://www.usegantry.org.  Install it as
+you would any CPAN module.  That is, either use the CPAN shell or proceed
+manually.  Both approaches are described below.
+
+Whether you install via the CPAN shell or manually, you'll need to install
+the prerequisites for the tests to pass.  The prerequisites list is
+intentionally small, to allow for the greatest flexibility in deployment
+options for you.  One module not on the list, which is highly useful, is
+DBIx::Class.  Even if you don't have it at the outset, you can install
+it later.  You'll need it to follow the simplest examples in this book.
+
+During testing, you will be asked whether to run certain sets of tests.  The
+questions ask whether you want to run tests against apparent \verb+mod_perl+
+installations.  A typical question looks like this:
+
+\begin{verbatim}
+# mod_perl version: 2.000001 detected
+# Do you want to run mod_perl 2.000001 tests [yes]?
+\end{verbatim}
+
+If you want to test against that installation answer yes (which is the
+default).  If you know that \verb+mod_perl+ is not properly installed,
+skip the test.
+
+During installation there is one further prompt.  It asks:
+
+\begin{verbatim}
+Gantry comes with a set of default templates that
+need to be written to disk. A typical location for these
+templates is your web server document root.
+
+Press enter to use the default directory or specify another
+directory. [/home/httpd/html/gantry]
+\end{verbatim}
+
+You can take the default or supply your own, but your web server must be
+willing to serve files from that directory.  Gantry will put all of its
+default templates there.  This include the HTML form template for all of
+its CRUD schemes, etc.
+
+To use the CPAN shell type:
+
+\begin{verbatim}
+perl -MCPAN -e shell
+cpan> install Gantry
+\end{verbatim}
+
+This method is preferred, since it grabs the prerequisite modules for you.
+
+If you like to work manually, you are welcome to download the gzipped tar
+file, gunzip it, untar it, and install it by hand.  After it is untarred,
+this reduces to:
+
+\begin{verbatim}
+perl Build.PL
+./Build
+./Build test
+./Build install
+\end{verbatim}
+
+\section{Installing Bigtop}
+
+The best place to get Bigtop is from CPAN.  Again, you can use the
+CPAN shell or work manually.  In either case, life will go poorly if you
+don't choose to install the prerequisite modules before testing.
+
+Bigtop also asks questions during installation process, but it asks them
+earlier, during perl Build.PL:
+
+\begin{verbatim}
+Bigtop has an editor called tentmaker.  It allows
+you to edit bigtop files with a DOM compatible browser
+(like Firefox).  tentmaker requires some templates.
+
+Do you want to install the tentmaker templates? [y]
+\end{verbatim}
+
+Whether you answer yes or no, tentmaker will be installed, but you won't be
+able to use it without the templates.
+
+If you wisely choose to answer yes, it will ask:
+
+\begin{verbatim}
+TentMaker needs to store some templates on your system.
+Please choose a location for them.
+
+Path for TentMaker templates [/usr/local/share/TentMaker]
+\end{verbatim}
+
+Choose any path you like, as long as the installing user has write permissions
+to create it.
+
+Once you have installed Gantry and Bigtop, you'll want to build a small app
+to get some feel for how these tools work.  That's the subject of the next
+chapter.

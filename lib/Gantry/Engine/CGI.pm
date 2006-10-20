@@ -4,6 +4,7 @@ require Exporter;
 use strict;
 use Carp qw( croak );
 use CGI::Simple;
+use File::Basename;
 use Gantry::Utils::DBConnHelper::Script;
 
 use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
@@ -52,6 +53,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     send_error_output
     success_code
     server_root
+    file_upload
 );
 
 @EXPORT_OK  = qw( );
@@ -160,6 +162,31 @@ sub dispatch {
 # Exported methods
 #-------------------------------------------------
 
+#-------------------------------------------------
+# $self->file_upload( param_name )
+#-------------------------------------------------
+sub file_upload {
+    my( $self, $param ) = @_;
+
+    die "file param required" if ! $param;
+    
+    my $q = $self->cgi();
+    my $filename = $q->param( $param );
+    $filename =~ s/\\/\//g;
+    
+    my( $name, $path, $suffix ) = fileparse( $filename, qr/\.[^.]*/ ); 
+    
+    return( {
+        unique_key => time . rand( 6 ),
+        fullname   => ( $name . $suffix ),
+        name       => $name,
+        suffix     => $suffix,
+        size       => ( $q->upload_info( $filename, 'size' ) || 0 ),
+        mime       => $q->upload_info( $filename, 'mime' ),
+        filehandle => $q->upload( $filename ),
+    } );
+
+}
 
 #-------------------------------------------------
 # $self->cast_custom_error( error )
@@ -167,7 +194,11 @@ sub dispatch {
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
 
-    $self->send_http_header();
+    print $self->cgi->header(
+        -type => 'text/html',
+        -status => ( $self->status() ? $self->status() : '400 Bad Request' ),
+    );
+
     $self->print_output( $error_page );
 
 }
@@ -236,7 +267,7 @@ sub declined_response {
     
     print $self->cgi->header(
             -type => 'text/html',
-            -status => '404 Declined',
+            -status => '404 Not Found',
     );
 
     my $current_location = $self->config->{ location };
@@ -558,7 +589,8 @@ sub status_const {
     return '403'         if uc $status eq 'FORBIDDEN';
     return '401'         if uc $status eq 'AUTH_REQUIRED';
     return '401'         if uc $status eq 'HTTP_UNAUTHORIZED';
-    return '400'         if uc $status eq 'SERVER_ERROR';
+    return '400'         if uc $status eq 'BAD_REQUEST';
+    return '500'         if uc $status eq 'SERVER_ERROR';
 
     die( "Undefined constant $status" );
     
@@ -609,11 +641,11 @@ sub send_http_header {
         print "$variable: $header_for->{ $variable }\n";
     }
 
-    my $p = {};
-    $p->{type}    = $self->content_type;
+    print $self->cgi->header(
+        -type => ( $self->content_type ? $self->content_type : 'text/html' ),
+        -status => ( $self->status() ? $self->status() : '200 OK' ),
+    );
     
-    print $self->cgi->header( $p );
-
 } # send_http_header
 
 #-------------------------------------------------
@@ -1029,6 +1061,46 @@ module provide mnemonic names for the status codes.
 
 Does nothing but meet the engine API.  mod_perl engines use it to report
 the numerical success code.
+
+=item $self->file_upload
+
+Uploads a file from the client's disk.
+
+Parameter: The name of the file input element on the html form.
+
+Returns: A hash with these keys:
+
+=over 4
+
+=item unique_key
+
+a unique identifier for this upload
+
+=item name
+
+the base name of the file
+
+=item suffix
+
+the extension (file type) of the file
+
+=item fullname
+
+name.suffix
+
+=item size
+
+bytes in file
+
+=item mime
+
+mime type of file
+
+=item filehandle
+
+a handle you can read the file from
+
+=back
 
 =back
 

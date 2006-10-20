@@ -5,9 +5,9 @@ use strict;
 use Carp qw( croak );
 
 use Apache::Constants qw( DECLINED OK REDIRECT AUTH_REQUIRED 
-                            SERVER_ERROR FORBIDDEN );
+                            SERVER_ERROR FORBIDDEN BAD_REQUEST );
 use Apache::Request;
-
+use File::Basename;
 use Gantry::Conf;
 use Gantry::Utils::DBConnHelper::MP13;
 
@@ -55,11 +55,44 @@ use vars qw( @ISA @EXPORT );
     set_req_params
     status_const
     success_code
+    file_upload
 );
 
 ############################################################
 # Functions                                                #
 ############################################################
+
+#-------------------------------------------------
+# $self->file_upload( param_name )
+#-------------------------------------------------
+sub file_upload {
+    my( $self, $param ) = @_;
+
+    die "param required" if ! $param;
+
+    my $apr = $self->ap_req;
+    my $status = $apr->parse;
+
+    if ( $status ) { die "upload error: $status" };
+
+    my $upload = $apr->upload( $param );
+    
+    my $filename = $upload->filename;
+    $filename =~ s/\\/\//g;
+    
+    my( $name, $path, $suffix ) = fileparse( $filename, qr/\.[^.]*/ ); 
+    
+    return( {
+        unique_key => time . rand( 6 ),
+        name       => $name,
+        suffix     => $suffix,
+        fullname   => ( $name . $suffix ),
+        size       => ( $upload->size || 0 ),
+        mime       => $upload->type,
+        filehandle => $upload->fh,
+    } );
+    
+}
 
 #-------------------------------------------------
 # $self->log_error( error )
@@ -77,11 +110,14 @@ sub log_error {
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
 
-    $self->r->log_error( 'custom ' . $die_msg );
-    $self->r->custom_response( 
-        $self->status_const( 'FORBIDDEN' ), $error_page );
+    my $status = ( $self->status() ? $self->status() 
+        : $self->status_const( 'BAD_REQUEST' ) );
     
-    return( $self->status_const( 'FORBIDDEN' ) );
+    $self->r->log_error( 'custom ' . $die_msg );
+    
+    $self->r->custom_response( $status, $error_page );
+    
+    return( $status );
 }
 
 #-------------------------------------------------
@@ -450,7 +486,8 @@ sub status_const {
   
     # Upper case our status 
     $status = uc $status; 
-
+    
+    return BAD_REQUEST      if $status eq 'BAD_REQUEST';
     return DECLINED         if $status eq 'DECLINED';
     return OK               if $status eq 'OK';
     return REDIRECT         if $status eq 'REDIRECT'; 
@@ -695,6 +732,46 @@ module provide mnemonic names for the status codes.
 =item $self->success_code
 
 Returns the proper numeric status code for OK.
+
+=item $self->file_upload
+
+Uploads a file from the client's disk.
+
+Parameter: The name of the file input element on the html form.
+
+Returns: A hash with these keys:
+
+=over 4
+
+=item unique_key
+
+a unique identifier for this upload
+
+=item name
+
+the base name of the file
+
+=item suffix
+
+the extension (file type) of the file
+
+=item fullname
+
+name.suffix
+
+=item size
+
+bytes in file
+
+=item mime
+
+mime type of file
+
+=item filehandle
+
+a handle you can read the file from
+
+=back
 
 =back
 

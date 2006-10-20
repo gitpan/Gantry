@@ -1,0 +1,346 @@
+\chapter{Deployment Issues}
+\label{chap:deploy}
+
+% make sure this says something about controlling database connection
+% info
+% If you want to change to a different database, you can arrange that now.
+% Click on the `App Config', you'll see something like Figure
+% \ref{fig:appconfig}.
+% 
+% \begin{figure}
+% \includegraphics[width=6in]{appconfig}
+% \caption{Application configuration table.}
+% \label{fig:appconfig}
+% \end{figure}
+% 
+% To change databases, simply change the dbconn config parameter, so it
+% has the proper DBI dsn string for connecting to your database.  You probably
+% also need to supply a dbuser.  Further, you will need to add a new
+% config param called dbpass, if your database expects a password for
+% your dbuser.  If so, type `dbpass' into the input box next to the
+% `New Config Statement' button, then press the button, and add the password.
+
+In the last chapter, we saw how to build an app with tentmaker and run it
+with a test server (app.server).  Bigtop also made a cgi script for us, which
+we could immediately deploy merely by moving it to the cgi-bin directory.
+Here we will look at two additional deployment issues.  First, we will
+move the app into a \verb+mod_perl+ environment.  Second, we will extract the
+conf from the app into the Gantry::Conf scheme.  The latter will allow us
+to easily deploy multiple instances of our app and share the app's conf info
+with external scripts.
+
+\section{Moving to Mod Perl}
+
+I'm not going to explain how to put a working \verb+mod_perl+ installation onto
+your server.  But, I am going to explain how to deploy a Gantry app via
+\verb+mod_perl+, once you have \verb+mod_perl+ working.
+
+Bigtop can help with much of our work, so begin by restarting the tentmaker
+and giving it the contact.bigtop file from the last chapter:
+
+\begin{verbatim}
+tentmaker docs/addressbook.bigtop
+\end{verbatim}
+
+First -- and foremost -- on the `Bigtop Config' tab, change the engine to
+the \verb+mod_perl+ engine you have installed (mine was 1.3 when I wrote this).
+
+Now, click on the `Backends' tab.  Uncheck the box for CGI Gantry, which will
+stop bigtop from making app.cgi and app.server.  Then check the box for
+HttpdConf Gantry, to start generating docs/httpd.conf.
+
+Since our app is not installed on the system yet, we need to tell
+\verb+mod_perl+ where to find it.  A regular \verb+use lib+ statement will do,
+but we need to place it carefully.  One good place to put it is at the top
+of a $<$Perl$>$ block in httpd.conf.  Here's how to make bigtop do that.
+
+Go to the `App Body' tab.  Create a new block of type `Literal' (leave the
+`Name:' box blank).  Scroll down to that block and select `Literal Type:'
+`PerlTop.'  This is the instruction telling bigtop to put a statement into
+the $<$Perl$>$ block in httpd.conf.  In the `String:' box, type a complete
+use lib statement (right down to the semi-colon) which will lead perl to the
+blib/lib directory of the build directory.  Mine looks like this:
+
+\begin{verbatim}
+use lib '/home/pcrow/AddressBook/lib';
+\end{verbatim}
+
+You might even want to include four leading spaces, if you care about the
+indentation in the generated conf file.
+
+Now we need to deal with some paths, which were relative for app.server,
+but must now be absolute.  While still in tentmaker, go to the `App Config'
+tab.  Add a new config variable called \verb+root+.  Make its value
+an absolute path to the html directory of the AddressBook build directory.
+This directory will need to be readable by the Apache User.
+
+The other path that needs adjustment is for app.db.  For the app to work,
+the Apache User needs to own both the app.db file and the directory where
+it lives.  In addition to ownership, it obviously needs write permissions.
+After you decide where to locate app.db, add a fully qualified absolute path
+to it in the `dbconn' value.
+
+Alternatively, you could switch to a different database engine.  Make that
+change in the same place, by altering the database connection info string.
+Then, don't forget to build the database.  There should be schema files
+for use with Postgres and MySQL in the docs directory.
+
+Save the file and regenerate the app:
+
+\begin{verbatim}
+bigtop docs/addressbook.bigtop all
+\end{verbatim}
+
+There is only one more thing we need to do to launch under \verb+mod_perl+.
+We, need to modify the system httpd.conf for our server to tell it about our
+app.
+
+For this app, I added the following to my \verb+mod_perl+ enabled httpd.conf:
+
+\begin{verbatim}
+<VirtualHost address.devel.example.com>
+    ServerName       address.devel.example.com
+    DocumentRoot     /home/pcrow/AddressBook/html
+    CustomLog        /home/pcrow/logs/combined.log combined
+    ErrorLog         /home/pcrow/logs/addressbook.err
+
+    Include /home/pcrow/AddressBook/docs/httpd.conf
+</VirtualHost>
+\end{verbatim}
+
+You might need to make a DNS entry to use the above approach.  We
+have a wild card which lets anything.devel... map to these virtual hosts,
+so we can make them on the fly.
+
+Now start or restart the web server and hit the app again at its new URL.
+
+\section{Moving to Gantry::Conf}
+
+The approach to app configuration in the last section and the last chapter
+both end up tying the conf info to the app rather tightly.  We want
+to move to a more flexible system.  Later subsections will explain two
+key example scenarios in which this flexibility is needed: deploying multiple
+instances of the same app in the same server and sharing conf info with
+external scripts or other apps.
+
+Gantry::Conf was Frank Wiles' idea (he's my boss, do don't be surprised
+if I gush in this section).  He was tired of being told by external
+app suppliers how he should store his conf info.  He didn't want to do the
+same to other people when we deliver an app.  Further, he knew that
+our shop was suffering from the difficulty of conf info duplication due
+to web apps relying on httpd.conf, while scripts did something different.
+This section explains how Gantry::Conf works by showing how to move our
+existing AddressBook app to it.
+
+We can turn again to tentmaker to get us started.  Click on `Backends.'
+Check the box for Conf Gantry.  Add an instance name for the app in the
+box at the far right labeled `Conf Instance.'  I'll call mine \verb+address+.
+Then, check the `Use Gantry::Conf' box in the far right hand column in the
+HttpdConf Gantry row.  This tells that backend to omit the conf information,
+since we are trying to centralize it, not adjust how it is duplicated.
+(HttpdConf Gantry will set a variable for the conf instance, and another
+for the conf file if that is defined, taking the values from the Conf
+Gantry backend).  If you were still using the CGI Gantry backend, you
+could do the same thing for it.
+
+Save the file, regenerate with bigtop.  If you restart the server and hit
+it now, you will receive an error, because Gantry::Conf does not know where
+to find your config.  Copy `AddressBook.gantry.conf' from the docs
+directory to the /etc/gantry.d directory, or make a symbolic link.  Make
+sure your /etc/gantry.conf has a wild card include:
+
+\begin{verbatim}
+include /etc/gantry.d/*.conf
+\end{verbatim}
+
+If you can't create or modify /etc/gantry.conf, make a file somewhere which
+the Apache User can read.  Put that file's name in the `Conf File' box
+in tentmaker for the Conf Gantry backend.  Save and regenerate.
+Then, create the master conf file with a wild card like the one shown
+above, but pick a directory you can write to and the Apache User can read
+from.
+
+Now it is safe to restart the app and point the browser to it.
+
+\subsection{Multiple instances}
+
+One of the key uses of Gantry::Conf is in easing deployment of multiple
+instances of the same app.  For instance, if my wife and I each want a
+separate address book, we can deploy two instances of the app.  Both will
+share some things, like the site appearance and even the database user and
+password.  But, they will store data in different databases.  This section
+explains how to accomplish this.
+
+First, there is no difficulty in setting up a second virtual server using
+the same code.  Just duplicate the VirtualHost shown above and change the
+names until it looks more like this:
+
+\begin{verbatim}
+<VirtualHost philaddress.devel.example.com>
+    ServerName       philaddress.devel.example.com
+    DocumentRoot     /home/pcrow/AddressBook/html
+    CustomLog        /home/pcrow/logs/combined.log combined
+    ErrorLog         /home/pcrow/logs/addressbook.err
+
+    Include /home/pcrow/AddressBook/docs/phil.conf
+</VirtualHost>
+\end{verbatim}
+
+Notice that I'm letting Lisa keep the original URL, in case she set
+a bookmark to it.  Also note that I referred to phil.conf.  I'll have to
+copy her conf and update it, but only by changing the GantryConfInstance:
+
+\begin{verbatim}
+PerlSetVar GantryConfInstance philaddress
+\end{verbatim}
+
+This is slightly painful, since I have to remember to repeat this copy and
+change process each time the httpd.conf changes.  (I have a back burner
+TODO item to address this.)
+
+With the web server conf updated, I need to correct the conf.  The easiest
+way to do that is to again copy the conf, but I want a more robust solution.
+I'm going to move the shared conf values into /etc/gantry.conf.  Everything
+is shared in this case except the dbconn value, so it will be the lone entry
+in each instance's conf file.  Here are the files, starting with
+/etc/gantry.conf:
+
+\begin{verbatim}
+<shared contact_shared>
+    dbuser apache
+    template_wrapper genwrapper.tt
+    root /home/pcrow/AddressBook/html
+</shared>
+<instance contact>
+    ConfigureVia FlatFile Config::General \
+            /home/pcrow/AddressBook/docs/AddressBook.conf
+    use contact_shared
+</instance>
+<instance philcontact>
+    use contact_shared
+    dbconn dbi:Pg:dbname=philcontact
+</instance>
+\end{verbatim}
+
+Lisa's instance now wants an individual conf files which has one line:
+
+\begin{verbatim}
+dbconn dbi:Pg:dbname=contact
+\end{verbatim}
+
+Now when I restart the server, users hitting
+\verb+http://contact.devel.example.com/contacts+ will access Lisa's
+data.  Users hitting \verb+http://philcontact.devel.example.com/contacts+
+will access my data.
+
+There are many other ways to configure the app to work with two instances
+using Gantry::Conf.  As with Perl, there is more than one way to do it.
+Picking one you like takes a bit of experience.  I've shown a couple of
+approaches here to get you started.  Note that all of these have abandoned
+conf generation for a manual approach.  One day it may be possible to
+generate instance specific conf, but that day has not yet dawned.
+
+\subsection{Sharing conf with batch processes}
+
+Half of the reason for developing Gantry::Conf was to ease the sharing of
+conf between the web delivered pieces of an app and its batch processes.
+Suppose we want the contact app to spam us with upcoming birthdays.
+We can now write a little script to accomplish that and configure it via
+the same conf that the app uses.
+
+To show how this works, suppose that I want an email reminder on a periodic
+basis (say once a week) of all the birthdays near the the current date.
+This would enable me to send cards, if I weren't so mean spirited.
+
+Here is the program which does the job for me:
+
+% /home/pcrow/play/AddressBook/scripts/reminder
+\begin{verbatim}
+#!/usr/bin/perl
+use strict; use warnings;
+
+use lib '/home/pcrow/AddressBook/lib';
+
+use Date::Manip qw( ParseDate DateCalc UnixDate );
+use Gantry::Conf;
+use AddressBook::Model;
+use AddressBook::Model::bday    qw( $BDAY    );
+
+my $instance = shift || 'address';
+
+my $conf = Gantry::Conf->retrieve( { instance => $instance } );
+
+my $schema = AddressBook::Model->connect(
+    $conf->{ dbconn }, $conf->{ dbuser }, $conf->{ dbpass },
+);
+
+my $today = ParseDate( 'today' );
+my $comp_err;
+
+my @bdays = $BDAY->ssearch( $schema );
+
+foreach my $bday_row ( @bdays ) {
+    ( my $db_date = $bday_row->bday ) =~ s{-}{/}g;
+    my $bday    = ParseDate( $db_date );
+    my $name    = $bday_row->name;
+    my $family  = $bday_row->address->foreign_display();
+
+    my $separation       = DateCalc( $today, $bday, \$comp_err );
+    my ( $weeks, $days ) = ( split /:/, $separation )[2,3];
+    my $sign             = substr $separation, 0, 1;
+
+    my $prep = ( $sign eq '+' ) ? 'from now' : 'ago';
+
+    $days += 7 * $weeks;
+
+    my $short_bdate = UnixDate( $bday, "%B %e" );
+
+    if ( abs( $days ) < 14 ) {
+            print "$name belonging to $family birth day:\n"
+                    .   "   $days days $prep on $short_bdate.\n";
+    }
+}
+\end{verbatim}
+
+The program begins like any other with a shebang line.  Then it uses the
+same lib path as the web server, so they will share the code modules.
+I wouldn't need the use lib statement, if I had installed the application.
+
+I chose Date::Manip to handle the dates, since it is standard.  From it
+I need ParseDate to turn strings into dates, DateCalc to compare dates,
+and UnixDate for pretty output.
+
+The rest of the uses bring in the model (and its abbreviation),
+Gantry::Conf itself, and a helper which will connect me to my database.
+
+The user supplies the conf instance name at the command line, so Lisa
+and I can each receive separate birthday updates.  That instance is
+passed to Gantry::Conf's retrieve method, which returns the proper hash
+of conf info.
+
+After storing today's date in a Date::Manip string, I ask the bday
+table model to return all of its rows.  I could have let the database do
+the date work, but chose to do it in Perl in a -- probably vain -- attempt
+to be database agnostic.
+
+Looping through each birthday row, I pull out the data I want to use.
+Note that I can call \verb+foreign_display+ on the \verb+address+ attribute
+of each birth day row, to get the family name from the address table.
+This is why we always want a \verb+foreign_display+ for each table.
+
+The rest is just a bit of Date::Manip work and pretty printing.
+I'll leave the actual scheduling of the job up to you.  If I really installed
+this, I would use cron.  Note that the email is indirect.  The cronned
+program prints to standard out, which cron will send to my mail on the local
+system.  That's enough for me.  Feel free to add a genuine email feature.
+
+Gantry::Conf is even more flexible than what I've shown here.  Unfortunately,
+it is beyond the scope of this book to show more of its details.  For instance,
+If I had more room, I could show how to set up a secure conf server which apps
+on multiple boxes could contact via https to retrieve shared conf.  Further,
+we could explore how to write your own provider, so you could replace flat
+file conf with LDAP or some other clever scheme.  Alas, we'll have to turn
+away from the fascinating subject of configuration and return to the world
+of web apps.  For more information on Gantry::Conf see the perldoc for
+Gantry::Conf::FAQ, Gantry::Conf::Tutorial, and the other modules in the
+Gantry::Conf namespace.

@@ -1,0 +1,103 @@
+CREATE TABLE job (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title varchar,
+    description varchar,
+    created datetime,
+    modified datetime,
+    travel_percent varchar,
+    on_site varchar,
+    time_percent varchar
+);
+
+INSERT INTO job ( title, description, travel_percent, on_site, time_percent )
+    VALUES ( 'Jr. Meeting Attender', 'Attend meetings and work on projects', '5%', 'onsite', 'fulltime' );
+
+INSERT INTO job ( title, description, travel_percent, on_site, time_percent )
+    VALUES ( 'Sr. Meeting Attender', 'Attend meetings and lead projects', '5%', 'onsite', 'fulltime' );
+
+INSERT INTO job ( title, description, travel_percent, on_site, time_percent )
+    VALUES ( 'Chief Financial Obfuscator', 'Top level financial manager', '5%', 'onsite', 'fulltime' );
+
+CREATE TABLE skill (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ident varchar,
+    description varchar,
+    created datetime,
+    modified datetime
+);
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'mtg_convene', 'Convene and run meetings' );
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'mtg_attend', 'Attend meetings' );
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'good_drive', 'Hold valid driver license and have clean driving record' );
+
+INSERT INTO skill ( ident, description )
+    VALUES ( 'cook_book_max', 'Have 15+ years practical experience cooking books.' );
+
+CREATE TABLE position (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ident varchar,
+    created datetime,
+    modified datetime,
+    job INTEGER,
+    n_openings INTEGER,
+    location varchar,
+    closes date,
+    boss varchar,
+    pay varchar
+);
+
+CREATE TABLE job_skill (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job INTEGER,
+    skill INTEGER
+);
+CREATE TABLE auth_users (
+    id INTEGER NOT NULL DEFAULT NEXTVAL( 'auth_users_seq'::text ),
+    user_id INTEGER PRIMARY KEY DEFAULT CURRVAL( 'auth_users_seq'::text ),
+    active boolean,
+    user_name varchar,
+    passwd varchar,
+    crypt varchar,
+    first_name varchar,
+    last_name varchar,
+    email varchar
+);
+
+INSERT INTO auth_users ( active, user_name, passwd, crypt, first_name, last_name, email )
+    VALUES ( 't', 'pcrow', 'for_test', 'fo5XAdfKx4dwQ', 'Phil', 'Crow', 'philcrow2000@yahoo.com' );
+
+CREATE TABLE auth_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ident varchar,
+    description varchar,
+    name varchar
+);
+
+INSERT INTO auth_groups ( ident, name, description )
+    VALUES ( 'HR', 'HR', 'Full admin access' );
+
+CREATE TABLE auth_group_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    group_id INTEGER
+);
+
+INSERT INTO auth_group_members ( user_id, group_id )
+    VALUES ( 1, 1 );
+
+CREATE TABLE auth_pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_perm varchar,
+    group_perm INTEGER,
+    world_perm INTEGER,
+    owner_id INTEGER,
+    group_id INTEGER,
+    url varchar,
+    title varchar
+);
+

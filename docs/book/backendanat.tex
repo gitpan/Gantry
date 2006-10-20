@@ -1,0 +1,1047 @@
+\chapter{Anatomy of Bigtop Backends}
+\label{chap:backendanat}
+
+This chapter explains how to write a Bigtop backend, mostly by example --
+actually with two examples.  You'll need to understand at least
+some of the content of Chapters \ref{chap:parsing} and \ref{chap:bigtopast}
+in order to fully follow the discussion.
+
+There are two examples in this chapter.  First up is Bigtop::Deparser, which
+is not a code generator (or even a backend in the full sense).  But, it is
+the most complete AST user -- in that it implements almost all of the AST
+packages.  Its aim is to reproduce the original input from a parse tree.
+Only two things keep it from doing that exactly: whitespace and comments.
+It always normalizes the whitespace according to its own rules.  It tries
+to retain comments in their original positions, but whitespace and tree
+alterations make that a dream.  It settles for never discarding comments,
+though they may drift in the source file.
+
+The second example is a backend: Bigtop::Backend::SQL::SQLite.  From the
+name you can guess that it's job is to make the SQL statements that build
+application databases in SQLite.  I chose this backend because it is simple,
+yet demonstrates most of the basic techniques needed to write a Bigtop
+generator.  See the section at the end of the last chapter for extra
+advice on the lookup hash, if you are writing a controller generating backend.
+
+Recall from the last chapter that the bigtop parse tree is an object blessed
+into the \verb+bigtop_file+ class.  That class provides many methods
+including \verb+walk_postorder+ to kick off recursive visiting of the tree.
+Normal backends do not implement any methods in the \verb+bigtop_file+
+package.  The urge to do so is probably proof of a design crime about to
+take place.  If there is a method you need, other backends may eventually
+need it too.  So, new methods in this package should go in Parser.pm.
+
+Therefore, our examples will begin their AST package code lower in the
+tree.  Let's make this concrete by introducing the first example.
+
+\section{Bigtop::Deparser Dissected}
+
+To simplify this discussion, I will omit the gymnastics the deparser
+performs to handle comment retention.  Further, I'll skip the code
+it uses to reproduce the Bigtop top level config block (where the backends
+are requested).  Instead, I'll begin with this excerpt from its deparse
+routine:
+
+\begin{verbatim}
+my $app_elements = $ast->walk_postorder( 'output_app_body' );
+\end{verbatim}
+
+Callers of the deparse routine are responsible for passing in the AST.
+(By far the most common caller is Bigtop::Tentmaker which supports tentmaker.)
+This call to \verb+walk_postorder+ orders a full walk of the whole AST.
+At each level, \verb+walk_postorder+ will call \verb+output_app_body+
+to generate the deparse output for the current node.  When writing your
+own backends, keep in mind that all backend code is mixed in to the
+same packages.  Thus, your method names need to be unique across all
+of Bigtop::Backend::* to avoid redefining a method belonging to some
+other backend.  Also, it very important to avoid modifying the tree.
+Other backends are also using the tree.
+
+The deparser implements as many packages in the AST as any module
+except Parser.pm, but it doesn't work in all of them.  Remember
+that \verb+walk_postorder+ will quietly accumulate child output and
+return it to the parent for any package which does not respond
+to the requested action -- that's \verb+output_app_body+ in this case.
+
+Now I will show the code which performs the deparse with a subsection for
+each implemented package.
+
+\subsection*{App Statement}
+
+App statements are things like \verb+authors+, \verb+contact_us+, etc.
+These appear on the `App Level Statements' tab in tentmaker.  All we
+need to do for them is dump them out, leading to this simple package:
+
+\begin{verbatim}
+package # app_statement
+    app_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self = shift;
+
+    my $retval = "    $self->{__KEYWORD__} ";
+
+    $retval   .= $self->{__ARGS__}->get_quoted_args . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+I won't say this too many more times, but remember that \verb+walk_postorder+
+callbacks must return array references.  This consistency simplifies the
+implamentation of \verb+walk_postorder+.  By always using arrays, I don't have
+to worry about hashes replacing early values with late ones.  Remember
+to think about the syblings of the node you are processing (there will be
+many statements).  Using arrays keeps all of these syblings and keeps them
+in order.
+
+The only other noteworthy feature is a wise call to \verb+get_quoted_args+.
+It carefually pulls data out of the node's arg list and formats it as
+legal Bigtop input.  As the name implies, this involves wrapping strings in
+quotes when (and only when) they contain characters illegal in Perl
+package names.
+
+While \verb+arg_list+ nodes are not visited by \verb+walk_postorder+, they
+are blessed, so you can call methods on them.
+
+\subsection*{App Config Block}
+
+Each application may have one app level config block (actually you could have
+more than one, but I can't think of why someone would use two or more).
+App level config blocks contain statements starting with a keyword and
+ending with a single value or a pair.  If they have a pair, the value
+must be my \verb+no_accessor+, which indicates that controllers should
+not make an accessor for the config variable (presumbably because the
+framework already provides one).  Here's how to deparse them:
+
+\begin{verbatim}
+package # app_config_block;
+    app_config_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self          = shift;
+    my $child_output  = shift;
+
+    my $indent        = ' ' x 4;
+
+    my @retval = ( "${indent}config {", @{ $child_output }, "${indent}}" );
+
+    return \@retval;
+}
+\end{verbatim}
+
+Here we see child output for the first time.  In this case the children
+are \verb+app_config_statement+ nodes.  There is one of those for
+each statement in the block.  This package only needs to wrap the child
+output with:
+
+\begin{verbatim}
+    config {
+    }
+\end{verbatim}
+
+The only thing interesting about this is the use of the \verb+$indent+
+variable to make the number of leading spaces visible.
+
+Remember that child output comes to actions as an array reference.
+Since I want to put it into my output array, I merely ask Perl to
+dereference it into a full list by wrapping it in \verb+@{ }+.
+
+You may be noticing the rather odd package statements.  This formatting
+hides the actual package name from the PAUSE indexer, while leaving it
+visible during vim folding.
+
+\subsection*{App Config Statement}
+
+App config statements are very similar to app statements.
+
+\begin{verbatim}
+package # app_config_statement;
+    app_config_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self    = shift;
+
+    my $retval  = "        $self->{__KEYWORD__} ";
+    $retval    .= $self->{__ARGS__}->get_quoted_args . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+Seeing this, you might think I should share this code with the
+\verb+app_statement+ package.  I've decided that it is clearer to recode
+-- in violation of the first principle I was ever taught about programmer --
+since parsing is hard enough to follow without routines appearing
+by magic.  It also adds flexibility in case the two node types eventually
+diverge.  Or, maybe it is just the wrong kind of laziness.
+
+\subsection*{Literal Block}
+
+Literal blocks dump text directly into output.  They must know which
+backend is interested in them or which type of literal they are (if
+many backends might care about them).  Other than that, all they know
+is their literal text, which must be quoted.
+
+\begin{verbatim}
+package # literal_block
+    literal_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self = shift;
+
+    my @retval = ( "    literal $self->{__BACKEND__}" );
+    push @retval, "      `$self->{__BODY__}`;";
+
+    return \@retval;
+}
+
+\end{verbatim}
+
+Remember that Bigtop uses backquotes.  This allows users to put the other
+quotes in any string without fear, but it does make the small assumption
+that web apps have no business shelling out.
+
+\subsection*{Table Block}
+
+Like other block packages, \verb+table_block+ is more a collector of
+output than a producer.
+
+\begin{verbatim}
+package # table_block
+    table_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+    my $child_output = shift;
+
+    my @retval;
+
+    push @retval, "    table $self->{__NAME__} {";
+    push @retval, @{ $child_output };
+    push @retval, '    }';
+
+    return \@retval;
+}
+\end{verbatim}
+
+Here we see the child output being wrapped in a block.
+
+\subsection*{Seq Block}
+
+Sequences are only available in Postgres, but they were part of our
+shop standard practice when Bigtop was written.  They are represented
+by blocks in Bigtop, but their blocks are empty.  Yielding a particularly
+simple deparser:
+
+\begin{verbatim}
+package # seq_block
+    seq_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+    my $child_output = shift;
+
+    return [ "    sequence $self->{__NAME__} {}" ];
+}
+\end{verbatim}
+
+In fact, there is no reason to even shift in the child output, as there
+can't be any.
+
+\subsection*{Table Element Block}
+
+We've finally arrived at a package with some complexity, which is actually
+just an artifact of bad design in the AST.  Both statements and fields
+are blessed into this package, so it must type test to tell them apart
+(shame on me).
+
+\begin{verbatim}
+package # table_element_block
+    table_element_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+    my $child_output = shift;
+
+    my @retval;
+
+    if ( $self->{__TYPE__} eq 'field' ) {
+        push @retval, "        field $self->{__NAME__} {";
+        push @retval, @{ $child_output };
+        push @retval, '        }';
+    }
+    else {
+        my $args = $self->{__ARGS__}->get_quoted_args;
+        push @retval, "        $self->{__TYPE__} $args;";
+    }
+
+    return \@retval;
+}
+\end{verbatim}
+
+This leads to two paths, both of which are starting to look familiar.
+If the element is a block, its child output is wrapped in exactly the
+manner of prior block packages.  Otherwise the element is a statement,
+which is merely delivered as text (realizing that the statement keyword
+is in the \verb+__TYPE__+ attribute).
+
+\subsection*{Field Statement}
+
+Due to a quirk in the AST, \verb+field_statements+ keep their values in
+a separate node, as we see here (and below):
+
+\begin{verbatim}
+package # field_statement
+    field_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+    my $child_output = shift;
+
+    my $retval = ' ' x 12 . "$self->{__KEYWORD__} ";
+    $retval   .= join( '', @{ $child_output } ) . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+Hence, the keyword comes out as for other statements, but the values are
+drawn from the child output.
+
+\subsection*{Field Statement Def}
+
+Finally we come to the heavily gaurded values of field statements.
+
+\begin{verbatim}
+package # field_statement_def
+    field_statement_def;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+
+    return [ $self->{__ARGS__}->get_quoted_args ];
+}
+\end{verbatim}
+
+\subsection*{Join Table}
+
+Join tables are a lot like tables, except they can have only statements
+-- and only two of those.
+
+\begin{verbatim}
+package # join_table
+    join_table;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self          = shift;
+    my $child_output  = shift;
+
+    my $type = '';
+
+    return [
+        "    join_table $self->{__NAME__} {",
+        @{ $child_output },
+        '    }'
+    ];
+}
+\end{verbatim}
+
+Again, the block wrapper is placed around the child output.
+
+\subsection*{Join Table Statement}
+
+These are handled exactly as other statements:
+
+\begin{verbatim}
+package # join_table_statement
+    join_table_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self    = shift;
+
+    my $retval  = "        $self->{__KEYWORD__} ";
+    $retval    .= $self->{__DEF__}->get_quoted_args . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+\subsection*{Controller Block}
+
+Now we shift our attention from SQL to controllers, beginning with their
+blocks.  I hope you can guess what is about to come:
+
+\begin{verbatim}
+package # controller_block;
+    controller_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+    my $child_output = shift;
+
+    my @retval;
+
+    my $is_type = $self->get_controller_type;
+    $is_type    = ( $is_type eq 'stub' ) ? ' ' : " is $is_type ";
+
+    push @retval, "    controller $self->{__NAME__}$is_type\{";
+    push @retval, @{ $child_output };
+    push @retval, '    }';
+
+    return \@retval;
+}
+\end{verbatim}
+
+The only new item of interest here is the controller type (which we will
+see echoed for methods below).  Parser.pm provides \verb+get_controller_type+
+to save us rumaging for ourselves.  Then it is just a matter of supplying
+the correct value if the type is marked as `stub.'  Since that is the
+default and types are not required, stub types are discarded.
+
+\subsection*{Controller Statement}
+
+These are like other statements:
+
+\begin{verbatim}
+package # controller_statement;
+    controller_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self    = shift;
+
+    my $retval  = "        $self->{__KEYWORD__} ";
+    $retval    .= $self->{__ARGS__}->get_quoted_args . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+\subsection*{Controller Method}
+
+Methods are blocks in their own right.  Like controller blocks, they
+have a block type (in an is clause).  But, their type is required.
+
+\begin{verbatim}
+package # controller_method;
+    controller_method;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self          = shift;
+    my $child_output  = shift;
+
+    return [
+        "        method $self->{__NAME__} is $self->{__TYPE__} {",
+        @{ $child_output },
+        '        }',
+    ];
+}
+\end{verbatim}
+
+The routine is simpler than the one for \verb+controller_block+, because
+of that required type.
+
+\subsection*{Method Statement}
+
+Again, statements all look alike at the leaf level.
+
+\begin{verbatim}
+package # method_statement;
+    method_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self          = shift;
+
+    my $retval  = "            $self->{__KEYWORD__} ";
+    $retval    .= $self->{__ARGS__}->get_quoted_args . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+\subsection*{Controller Literal Block}
+
+Some literals are specific to controllers.  For instance, the httpd.conf
+location for the controller might need special instructions like
+\verb+require group admin+.  These literals are highly similar to app
+level literals.
+
+\begin{verbatim}
+package # controller_literal_block
+    controller_literal_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self = shift;
+
+    my $space  = ' ';
+    my @retval = ( $space x 8 . "literal $self->{__BACKEND__}" );
+    push @retval, $space x 12 . "`$self->{__BODY__}`;";
+
+    return \@retval;
+}
+\end{verbatim}
+
+So literals are still statements, but they have two keywords `literal'
+and the intended recipient.  Finally, their values must be a single
+string, which they store in their \verb+__BODY__+ attribute.
+
+\subsection*{Controller Config Block}
+
+These are similar to their app level counterparts, but they appear inside
+controllers which need tailored output.
+
+\begin{verbatim}
+package # controller_config_block
+    controller_config_block;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+    my $child_output = shift;
+
+    my $space = ' ';
+    my @retval = ( $space x 8 . 'config {' );
+
+    push @retval, @{ $child_output };
+
+    push @retval, $space x 8 . '}';
+
+    return \@retval;
+}
+\end{verbatim}
+
+\subsection*{Controller Config Statement}
+
+Finally, we reach the last package.  These are typical statements.
+
+\begin{verbatim}
+package # controller_config_statement
+    controller_config_statement;
+use strict; use warnings;
+
+sub output_app_body {
+    my $self         = shift;
+
+    my $space = ' ';
+
+    my $retval  = $space x 12 . "$self->{__KEYWORD__} ";
+    $retval    .= $self->{__ARGS__}->get_quoted_args . ';';
+
+    return [ $retval ];
+}
+\end{verbatim}
+
+Now you've seen an AST user.  But, while the deparser does implement
+almost all of the packages in the AST, it is different in character from
+other AST users.  The next example shifts the focus from completeness
+to typical generation activities.
+
+\section{A Stroll through SQLite's Backend}
+
+Bigtop::Backend::SQL::SQLite produces the schema files for sqlite database
+creation.  This limits its focus to table and join table blocks.  Seeing
+it at work should give you a good idea of how to write a backend to
+generate whatever you need.
+
+For tentmaker to work with your backend, you need to do certain things.
+Chief among them is to put your module into the proper namespace.  It
+must live in Bigtop::Backend::*.  Further, it needs a backend type
+and a name.  This leads to a full name like Bigtop::Backend::SQL::SQLite.
+
+The preamble of the module takes care of the other tentmaker obligations:
+
+\begin{verbatim}
+package Bigtop::Backend::SQL::SQLite;
+use strict; use warnings;
+
+use Bigtop::Backend::SQL;
+use Inline;
+
+sub what_do_you_make {
+    return [
+        [ 'docs/schema.sqlite' => 'SQLite database schema' ],
+    ];
+}
+
+sub backend_block_keywords {
+    return [
+        { keyword => 'no_gen',
+          label   => 'No Gen',
+          descr   => 'Skip everything for this backend',
+          type    => 'boolean' },
+
+        { keyword => 'template',
+          label   => 'Alternate Template',
+          descr   => 'A custom TT template.',
+          type    => 'text' },
+    ];
+}
+\end{verbatim}
+
+In tentmaker, the values from \verb+what_do_you_make+ become docs on
+the `Backends' tab pane.  The other method, \verb+backend_block_keywords+,
+is more important.  It states what keywords the backend allows in its
+block in the Bigtop config section.  Use the keys shown and, at your option,
+the others from this table:
+
+\begin{tabular}{l|l}
+Key     & Meaning \\
+\hline
+keyword & the statement keyword inside the backend                         \\
+label   & what tentmaker puts next to the entry element                    \\
+descr   & additional documentation tentmaker shows under the entry element \\
+type    & \verb+text+, \verb+boolean+, or \verb+controlled_boolean+        \\
+default & default value                                                    \\
+true    & for \verb+controlled_boolean+s what the checked value is         \\
+false   & for \verb+controlled_boolean+s what the unchecked value is       \\
+\end{tabular}
+
+If the type is \verb+boolean+ or \verb+controlled_boolean+, the input element
+will be a checkbox.  If you want the default to be checked, use the string
+`true' as the default value.  If the type is \verb+text+, the default should
+be a string which will be put in the input box on page load.
+
+Most booleans can live with zero for false and one for true.  If you need
+something more interesting, you need to use a \verb+controlled_boolean+.
+It allows you to specify whatever values you want for true and false.
+Use the keys `true' and `false' to specify the values.  These should
+probably have been called `checked' and `unchecked.'  If one of the checkbox
+states should remove the statement from the backend's config block entirely,
+make its value a real undef (not a string).  See Bigtop::Backend::Init::Std
+for examples.
+
+With the module in the right namespace and the methods tentmaker likes
+to call in place, we are ready to do the actual generation.  The first
+obligation of a backend is to provide a \verb+gen_BackendType+ method
+for Bigtop::Parser to call.  Since our backend type is SQL, that method
+looks like this.
+
+\begin{verbatim}
+sub gen_SQL {
+    shift;
+    my $base_dir = shift;
+    my $tree     = shift;
+
+    # walk tree generating sql
+    my $lookup       = $tree->{application}{lookup};
+    my $sql          = $tree->walk_postorder( 'output_sql_lite', $lookup );
+    my $sql_output   = join '', @{ $sql };
+
+    # write the schema.postgres
+    my $docs_dir     = File::Spec->catdir( $base_dir, 'docs' );
+    mkdir $docs_dir;
+
+    my $sql_file     = File::Spec->catfile( $docs_dir, 'schema.sqlite' );
+
+    open my $SQL, '>', $sql_file or die "Couldn't write $sql_file: $!\n";
+
+    print $SQL $sql_output;
+
+    close $SQL or die "Couldn't close $sql_file: $!\n";
+}
+\end{verbatim}
+
+After shifting in the parameters, \verb+gen_SQL+ pulls out the lookup hash
+so it can be passed to \verb+walk_postorder+, which will pass it to all
+the \verb+output_sql_lite+ callbacks.  The output comes back as an
+array.  After joining it into a string, the rest of the routine just
+figures out where to put the output, then puts it there.  Some backends
+use \verb+Bigtop::write_file+ to do the actual writing.  It takes a
+no overwrite flag, this is especially useful for backends that make stubs.
+They can tell it what to call the file, what to put in it, and that they
+don't want to replace an existing file.
+
+The Bigtop module also provides a convenience method for making paths,
+controller methods can use it to make the proper lib subdirectories for
+their modules.
+
+We have one more step before beginning our return trip through the AST
+packages.  We need to set up our output template.
+
+\begin{verbatim}
+our $template_is_setup = 0;
+our $default_template_text = <<'EO_TT_blocks';
+[% BLOCK sql_block %]
+CREATE [% keyword %] [% name %][% child_output %]
+
+[% END %]
+
+[% BLOCK table_body %]
+ (
+[% FOREACH child_element IN child_output %]
+[% child_element +%][% UNLESS loop.last %],[% END %]
+
+[% END %]
+);
+[% END %]
+
+[% BLOCK table_element_block %]    [% name %] [% child_output %][% END %]
+
+[% BLOCK field_statement %]
+[% keywords.join( ' ' ) %]
+[% END %]
+
+[% BLOCK insert_statement %]
+INSERT INTO [% table %] ( [% columns.join( ', ' ) %] )
+    VALUES ( [% values.join( ', ' ) %] );
+[% END %]
+
+[% BLOCK three_way %]
+CREATE TABLE [% table_name %] (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+[% FOREACH foreign_key IN foreign_keys %]
+    [% foreign_key %] INTEGER[% UNLESS loop.last %],[% END +%]
+[% END %]
+);
+[% END %]
+EO_TT_blocks
+\end{verbatim}
+
+Most of the backends use Inline::TT which binds Template Toolkit BLOCKs
+to subs in the backend module.  The BLOCKs defined here are called
+by various \verb+output_sql_lite+ callbacks, as we will see shortly.
+
+If the user wants to replace this template, she may copy it to a file.
+Then, edit that file.  Finally, supply the `template' backend statement
+in the SQL SQLite block in the config block at the top of the Bigtop
+file.  Most backends support this approach -- the one notable exception
+is the GantryDefault SiteLook backend, whose output is itself a template.
+
+The definition above just put the template into a string.  We need to get
+Inline involved to bind the blocks:
+
+\begin{verbatim}
+sub setup_template {
+    my $class         = shift;
+    my $template_text = shift || $default_template_text;
+
+    return if ( $template_is_setup );
+
+    Inline->bind(
+        TT                  => $template_text,
+        POST_CHOMP          => 1,
+        TRIM_LEADING_SPACE  => 0,
+        TRIM_TRAILING_SPACE => 0,
+    );
+
+    $template_is_setup = 1;
+}
+\end{verbatim}
+
+The template is either the file supplied as the `template' in the backend's
+config bloc, or the default template string shown above.  \verb+Inline->bind+
+does the magic of converting the BLOCKs to subs in the current package at run
+time.  Since it binds to the current package, this code is extremely difficult
+to factor out and is repeated in all but one backend.
+
+Now we are ready to walk down the tree making output.  The process is
+similar to the deparser from the first section, but with a notable difference
+in focus.  Here, we want to generate the SQL needed to build the database
+described in the Bigtop input.  We are not interested in controllers and the
+like.  Among other things this greatly reduces the number of AST packages
+which appear in a backend.  For the record there are 18 AST packages in the
+deparser.  Here there are only 6, but the code in them is a bit more complex.
+
+\subsection*{Table Block}
+
+The table block and its elements are unsuprisingly key to getting the SQL
+output.  They also require the most care and therefore the most code.
+
+\begin{verbatim}
+package # table_block
+    table_block;
+use strict; use warnings;
+
+sub output_sql_lite {
+    my $self         = shift;
+    my $child_output = shift;
+
+    return if ( $self->_skip_this_block );
+
+    my %output;
+    foreach my $statement ( @{ $child_output } ) {
+        my ( $type, $output ) = @{ $statement };
+        push @{ $output{ $type } }, $output;
+    }
+
+    my $child_out_str = Bigtop::Backend::SQL::SQLite::table_body(
+        { child_output => $output{table_body} }
+    );
+
+    if ( defined $output{insert_statements} ) {
+        $child_out_str .= "\n" . join "\n", @{ $output{insert_statements} };
+    }
+
+    my $output = Bigtop::Backend::SQL::SQLite::sql_block(
+        {
+            keyword      => $self->get_create_keyword(),
+            child_output => $child_out_str,
+            name         => $self->get_name(),
+        }
+    );
+
+    return [ $output ];
+}
+\end{verbatim}
+
+In Bigtop, you may mark a table as \verb+not_for SQL;+.  If you do,
+\verb+_skip_this_block+ provided by Bigtop::Backend::SQL -- from which
+all SQL backends inherit -- will return true.  Then the backend should
+make nothing for this table.
+
+If the table will be included, most of the data will come from its
+elements as child output.  There are two types of output: things that
+go in the table body and insert statements which must come after the table
+definition.  A simple walk through the child array separates the two
+types into separate arrays.  The first of these is passed to the
+\verb+table_body+ TT BLOCK.  The second is handled even more directly,
+by joining its elements with some lovely new lines.
+
+Once the two types of child data have been converted into valid SQL
+snippets, they are passed to the \verb+sql_block+ TT template.
+This returns a single string, which must be returned as an array element.
+
+\subsection*{Table Element Block}
+
+Table element blocks are complicated by the fact that they can be either
+simple statements or field blocks.  This is clearly a symptom of poor design
+creeping into my otherwise handsome AST.
+
+\begin{verbatim}
+package # table_element_block
+    table_element_block;
+use strict; use warnings;
+
+sub output_sql_lite {
+    my $self         = shift;
+    my $child_output = shift;
+
+    if ( defined $child_output) {
+
+        my $child_out_str = join "\n", @{ $child_output };
+
+        my $output = Bigtop::Backend::SQL::SQLite::table_element_block(
+            { name => $self->get_name(), child_output => $child_out_str }
+        );
+
+        return [ [ table_body => $output ] ];
+    }
+\end{verbatim}
+
+If there is child output, the element block must in fact be a field block.
+The output from the field -- as we will see below -- is something like
+
+\begin{verbatim}
+        phone_number varchar
+\end{verbatim}
+
+The \verb+table_element_block+ TT BLOCK adds commas to each of those
+lines, except the last one.  The result is the full contents of the table
+creation block.
+
+The else block handles the only table statements we care about in this
+backend.
+
+\begin{verbatim}
+    else {
+        return unless ( $self->{__TYPE__} eq 'data' );
+
+        my @columns;
+        my @values;
+        foreach my $insertion ( @{ $self->{__ARGS__} } ) {
+            my ( $column, $value ) = %{ $insertion };
+
+            $value = "'$value'" unless $value =~ /^\d+$/;
+
+            push @columns, $column;
+            push @values,  $value;
+        }
+
+        my $output = Bigtop::Backend::SQL::SQLite::insert_statement(
+            {
+                table   => $self->get_table_name,
+                columns => \@columns,
+                values  => \@values,
+            }
+        );
+        return [ [ insert_statements => $output ] ];
+    }
+}
+\end{verbatim}
+
+INSERT INTO statements derive from Bigtop data statements.  If the statement
+isn't a data statement, this backend ignores it with an immediate return.
+Otherwise, the args of the statement are carefully collected -- with special
+attention paid to quoting.  Once collected, they are passed to the
+\verb+insert_statement+ TT BLOCK.
+
+Notice that in both cases the return values are carefully marked with their
+type, but only arrays of arrays are returned.  This is saves sanity, by
+avoiding the need to consider what packages you didn't implement did to
+your data structure.
+
+\subsection*{Field Statement}
+
+This is the last interesting package.  It starts by defining some Bigtop
+abbreviations and their SQLite counterparts:
+
+\begin{verbatim}
+package # field_statement
+    field_statement;
+use strict; use warnings;
+
+my %expansion_for = (
+    int4               => 'INTEGER',
+    primary_key        => 'PRIMARY KEY',
+    assign_by_sequence => 'AUTOINCREMENT',
+    auto               => 'AUTOINCREMENT',
+);
+\end{verbatim}
+
+These will be used momentarily to convert Bigtop idioms into proper SQLite
+syntax.
+
+\begin{verbatim}
+sub output_sql_lite {
+    my $self   = shift;
+    shift;  # there is no child output
+    my $lookup = shift;
+
+    return unless $self->get_name() eq 'is';
+
+    my @keywords;
+    foreach my $arg ( @{ $self->{__DEF__}{__ARGS__} } ) {
+        my $expanded_form = $expansion_for{$arg};
+
+        if ( defined $expanded_form ) {
+            push @keywords, $expanded_form;
+        }
+        else {
+            push @keywords, $arg;
+        }
+    }
+    my $output = Bigtop::Backend::SQL::SQLite::field_statement(
+        { keywords => \@keywords }
+    );
+
+    return [ $output ];
+}
+\end{verbatim}
+
+There are many field statements, the only one of interest to us is `is.'
+All others are ignored with a bare return.  There can be multiple args
+for `is.'  In particular, it is common to see:
+
+\begin{verbatim}
+    field id { is int4, primary_key, auto; }
+\end{verbatim}
+
+Hence, we need to loop over the args, which are buried inside the
+\verb+__DEF__+ attribute of the statement node.  For each arg, we need
+to first see whether it needs to be translated, by trying to look it up
+in the \verb+expansion_for+ hash.  If it is there, the translation is used.
+Otherwise, the arg is used directly.
+
+Once all the args are safely translated, the are handed to the
+\verb+field_statement+ TT BLOCK.
+
+It is clear sailing from here on.
+
+\subsection*{Literal Block}
+
+Literal blocks have the easiest generation ever.
+
+\begin{verbatim}
+ipackage # literal_block
+    literal_block;
+use strict; use warnings;
+
+sub output_sql_lite {
+    my $self = shift;
+
+    return $self->make_output( 'SQL' );
+}
+\end{verbatim}
+
+They merely cop-out by calling Parser.pm's \verb+make_output+ with the
+literal type of interest -- \verb+SQL+ in this case.  It returns the text
+in the node if the node is of the requested type, or undef if the node
+is for other backends.
+
+\subsection*{Join Table}
+
+The \verb+join_table+ package could probably be eliminated.
+
+\begin{verbatim}
+package # join_table
+    join_table;
+use strict; use warnings;
+
+sub output_sql_lite {
+    my $self         = shift;
+    my $child_output = shift;
+
+    my $three_way    = Bigtop::Backend::SQL::SQLite::three_way(
+        {
+            table_name   => $self->{__NAME__},
+            foreign_keys => $child_output,
+        }
+    );
+
+    return [ $three_way ];
+}
+\end{verbatim}
+
+The child output is passed directly to the \verb+three_way+ TT BLOCK.
+This could probably have been handled by the \verb+join_table_statement+.
+
+\subsection*{Join Table Statement}
+
+Join table becomes interesting for Model backends which need to generate
+many-to-many relationships.  Here, all we need to do is make the table that
+sits between the end point tables of the relationship.
+
+\begin{verbatim}
+package # join_table_statement
+    join_table_statement;
+use strict; use warnings;
+
+sub output_sql_lite {
+    my $self         = shift;
+    my $child_output = shift;
+
+    return unless $self->{__KEYWORD__} eq 'joins';
+
+    my @tables = %{ $self->{__DEF__}->get_first_arg() };
+
+    return \@tables;
+}
+
+1;
+\end{verbatim}
+
+Because of the way the \verb+three_way+ TT BLOCK works, all I need
+to do here is return a list of the names of the joining tables.
+
+Having seen the SQLite generator in detail, you might want to peek inside
+some other generators to gain ideas for your backend.  The most interesting
+one is Bigtop::Backend::Control::Gantry.  It works on controller blocks,
+but makes heavy use of the lookup hash to produce a variety of code.
+The lookup hash section at the end of last chapter is valuable for authors
+of complex backends.

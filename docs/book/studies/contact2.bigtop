@@ -1,0 +1,125 @@
+config {
+    engine CGI;
+    template_engine TT;
+    Init Std { no_gen 0; }
+    CGI Gantry { with_server 1; }
+    Control Gantry { dbix 0; }
+    SQL Postgres {  }
+    Model GantryCDBI {  }
+    SiteLook GantryDefault { gantry_wrapper `/home/pcrow/srcgantry/root/sample_wrapper.tt`; }
+}
+app Contact {
+    config {
+        dbconn `dbi:Pg:dbname=contact` => no_accessor;
+        dbuser apache => no_accessor;
+        template_wrapper `genwrapper.tt` => no_accessor;
+        root `/home/pcrow/srcgantry/docs/book/studies/Contact/html:/home/pcrow/srcgantry/root` => no_accessor;
+    }
+    authors `Phil Crow` => `philcrow2000@yahoo.com`;
+    sequence contact_seq {}
+    table contact {
+        field id {
+            is int4, primary_key, auto;
+        }
+        sequence contact_seq;
+        foreign_display `%name`;
+        field name {
+            is varchar;
+            label Name;
+            html_form_type text;
+        }
+        field phone {
+            is varchar;
+            label Phone;
+            html_form_type text;
+            html_form_optional 1;
+        }
+        field street {
+            is varchar;
+            label Street;
+            html_form_type text;
+            html_form_optional 1;
+        }
+        field city {
+            is varchar;
+            label City;
+            html_form_type text;
+            html_form_optional 1;
+        }
+        field state {
+            is varchar;
+            label State;
+            html_form_type text;
+            html_form_optional 1;
+        }
+        field zip {
+            is varchar;
+            label `Zip Code`;
+            html_form_type text;
+            html_form_optional 1;
+        }
+        field email {
+            is varchar;
+            label Email;
+            html_form_optional 1;
+            html_form_type text;
+        }
+    }
+    controller Contact is AutoCRUD {
+        rel_location contacts;
+        controls_table contact;
+        text_description contact;
+        method do_main is main_listing {
+            cols name, phone, email;
+            header_options Add;
+            row_options Edit, Delete;
+            title Contacts;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id;
+        }
+    }
+    sequence bday_seq {}
+    table bday {
+        field id {
+            is int4, primary_key, auto;
+        }
+        sequence bday_seq;
+        foreign_display `%name`;
+        field contact_id {
+            is int4;
+            refers_to contact;
+            label Contact;
+            html_form_type select;
+        }
+        field name {
+            is varchar;
+            label Name;
+            html_form_type text;
+        }
+        field bdate {
+            is date;
+            label `Birth Date`;
+            html_form_type text;
+            date_select_text `Calendar Popup`;
+        }
+    }
+    controller BDay is AutoCRUD {
+        rel_location bday;
+        controls_table bday;
+        text_description `birth date`;
+        method do_main is main_listing {
+            cols contact_id, name, bdate;
+            header_options Add;
+            row_options Edit, Delete;
+            title `Birth Days`;
+        }
+        method form is AutoCRUD_form {
+            extra_keys javascript => `$self->calendar_month_js( 'bdate_form' )`;
+            form_name bdate_form;
+            all_fields_but id;
+        }
+        uses `Gantry::Plugins::Calendar`;
+        page_link_label `Birth Days`;
+    }
+}

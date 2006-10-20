@@ -1,0 +1,264 @@
+\chapter{Contact Us}
+\label{chap:contactus}
+
+Suppose your boss asks you to add a 'Contact Us' button on the bottom of the
+company web site.  All it should do is display a form with a place for the
+customer's email address, a large text box, a submit, and a cancel button.
+(Why the boss didn't like your first suggestion of a mailto link is
+beyond me.)  Upon submission, the text from the box should go directly into
+an email message to \verb+support@example.com+, to be answered sometime in the
+next month, if the customer is lucky.
+
+This job is small, but it will show how Gantry can get out of the way when
+you have a little bit of non-standard work to do.  I'll still start with
+bigtop, but I won't ask it for much help.  After all, there is no database.
+So, let's see what we can do with a one controller app, and let's write it
+by hand -- at least mostly.
+
+\section{Getting Started}
+
+Even though tentmaker is overkill and bigtop won't be needed to make
+code, the latter can still pitch in as a replacement for h2xs in building
+the project directory.  To start from scratch without using tentmaker,
+type:
+
+\begin{verbatim}
+bigtop --new ContactUs
+\end{verbatim}
+
+This will work like h2xs, in that it will make a ContactUs subdirectory of
+the current directory and put the structure of a CPAN distribution in it.
+I like it better than h2xs primarily because it uses Module::Build instead of
+ExtUtils::MakeMaker.  It also makes docs/contactus.bigtop in case we do want
+to start using tentmaker and/or bigtop to work on the app.
+
+Changing into the ContactUs directory, we are ready to begin hand writting
+our app.  The operative code belongs in lib/ContactUs.pm.  Edit that file
+and put something like this in it:
+
+\begin{verbatim}
+package ContactUs;
+use strict;
+
+use base 'Gantry';
+
+sub do_main {
+    return "Hi Rob";
+}
+
+1;
+\end{verbatim}
+
+Saving this will give us a the smallest possible Gantry app, a.k.a.
+something to play with.  To deploy this, we could use \verb+mod_perl+,
+but it is easier to start with a self standing server.  Here's one:
+
+\begin{verbatim}
+#!/usr/bin/perl
+use strict;
+
+use Gantry::Server;
+
+use lib 'lib';
+
+use ContactUs qw{ -Engine=CGI -TemplateEngine=Default };
+
+my $cgi = Gantry::Engine::CGI->new();
+
+$cgi->add_location( '/', 'ContactUs' );
+
+my $port   = shift || 8080;
+my $server = Gantry::Server->new( $port );
+
+$server->set_engine_object( $cgi );
+$server->run();
+\end{verbatim}
+
+The key to a self standing server is to use Gantry::Server, which is based
+on HTTP::Server::Simple.  The other features of our serving script are:
+the use lib statement, which points to the lib directory where our ContactUs.pm
+lives; a full use statement for that module, which specifies the CGI engine
+and Default templating (which provides no output templating help at all);
+constructing a CGI engine object and populating its root location with
+our module name; instanstiating the server with a default port of 8080,
+which our users can easily override; setting our engine object in that
+server; and starting it.
+
+If you start the server at this point and point your browser to it, you
+will see a greeting for an old friend of mine.  We still have quite a
+bit of work to do in ContactUs.pm, but the server is finished.  In fact,
+this server is almost enough for any project.  All you have to do is
+add additional \verb+add_location+ calls -- and possibly some
+\verb+add_config+ calls.  Bigtop does that for you, but it really isn't
+that much work.  (Well, bigtop actually passes all of the config parameters
+and location to the CGI engine constructor.)
+
+With our server in good shape, let's make the module perform to spec.
+
+\section{Allowing Them to Contact Us}
+
+There are three things we need to make this application work.  First, we
+need a form to take the data.  Second, we need a method to process that
+form.  Third, the processing method needs a way to send email.  Let's start
+with the form.
+
+Gantry provides Gantry::Utils::HTML for those who don't like templates.
+It is in the same spirit as CGI.pm, but the syntax was never meant to match
+that venerable module.  Here is the new \verb+do_main+ with the form:
+
+\begin{verbatim}
+use Gantry::Utils::HTML qw( :form :table :style );
+
+sub do_main {
+    my $self = shift;
+
+    return join '',
+        ht_form_js( "$self->{uri}/contactus" ),
+            ht_table(),
+                ht_tr(),
+                    ht_td(), "Your Email Address:", ht_utd(),
+                    ht_td(), ht_input( 'email',   'text' ), ht_utd(),
+                ht_utr(),
+                ht_tr(),
+                    ht_td(), "What We Need to Know:", ht_utd(),
+                    ht_td(),
+                        ht_input( 'message', 'textarea', '',
+                                  'rows="12" cols="75"' ),
+                    ht_utd(),
+                ht_utr(),
+            ht_utable(),
+            ht_submit( 'Submit', 'Submit' ),
+            ht_submit( 'Cancel', 'Cancel' ),
+        ht_uform;
+}
+\end{verbatim}
+
+All of the methods in the HTML utility module return lists of strings.  The
+main Gantry handler is expecting a single string, hence I used join to
+build a single string from the various lists.
+
+To start the form, I called \verb+ht_form_js+, giving it the URL which
+will process the form (it is handled by \verb+do_contact_us+ below).
+To finish it, I called \verb+ht_uform+.  In the middle, I used other
+methods to make a rudimentary input form, laid out as a table.
+
+The two input items are in the table with labels on the left and entry widgets
+on the right.  Below that table are the submit and cancel buttons.
+
+Alternatively, I could have hand coded the HTML in my controller, but that
+is even uglier.  Most of us would prefer to use a template, but there are
+plenty of examples of that approach in other parts of this book.
+
+Processing the form is fairly straighforward.  We need a method with the
+same name as the POST action of the form with the \verb+do_+ prefix.  For
+my example, the method name is \verb+do_contactus+.  If the task was more
+complicated, that same URL could even map to the \verb+do_main+ of a different
+controller.
+
+Here is the shell of the form processor:
+
+\begin{verbatim}
+sub do_contactus {
+    my $self = shift;
+
+    my $params = $self->get_param_hash();
+
+    return ht_h( 2, 'Thank you for contacting us.' );
+}
+\end{verbatim}
+
+This method has the three essential steps of a Gantry form handler: (1)
+it takes the site object as it invocant, (2) it requests the form
+parameters by calling \verb+get_param_hash+, (3) it returns something.
+Sometimes the return value is a redirection to a better place in the
+app.  This one is a dead end thank you.
+
+If you are using Template Toolkit, substitute returning something from
+the handler for passing the template name to the template accessor and
+putting data for the template into a hash inside the stash:
+
+\begin{verbatim}
+$self->template( 'mytemplate.tt' );
+$self->stash->controller->data( $data_hash_ref );
+\end{verbatim}
+
+All that remains is to send the mail.  You can use your favorite mailer
+to do that; mine is Mail::Sendmail.  So, my first version looks like this:
+
+\begin{verbatim}
+sub do_contactus {
+    my $self = shift;
+
+    my $params = $self->get_param_hash();
+
+    sendmail(
+        To      => 'support@example.com',
+        From    => 'contactus@example.com',
+        Subject => "Contact Us Message from $params->{ email }",
+        Message => $params->{ message },
+        smtp    => 'smtp.example.com'
+    ) or warn "couldn't send $params->{ message } to support\@example.com";
+
+    return ht_h( 2, 'Thank you for contacting us.' );
+}
+\end{verbatim}
+
+I'm depending on my mailer to sanatize any tainted data that the user
+might have submitted.
+
+Even though I like whitespace and very pretty layout, this app is only
+48 lines of code, counting the \verb+1;+ at the bottom -- but not counting
+its docs.
+
+\section{Playing Well with our Sysadmin}
+
+We really should do one more thing.  We should allow the system administrator
+to control who gets the mail and which SMTP server it goes through.  For this,
+we should create a conf instance like this in our \verb+/etc/gantry.conf+:
+
+\begin{verbatim}
+<instance contactus>
+    contactus_email   support@example.com
+    contactus_from    contactus@example.com
+    smtp_host         smtp.example.com
+</instance>
+\end{verbatim}
+
+Then we need to tell the serving script that we want to use this instance.
+This requires adding \verb+use Gantry::Conf;+ to the top of the script and
+this link immediately after \verb+add_location+:
+
+\begin{verbatim}
+$cgi->add_config( 'GantryConfInstance', 'contactus' );
+\end{verbatim}
+
+Now, all that remains is to use the config variables in the
+\verb+do_contactus+ method.  Here is the new version:
+
+\begin{verbatim}
+sub do_contactus {
+    my $self = shift;
+
+    my $params = $self->get_param_hash();
+
+    sendmail(
+        To      => $self->fish_config( 'contactus_email' ),
+        From    => $self->fish_config( 'contactus_from' ),
+        Subject => "Contact Us Message from $params->{ email }",
+        Message => $params->{ message },
+        smtp    => $self->fish_config( 'smtp_host' ),
+    ) or warn "couldn't send $params->{ message } to support\@example.com";
+
+    return ht_h( 2, 'Thank you for contacting us.' );
+}
+\end{verbatim}
+
+Now our sysadmin can control the mail flow from conf.  In particular, this
+allows development and production systems to send to different addresses
+via different smtp hosts.
+
+While I don't write many apps by hand from start to finish, Gantry can help
+you do that, right down to hiding the uglier aspects of HTML even while
+you include it in the controller.  We've seen all the pieces you need to
+write such slender apps in this case study.  We will now return to a lazier
+way.

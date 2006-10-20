@@ -114,6 +114,13 @@ sub gupdate_or_create {
                 resultset( $class->table )->update_or_create( @_ );
 }
 
+sub screate {
+    my $class  = shift;
+    my $schema = shift;
+
+    return $schema->resultset( $class->table )->create( @_ );
+}
+
 sub ssearch {
     my $class  = shift;
     my $schema = shift;

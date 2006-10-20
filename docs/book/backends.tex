@@ -1,0 +1,225 @@
+\chapter{Backends}
+\label{chap:backends}
+
+This chapter will walk through almost all the Bigtop backends which were
+available when it was written (Conf General is deprecated and therefore
+I omitted it).  For each backend, I will list what it makes and what config
+statements it understands.  The config statements are shown in a table.
+The first column has the name that appears in tentmaker under `Config
+Statements'.  The second column has the name used in the Bigtop language
+-- in case you are using a text editor for updates.
+
+Keep in mind that all backends honor `No Gen' (a.k.a. \verb+no_gen+).
+That statement tells bigtop not to invoke the backend, so it won't make
+anything.  Use this when you are happy with what the backend made and
+don't want to risk overwritting it.  This is preferable to removing
+-- or commenting out -- the backend statement, since backends register
+keywords.  If the backend is never loaded, its unique keywords will
+generate syntax errors.
+
+In addition to `No Gen,' all backends except Init Std allow
+`Alternate Template' (a.k.a. \verb+template+).  It allows you to
+replace the hard coded generation template in the backend with
+one of your choice.  To make this work, copy the template out of the
+backend into a file on your disk.  Then edit it to suit yourself.
+But, you must keep the BLOCKS from the original template, and you can't
+expect them to give you additional data.  For those changes, you need
+to implement your own backend.  The rest of this part of the book
+is designed to help you learn how to do that.
+
+For boolean values, a check mark in the tentmaker box is equivalent to
+any true value in the bigtop file.  For hand editing, I use 1
+to set the value or 0 to turn it off.  In the descriptions below, I
+will use the term `check this' to indicate booleans -- thus I'm almost
+assuming you are running tentmaker.
+
+\section{CGI Gantry}
+
+The CGI Gantry backend makes a CGI script for use in CGI or FastCGI
+environments.  It can also make a stand alone server.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+FastCGI           & \verb+fast_cgi+ &
+    Puts extra code in the CGI script to make it work with FastCGI   \\
+
+Use Gantry::Conf  & \verb+gantry_conf+ &
+    Check this if you are also planning to use the Conf Gantry backend \\
+
+Build Server      & \verb+with_server+ &
+    Check this, if you want a stand alone test server script. \\
+
+Server Port       & \verb+server_port+ &
+    Use this to change the default port for the stand alone server away \\
+& & from 8080.  Server users can always override this at the command line. \\
+
+Generate Root Path & \verb+gen_root+ &
+    Adds \verb+html+ to the root config variable (usually a good thing). \\    
+
+Database Flexibility & \verb+flex_db+ &
+    Adds command line options to app.server for database connection info. \\
+\end{tabular}
+
+\section{Conf Gantry}
+
+If you want to use Gantry::Conf, use this backend.  It makes a text file
+called \verb+docs/AppName.gantry.conf+, which has a Gantry::Conf instance
+for the app.  The file is formatted for use with Config::General.  You can
+immediately copy this file to your /etc/gantry.d directory, if your
+/etc/gantry.conf has a wild card include for all conf files in that directory.
+Alternatively, you could make a symbolic link, allowing bigtop to keep
+regenerating the file without you having to copy it there by hand.
+
+Other than No Gen and Alternate Template, this backend understands these
+statements:
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword  & Bigtop Keyword & What to do with it \\
+\hline
+Conf Instance      & \verb+instance+ &
+    The Gantry::Conf instance name for your app.  \\
+Conf File          & \verb+conffile+ &
+    Your master conf file name if it isn't /etc/gantry.conf \\
+Generate Root Path & \verb+gen_root+ &
+    Adds \verb+html+ to the root config variable (usually a good thing). \\    
+
+\end{tabular}
+
+\section{Conf General}
+
+The Conf General backend has been deprecated, but is unlikely to disappear.
+
+\section{Control Gantry}
+
+Control Gantry makes controllers for the app.  For each controller, there
+are two pieces: the stub and the GEN module.  Edit the stub, the GEN
+module is fair game for regeneration.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+Full Use Statement & \verb+full_use+ &
+    Puts the engine and template engine information in the base \\
+& & controller.  Usually you check this box instead of the one in \\
+& & the HttpdConf backend. \\
+
+For use with DBIx::Class & \verb+dbix+ &
+    Check this if you are using the DBIx::Class ORM. \\
+\end{tabular}
+
+\section{HttpdConf Gantry}
+
+HttpdConf Gantry makes a file which can be included directly into
+your httpd.conf.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+Use Gantry::Conf  & \verb+gantry_conf+  &
+    Use this if you are using the Config Gantry backend \\
+
+Skip Config        & \verb+skip_config+ &
+    Check this when you are using the Config General backend, so this \\
+& & backend will not duplicate the config information in httpd.conf.  \\
+
+Full Use Statement & \verb+full_use+    &
+    Puts the engine and template engine info in the httpd.conf Perl block. \\
+& & This is the default.  Uncheck it (set it to a false value) if you \\
+& & don't want it. \\
+
+Generate Root Path & \verb+gen_root+ &
+    Adds \verb+html+ to the root config variable (usually a good thing). \\    
+
+\end{tabular}
+
+\section{Init Std}
+
+Init Std is responsible for making the things that h2xs makes (except that
+it does not make any code modules).  Namely, this includes README, Changes,
+etc.
+
+Instead of making a very repetative table, I'll summarize the keywords here.
+There are many statements like `Skip Changes,' all of these turn off
+one generated file.  In the bigtop file, you use statements like:
+\verb+Changes no_gen;+.  Here is a list of the files you can turn off:
+Build.PL, Changes, README, MANIFEST, MANIFEST.SKIP.  By default everything
+will always be regenerated.
+
+Usually, I just turn off all generation for this backend once I've built
+the app the first time.  I do that by checking No Gen.
+
+\section{Model Gantry}
+
+Model Gantry generates model modules for Gantry's native ORM scheme.
+We don't use it much.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+Models Inherit From & \verb+model_base_class+ &
+    Use this if you don't want your native models to inherit directly from \\
+& & Gantry::Utils::Model.
+\end{tabular}
+
+\section{Model GantryCDBI}
+
+Model GantryCDBI generates model modules for use with Class::DBI::Sweet.
+This is no longer the prefered ORM.  We now use DBIx::Class.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+Models Inherit From & \verb+model_base_class+ &
+    Use this if you don't want your native models to inherit directly from \\
+& & Gantry::Utils::CDBI.
+\end{tabular}
+
+\section{Model GantryDBIxClass}
+
+Model GantryDBIxClass generates model modules for use with DBIx::Class.
+Be sure to check the `For Use with DBIx::Class' (a.k.a. \verb+dbix 1+;)
+on the Control Gantry backend.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+Models Inherit From & \verb+model_base_class+ &
+    Use this if you don't want your native models to inherit directly from \\
+& & Gantry::Utils::DBIxClass.
+\end{tabular}
+
+\section{SiteLook GantryDefault}
+
+SiteLook GantryDefault makes the Template Toolkit wrapper for your app.
+
+\begin{tabular}{l|l|l}
+Tentmaker Keyword & Bigtop Keyword & What to do with it \\
+\hline
+Gantry Wrapper Path & \verb+gantry_wrapper+ &
+    Use this if you need to specify a non-standard default wrapper.  By  \\
+& & default, this backend uses \verb+sample_wrapper.tt+ which ships with \\
+& & Gantry.  Refer to it, if you want to write your own.
+\end{tabular}
+
+\section{SQL MySQL}
+
+SQL MySQL makes \verb+docs/schema.mysql+ with the valid SQL statements
+needed to make a MySQL database for your app.  You may use this with
+the other SQL backends.
+
+\section{SQL Postgres}
+
+SQL Postgres makes \verb+docs/schema.postgres+ with the valid SQL statements
+needed to make a Postgres database for your app.  You may use this with
+the other SQL backends.
+
+\section{SQL SQLite}
+
+SQL SQLite makes \verb+docs/schema.sqlite+ with the valid SQL statements
+needed to make a SQLite database for your app.  You may use this with
+the other SQL backends.
+
+Now that you have seen what backends are available in Bigtop, you may
+be itching to write your own.  That is what the rest of the part of the
+book is here to help you do.

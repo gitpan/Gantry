@@ -1,0 +1,418 @@
+config {
+    engine CGI;
+    template_engine TT;
+    Init Std {  }
+    CGI Gantry { with_server 1; instance hiring; }
+    Control Gantry { dbix 1; }
+    SQL Postgres {  }
+    SiteLook GantryDefault { gantry_wrapper `/home/pcrow/srcgantry/root/sample_wrapper.tt`; }
+    Model GantryDBIxClass {  }
+}
+app HT {
+    config {
+        dbconn `dbi:Pg:dbname=hiring` => no_accessor;
+        dbuser apache => no_accessor;
+        template_wrapper `genwrapper.tt` => no_accessor;
+        root `/home/pcrow/srcgantry/docs/book/studies/HT/html:/home/pcrow/srcgantry/root` => no_accessor;
+    }
+    authors `Phil Crow` => `philcrow2000@yahoo.com`;
+    email `philcrow2000@yahoo.com`;
+    sequence job_seq {}
+    sequence postion_seq {}
+    sequence contact_seq {}
+    sequence auth_users_seq {}
+    sequence skill_seq {}
+    sequence application_seq {}
+    sequence score_seq {}
+    sequence status_seq {}
+    sequence email_template_seq {}
+    sequence email_seq {}
+    sequence change_log_seq {}
+    table job {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field title {
+            is varchar;
+            label Title;
+            html_form_type text;
+        }
+        field descr {
+            is text;
+            label Description;
+            html_form_type textarea;
+        }
+        field travel_percent {
+            is varchar;
+            label `Travel Percent`;
+            html_form_type text;
+        }
+        field on_site {
+            is varchar;
+            label `On/Off Site`;
+            html_form_type select;
+            html_form_options `On-Site` => onsite, `Partial Telecommute` => parttele, Telecommute => tele;
+        }
+        field time_percent {
+            is varchar;
+            label `Full/Part Time`;
+            html_form_type select;
+            html_form_options `Full Time` => fulltime, `Part Time` => parttime;
+        }
+        sequence job_seq;
+        foreign_display `%title`;
+    }
+    table position {
+        field id {
+            is int4, primary_key, auto;
+        }
+        sequence position_seq;
+        foreign_display `%ident`;
+        field ident {
+            is varchar;
+            label IDENT;
+            html_form_type text;
+        }
+        field n_openings {
+            is int4;
+            label `Number of Openings`;
+            html_form_type select;
+            html_form_options 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5;
+        }
+        field location {
+            is varchar;
+            label Location;
+            html_form_type text;
+        }
+        field closes {
+            is date;
+            label `Closing Date`;
+            html_form_type text;
+            date_select_text `Calendar Popup`;
+        }
+        field boss {
+            is varchar;
+            label Supervisor;
+            html_form_type text;
+        }
+        field pay {
+            is varchar;
+            label Pay;
+            html_form_type text;
+        }
+    }
+    table contact {
+        field id {
+            is int4, primary_key, auto;
+        }
+        sequence contact_seq;
+        foreign_display `%ident`;
+        field ident {
+            is varchar;
+            label IDENT;
+            html_form_type text;
+        }
+        field descr {
+            is text;
+            label `Contact Details`;
+            html_form_type textarea;
+        }
+    }
+    table skill {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field ident {
+            is varchar, varchar;
+            label IDENT;
+            html_form_type text;
+        }
+        field descr {
+            is text, text;
+            label Description;
+            html_form_type textarea;
+        }
+        sequence skill_seq;
+        foreign_display `%ident`;
+    }
+    table skill2job {
+        field job_id {
+            is int4;
+            refers_to job;
+            label Job;
+            html_form_type select;
+        }
+        field skill_id {
+            is int4;
+            refers_to skill;
+            label Skill;
+            html_form_type select;
+        }
+    }
+    table auth_users {
+        field id {
+            is int4, primary_key, auto;
+        }
+    }
+    table application {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field first_name {
+            is varchar;
+            label `First Name`;
+            html_form_type text;
+        }
+        field last_name {
+            is varchar;
+            label `Last Name`;
+            html_form_type text;
+        }
+        field email {
+            is varchar;
+            label `Email Address`;
+            html_form_type text;
+        }
+        field resume {
+            is text;
+            label `Resume/Cover Letter`;
+            html_form_type textarea;
+        }
+        field received {
+            is date;
+            label Received;
+            html_form_type text;
+            date_select_text `Calendar Popup`;
+        }
+        field rejected {
+            is date;
+            label `Rejected Date`;
+            html_form_type text;
+            date_select_text `Calendar Popup`;
+        }
+        field interview {
+            is date;
+            label `Interview Date`;
+            html_form_type text;
+            date_select_text `Calendar Popup`;
+        }
+        field phone {
+            is varchar;
+            label Phone;
+            html_form_type text;
+        }
+        sequence application_seq;
+        foreign_display `%first_name %last_name`;
+    }
+    table score {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field ranking {
+            is int4;
+            label Ranking;
+            html_form_type select;
+            html_form_options Excellent => 5, High => 4, Medium => 3, Low => 2, Reject => 1;
+        }
+        field type {
+            is int4;
+            label `Ranking Type`;
+            html_form_type select;
+            html_form_options Resume => resume, Interview => interview;
+        }
+        field comments {
+            is text;
+            label Comments;
+            html_form_type textarea;
+        }
+        field suggested_pay {
+            is varchar;
+            label `Suggested Pay`;
+            html_form_type text;
+        }
+        field ranker_id {
+            is int4;
+            refers_to auth_users;
+            label `Ranked By`;
+            html_form_type select;
+        }
+        field application_id {
+            is int4;
+            refers_to application;
+            label Application;
+            html_form_type select;
+        }
+        sequence score_seq;
+        foreign_display `%type: %ranking`;
+    }
+    table status {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field ident {
+            is varchar;
+            label IDENT;
+            html_form_type text;
+        }
+        field descr {
+            is text;
+            label Description;
+            html_form_type textarea;
+        }
+        sequence status_seq;
+        foreign_display `%ident`;
+    }
+    table email_template {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field template {
+            is varchar;
+            label `Template File Name`;
+            html_form_type text;
+        }
+        sequence email_template_seq;
+        foreign_display `%template`;
+    }
+    table email {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field sent {
+            is date;
+            label `Date Sent`;
+        }
+        field content {
+            is text;
+            label `Email Content`;
+            html_form_type textarea;
+        }
+        sequence email_seq;
+        foreign_display `%sent`;
+        field application_id {
+            is int4, int4;
+            refers_to application;
+            label Application;
+            html_form_type select;
+        }
+    }
+    table change_log {
+        field id {
+            is int4, primary_key, auto;
+        }
+        field activity {
+            is varchar;
+            label Activity;
+        }
+        field auth_user_id {
+            is int4;
+            refers_to auth_users;
+            label `Changed By`;
+        }
+        field application_id {
+            is int4, int4, int4;
+            refers_to application;
+            label Application;
+        }
+        sequence change_log_seq;
+        foreign_display `%activity`;
+    }
+    controller Job is AutoCRUD {
+        rel_location `admin/job`;
+        controls_table job;
+        text_description `job description`;
+        method do_main is main_listing {
+            cols title;
+            header_options Add;
+            row_options Edit, Delete;
+            title `Job Description`;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id;
+        }
+    }
+    controller Position is AutoCRUD {
+        rel_location position;
+        controls_table position;
+        text_description position;
+        page_link_label Positions;
+        method do_main is main_listing {
+            cols ident, n_openings;
+            header_options Add;
+            row_options Edit, Delete;
+            title Position;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id;
+        }
+    }
+    controller Contact is AutoCRUD {
+        rel_location contact;
+        controls_table contact;
+        text_description contact;
+        page_link_label contact;
+        method do_main is main_listing {
+            cols ident;
+            header_options Add;
+            row_options Edit, Delete;
+            title Contact;
+        }
+        method form is AutoCRUD_form {
+
+        }
+    }
+    controller Skill is AutoCRUD {
+        rel_location `admin/skill`;
+        controls_table skill;
+        text_description skill;
+        page_link_label skill;
+        method do_main is main_listing {
+            cols ident;
+            header_options Add;
+            row_options Edit, Delete;
+            title Skill;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id;
+        }
+    }
+    controller AuthUser is AutoCRUD {
+
+    }
+    controller Application is CRUD {
+
+    }
+    controller Score is CRUD {
+
+    }
+    controller Status is AutoCRUD {
+        rel_location status;
+        controls_table status;
+        text_description status;
+        method do_main is main_listing {
+            cols ident;
+            header_options Add;
+            row_options Edit, Delete;
+            title Status;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id;
+        }
+    }
+    controller EmailTemplate is AutoCRUD {
+        rel_location emailtemplate;
+        controls_table email_template;
+        text_description `email template`;
+        method do_main is main_listing {
+            cols template;
+            header_options Add;
+            row_options Edit, Delete;
+        }
+        method form is AutoCRUD_form {
+            all_fields_but id;
+        }
+    }
+    controller Email is stub {
+
+    }
+}

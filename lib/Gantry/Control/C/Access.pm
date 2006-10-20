@@ -15,14 +15,27 @@ sub handler : method {
     my $remote_ip = $self->remote_ip( $r );
 
     # Range, or specfic ips.
-    my $ranges  = ( $r->dir_config( 'AuthAllowRanges' ) 
-        || $r->dir_config( 'auth_allow_ranges' ) );
-        
-    my $ips     = ( $r->dir_config( 'AuthAllowIps' )
-        || $r->dir_config( 'auth_allow_ips' ) );
-        
-    my $ignore  = ( $r->dir_config( 'AccessNoOverRide' )
-        || $r->dir_config( 'ignore_access_handler' ) );
+    my $ranges  = $r->dir_config( 'AuthAllowRanges' );
+
+    if ( defined $r->dir_config( 'auth_allow_ranges' ) ) {
+        $ranges = $r->dir_config( 'auth_allow_ranges' );
+    }
+
+    my $ips = $r->dir_config( 'AuthAllowIps' );
+
+    if ( defined $r->dir_config( 'auth_allow_ips' ) ) {
+        $ips = $r->dir_config( 'auth_allow_ips' );
+    }
+
+    my $ignore = $r->dir_config( 'AccessNoOverRide' );
+
+    if ( $r->dir_config( 'ignore_access_handler' ) =~/^y/i ) {
+        $ignore = 1;
+    }
+    elsif ( $r->dir_config( 'ignore_access_handler' ) =~ /^n/i ) {
+        $ignore = 0;
+    }
+
     
     $ignore     = 0 if ( ! defined $ignore );
 
