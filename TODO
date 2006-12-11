@@ -1,5 +1,36 @@
-When form.tt reports missing fields, it should use the label of the field
-and not the name.
+Book does not describe:
+    fields statements html_form_...: content, width, label_width
+    (bigtop doesn't know about these either)
+
+Clean params is still too aggressive.  Example if a user enters zero for
+a varchar, it gets nulled.
+
+Auth concerns:
+    name of the user<->group three way is forced on you and it isn't groups
+    encryption is forced upon you
+    there is no way to specify other criteria for the auth users search
+    (only username and password are checked, not things like active flags)
+    Cannot use salt-based IV generation if literal IV is specified at ../lib/Gantry/Plugins/AuthCookie.pm line 342
+
+Make sure Gantry::Conf is working on a per location basis with CGI.
+
+AuthCookie plugin requires Crypt::CBC, Crypt::Blowfish, and
+Authen::Htpasswd but doesn't let you know in a nice way.
+
+Add the following to documentation (including to the book):
+    auth (job ad case study)
+    many-to-many (job ad case study)
+    callback registration (plugins)
+
+We are still struggling with questions during ./Build install both in and
+out of CPAN now.  These questions need to move to the perl Build.PL phase
+like the ones that seem to work well for Bigtop.
+
+Install problems pointed out by Apps::Cyrus:
+    1. The generated tests fail when pages call user_row, it returns undef.
+    2. The generated Build.PL wants to help you install web content, but
+       that content is not moved to blib/web for you.
+Both of these occur on production only.
 
 Phil Crow Thu May 11 12:05:59 CDT 2006
 Tim suggested a Gantry notes section to be features on usegantry.org.
@@ -20,6 +51,11 @@ Gantry::Utils::Model needs some more features:
         cascading delete
 
 DONE:
+    AutoCRUD needs to stop relying on autocommit.
+
+    When form.tt reports missing fields, it should use the label of the field
+    and not the name.
+
     DBIx::Class support should:
         be converted to let DBIx::Class handle the primary keys (if possible)
         be more careful with commits

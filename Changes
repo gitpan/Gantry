@@ -1,5 +1,29 @@
 This file documents the revision history for Perl extension Gantry
 
+3.45 Mon Dec 11 10:10:13 CST 2006
+    - Arranged documenation
+    - Fixed namespace issue with Gantry::Plugins::AuthCookie
+   
+3.44 Tue Dec  5 09:42:01 CST 2006
+    - Added Gantry::Utils::FormErrors to manifest.
+   
+3.43 Tue Dec  5 09:09:00 CST 2006
+    - moved uri, location, path_info, method above the init callback
+    - Param cleaning for CRUD and AutoCRUD no longer makes 0 ints null.
+      But it does make blank ints null.
+    - DBIx::Class autocrud helper now uses transactions so you don't need
+      to set AutoCommit => 1 to use it.
+    - added Gantry::Plugins::AuthCookie ( cookie based auth ). Supports
+      DBIx::Class user models and Apache htpasswd files.
+    - added Template::Plugin::GantryAuthCookie for decrypting auth cookies
+      from Apache::Templates.
+    - added plugin functionality to various phases of the request. Currently
+      you can register the plugin and its callback at the init, pre_init, 
+      post_init, pre_process and post_process phase. 
+      See Gantry::Plugins::AuthCookie for an example.
+    - Gantry::Plugins::CRUD has a new callback: validator in case you
+      don't want or can't use Data::FormValidator.
+
 3.42 Thu Oct 19 10:05:57 CDT 2006
     - Added Samples.
     - Missing and Invalid fields on form.tt now have their labels in the

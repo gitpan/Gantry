@@ -12,6 +12,13 @@
 \bblibdirs$
 # ^MANIFEST\.SKIP$
 
+# Avoid extra doc files
+\bdocs\/book
+\bdocs\/extra
+\bdocs\/talk
+\bsamples
+\bbugreports
+
 # Avoid Module::Build generated and utility files.
 \bBuild$
 \b_build
@@ -24,6 +31,7 @@
 \#$
 \b\.#
 \.swp$
+\.DS_Store$
 
 # Avoid inline's dropings
 _Inline

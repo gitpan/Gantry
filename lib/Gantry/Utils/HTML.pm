@@ -111,7 +111,7 @@ sub ht_udiv {
 # ht_qt( $string )
 #-------------------------------------------------
 sub ht_qt {
-    my $string = shift;
+    my $string = shift || '';
 
     # This removes possibly unsafe characters from this to be outputted. 
 

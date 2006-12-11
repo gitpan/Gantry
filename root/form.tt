@@ -35,7 +35,8 @@ Parameters:
                           label    - text description displayed to user
                           content  - additional description text used only
                                      next to the input box, not in errors.
-                          width    - width of the fields <td>
+                          width    - width of the field's <td>
+                          label_width - width of the field's label <td>
                           name     - the name of the field in the form
                                      (much match the database column name)
                           default_value - what shows up if there is no previous
@@ -43,6 +44,7 @@ Parameters:
                                           database
                           type     - One of:
                                          select (pick one drop down list)
+                                         select_multiple (pick 1 or more)
                                          text
                                          textarea
                       the rest of the keys in the fields hash depend on the
@@ -53,6 +55,14 @@ Parameters:
                                                     option
                                             label - what the user sees in the
                                                     list
+                          select_multiple
+                              options - just as for select
+                              selected - a code reference which accepts one
+                                         value, and the form params.  Return
+                                         true if the value is selected, false
+                                         otherwise.  Usually
+                                         Gantry::Plugins::CRUD's
+                                         select_multiple_closure works well.
                           text
                               date_select_text - the text of the href link for
                                                  the date popup window.
@@ -175,7 +185,7 @@ Parameters:
 			width="[% view.form.width || '100%' %]"	>
 			
 			[% FOREACH field IN view.form.fields %]
-			
+			[% IF field.raw_html %][% field.raw_html %][% END %]
 			<tr>
 				[% IF view.form.results.missing( "${field.name}" ) %]
 					[% style_str = ' style="color: red"' %]
@@ -185,7 +195,7 @@ Parameters:
 
 				<!-- LABEL -->
 				<td class="shd" valign="top"[% style_str %] style="width: [%-
-					label_width || '30%' %]">		
+					field.label_width || '30%' %]">		
 					[%- field.label %]
                     [% IF field.content %][% field.content %][% END %]
 					[%- UNLESS field.optional 
@@ -204,6 +214,7 @@ Parameters:
                         [%- field_val_hash = {} -%]
                        
 						[%- FOR option IN field.options -%]
+                          [%- IF view.form.row.defined %]
 							[%- IF field.is == 'boolean' -%]
 								[% IF view.form.row.${field.name} %]
 									[% row_value = 't' %]
@@ -213,7 +224,8 @@ Parameters:
 							[%- ELSE -%]
 								[% row_value = view.form.row.${field.name} %]
 							[%- END -%]
-                            
+                          [%- END -%]
+
 							[%- IF ( option.value == self.params.${field.name} 
                                 && self.params.defined("${field.name}") ) %]
 								[%- field_val_hash.param_field = option.value %]
@@ -244,16 +256,28 @@ Parameters:
 							</option> 
 						[%- END %]
 						</select>
-						
+                    [%- ELSIF field.type == 'select_multiple' %]
+						<select multiple name="[% field.name %]">
+						[%- FOR option IN field.options %]
+                            <option value="[% option.value %]"
+							 [% IF field.selected( option.value, self.params );
+							 	"selected='selected'";
+							 	END;
+							 %]
+							>
+							[%- option.label || option.value %]
+							</option> 
+						[%- END %]
+                        </select>
 					[%- ELSIF field.type == 'textarea' %]
-                        [%- IF self.params.defined( "${field.name}" );
+                        [%- IF self.params.${field.name}.defined;
                                input_value = self.params.${field.name};
                            ELSIF view.form.row.${field.name}.defined;
                                input_value = view.form.row.${field.name};
                            ELSE;
                                input_value = field.default_value;
                            END;
-                        -%]    						
+                        -%]
 						<textarea name="[% field.name %]" id="[% field.id %]"
 							rows="[% field.rows || '0' %]"
 							cols="[% field.cols || '0' %]"
@@ -275,9 +299,9 @@ Parameters:
                         [% ELSE %]
                             [% view.form.row.${field.name} %]
                         [% END %]
-					
+
 					[%- ELSIF field.type == 'date' -%]
-                        [%- IF self.params.defined("${field.name}");
+                        [%- IF self.params.${field.name}.defined;
                                input_value = self.params.${field.name};
                            ELSIF view.form.row.${field.name}.defined;
                                input_value = view.form.row.${field.name};
@@ -285,7 +309,7 @@ Parameters:
                                input_value = field.default_value;
                            END;
                         -%]
-       						
+
                         <div dojoType="dropdowndatepicker"
                             date="[% input_value.replace( '-', '/' ) %]"
                             fieldName="[% field.name %]">
@@ -332,6 +356,7 @@ Parameters:
 		</table>
 	</div>
 	
-	
+	<br style="clear: both" />	
 </fieldset>
+
 </form>

@@ -72,7 +72,13 @@ sub clean_params {
         next FIELD unless ( defined $field->{ name } );
         next FIELD unless ( defined $params->{ $name } );
 
-        if ( ( $field->{is} !~ /^bool/ )
+        if ( $field->{ is } =~ /^varchar/i and $params->{ $name } eq '' ) {
+            $params->{ $name } = undef;
+        }
+        elsif ( $field->{ is } =~ /^int/i and $params->{ $name } eq '' ) {
+            $params->{ $name } = undef;
+        }
+        elsif ( ( $field->{is} !~ /^bool/i and $field->{is} !~ /^int/i )
                 and
              ( not $params->{ $name } )
            )

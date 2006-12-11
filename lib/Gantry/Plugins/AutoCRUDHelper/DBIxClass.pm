@@ -8,7 +8,11 @@ sub insert {
     my $schema      = $gantry_site->get_schema();
     my $table_name  = $gantry_site->get_model_name->table_name();
 
-    return $schema->resultset( $table_name )->create( $params );
+    $schema->txn_begin();
+    my $new_row     = $schema->resultset( $table_name )->create( $params );
+    $schema->txn_commit();
+
+    return $new_row;
 }
 
 sub retrieve {
@@ -30,8 +34,12 @@ sub update {
     my $row         = shift;
     my $params      = shift;
 
+    my $schema      = $gantry_site->get_schema();
+
+    $schema->txn_begin();
     $row->update( $params );
     $row->discard_changes();
+    $schema->txn_commit();
 }
 
 sub delete {
@@ -39,7 +47,10 @@ sub delete {
     my $gantry_site = shift;
     my $row         = shift;
 
+    my $schema      = $gantry_site->get_schema();
+    $schema->txn_begin();
     $row->delete;
+    $schema->txn_commit();
 }
 
 1;

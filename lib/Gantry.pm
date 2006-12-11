@@ -10,9 +10,10 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.42';
+our $VERSION = '3.45';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
+our %plugin_callbacks;
 
 ############################################################
 # Functions                                                #
@@ -34,10 +35,26 @@ sub handler : method {
         die( 'No engine specified, engine required' );
     }
     
+    my $namespace = $class->namespace;
     my $action;
     eval {                              
+
+        # Do the plugin callbacks for the 'pre_init' phase 
+        foreach my $callback (
+                @{ $plugin_callbacks{ $namespace }{ pre_init } }
+        ) {
+            $callback->( $self );
+        } 
+
         $self->init( $r_or_cgi );
 
+        # Do the plugin callbacks for the 'post_init' phase 
+        foreach my $callback (
+                @{ $plugin_callbacks{ $namespace }{ post_init } }
+        ) {
+            $callback->( $self );
+        } 
+                
         my @p       = $self->cleanroot( $self->dispatch_location );
         my $p1      = ( shift( @p ) || 'main' );
         $action     = 'do_'. $p1;
@@ -82,19 +99,35 @@ sub handler : method {
 
     # Call do_process, defined within the template plugin
     eval {
-        my $response_page = '';
-        $response_page    = $self->do_process( );
+
+        # Do the plugin callbacks for the 'pre_template_process' phase 
+        foreach my $callback (
+                @{ $plugin_callbacks{ $namespace }{ pre_process } }
+        ) {
+            $callback->( $self );
+        } 
+
+        $self->{__RESPONSE_PAGE__} = '';
+        $self->{__RESPONSE_PAGE__} = $self->do_process( );
+
+        # Do the plugin callbacks for the 'pre_template_process' phase 
+        foreach my $callback (
+                @{ $plugin_callbacks{ $namespace }{ post_process } }
+        ) {
+            $callback->( $self );
+        } 
 
         my $status = $self->status() ? $self->status() : 200;
 
         if ( $status < 400 ) {
             
             $self->send_http_header();
-            $self->print_output( $response_page );
+            $self->print_output( $self->{__RESPONSE_PAGE__} );
         
         }
         else {
-            $self->cast_custom_error( $response_page ) if $response_page;
+            $self->cast_custom_error( $self->{__RESPONSE_PAGE__} ) 
+                if $self->{__RESPONSE_PAGE__};
         }
     };
 
@@ -189,7 +222,7 @@ sub relocate {
 
     $location = $self->location if ( ! defined $location );
     $self->redirect( 1 ); # Tag it for the handler to handle nice.
-    $self->header_out( 'location', $location );
+    $self->header_out( 'location', $location );    
     $self->status( $self->status_const( 'REDIRECT' ) );
     
     return( $self->status_const( 'REDIRECT' ) );
@@ -202,10 +235,19 @@ sub relocate {
 sub get_cookies {
     my ( $self, $want_cookie ) = ( shift, shift );
 
+    # return the cookies if previously parsed
+    if ( $self->{__PARSED_COOKIES__} ) {
+        
+        return $self->{__PARSED_COOKIES__}->{$want_cookie} 
+            if defined $want_cookie;
+        
+        return $self->{__PARSED_COOKIES__};        
+    }
+    
     my $client = 
         $self->header_in( 'Cookie' ) || $self->header_in( 'HTTP_COOKIE' ); 
     
-    return () if ( ! defined $client ); #|| ! $raw ); 
+    return () if ( ! defined $client );
     
     my %cookies; 
 
@@ -213,6 +255,8 @@ sub get_cookies {
         my ( $key, $value ) = split( /=/, $crumb ); 
         $cookies{$key} = $value;
     } 
+    
+    $self->{__PARSED_COOKIES__} = \%cookies;
     
     if ( defined $want_cookie ) {
         return( $cookies{$want_cookie} );
@@ -359,6 +403,18 @@ sub import {
             };
             if ($@) { die qq/Could not load plugin "$plugin", "$@"/ }
         
+            eval {
+                my $namespace     = $class->namespace();
+                my @new_callbacks = $plugin->get_callbacks( $namespace );
+
+                foreach my $callback ( @new_callbacks ) {
+                    push @{
+                            $plugin_callbacks{ $namespace }
+                                             { $callback->{ phase } }
+                         }, $callback->{ callback };
+                }
+            };
+            # failure means not having to register callbacks
         }
     }
     
@@ -378,6 +434,14 @@ sub import {
     }   
 
 }
+
+#-------------------------------------------------
+# $class->namespace or $site->namespace
+#-------------------------------------------------
+sub namespace {
+    return 'Gantry';
+}
+
 #-------------------------------------------------
 # $site->init( $r )
 # note: this function should be redefined in the application.
@@ -398,13 +462,20 @@ sub init {
 
     $self->engine_init( $r_or_cgi );
 
-    # set post_max - used for apache request object
-    $self->post_max( $self->fish_config( 'post_max' ) || '20000000' );
-
     $self->uri( $self->fish_uri() );
     $self->location( $self->fish_location() );
     $self->path_info( $self->fish_path_info() );
     $self->method( $self->fish_method() );
+    
+    # Do the plugin callbacks for the 'init' phase 
+    foreach my $callback (
+                @{ $plugin_callbacks{ $self->namespace }{ init } }
+    ) {
+        $callback->( $self );
+    }
+    
+    # set post_max - used for apache request object
+    $self->post_max( $self->fish_config( 'post_max' ) || '20000000' );
 
     # set user varible
     $self->user( $self->fish_user() );
@@ -419,7 +490,7 @@ sub init {
     $self->template_disable( $self->fish_config( 'template_disable' ) );
     
     # set application directory variables
-    my $app_root = $self->fish_config( 'root' );
+    my $app_root = $self->fish_config( 'root' ) || '';
 
     $self->root( join ':', $app_root, Gantry::Init::base_root() );
     $self->doc_root( $self->fish_config( 'doc_root' ) );
@@ -435,7 +506,7 @@ sub init {
     $self->css_rootp( $self->fish_config( 'css_rootp' ) );
     $self->tmp_rootp( $self->fish_config( 'tmp_rootp' ) );
     $self->editor_rootp( $self->fish_config( 'editor_rootp' ) );
-
+    
     # set no cache
     $self->no_cache( $self->fish_config( 'no_cache' ) );
     
@@ -1139,6 +1210,42 @@ parameters that are in the uri past the method name.
 The init is called at the begining of each request and sets values such as,
 app_rootp, img_rootp, and other application set vars.
 
+=item register_callback
+
+This will register a callback with the framework and assign it to a particular
+phase of the request cycle. Callbacks are generally in plugins, 
+see Gantry::Plugins::AuthCookie for an example of this. However, callbacks can
+be registered from any module and are not limited to just plugins. 
+
+ Defined phases where callbacks can be assigned.
+  pre_init       at the beginning, before pretty much everything
+  post_init      just after the main initializtion of the request
+  pre_process    just before the template engine is envoked
+  post_process   right after the template engine has done its thing
+
+ package Gantry::Plugins::SomePlugin;
+ 
+ BEGIN {
+     Gantry->register_callback( 'post_init', \&initialize );
+     Gantry->register_callback( 'post_init', \&auth_check );
+     Gantry->register_callback( 'post_process', \&munge );    
+ }
+ 
+ sub initialize {
+     my $gantry_site_object = shift;
+     ...
+ }
+ 
+ sub auth_check {
+     my $gantry_site_object = shift;
+     ...
+ }
+ 
+ sub munge {
+     my $gantry_site_object = shift;
+     ...
+ }
+ 
 =item declined 
 
  $self->declined( 1 );
@@ -1575,6 +1682,19 @@ Not yet implemented.  Currently you must code this in your model base class.
 
 Dual use accessor so you can keep track of the base model class name
 when using DBIx::Class.
+
+=item namespace
+
+Call this as a class OR object method.  Returns the namespace of the
+current app (which could be the name of the apps base module).  The
+one in this module always returns 'Gantry'.
+
+You need to implement this if you use a plugin that registers callbacks,
+so those callbacks will only be called for the apps that want the plugin.
+Otherwise, every app in your Apache server will have to use the plugin,
+even those that don't need it.
+
+Currently, the only plugin that registers callbacks is AuthCookie.
 
 =back
 

@@ -1,4 +1,4 @@
-use Test::More tests => 18;
+use Test::More tests => 19;
 
 # server
 use_ok('Gantry::Server');
@@ -9,6 +9,7 @@ use_ok('Gantry::Utils::SQL');
 use_ok('Gantry::Utils::HTML');
 use_ok('Gantry::Utils::CRUDHelp');
 use_ok('Gantry::Utils::ModelHelper');
+use_ok('Gantry::Utils::FormErrors');
 
 # auth control models
 use_ok('Gantry::Control::Model::auth_users');

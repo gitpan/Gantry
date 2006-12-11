@@ -6,6 +6,10 @@ use Data::FormValidator;
 
 use Gantry::Utils::CRUDHelp qw( clean_dates clean_params form_profile );
 
+use base 'Exporter';
+
+our @EXPORT_OK = qw( select_multiple_closure );
+
 #-----------------------------------------------------------
 # Constructor
 #-----------------------------------------------------------
@@ -94,6 +98,11 @@ sub turn_off_clean_params {
     return $self->{turn_off_clean_params};
 }
 
+sub validator {
+    my $self = shift;
+    return $self->{validator}
+}
+
 #-----------------------------------------------------------
 # Methods users call
 #-----------------------------------------------------------
@@ -132,13 +141,29 @@ sub add {
 
     $show_form = 1 if ( keys %{ $params } == 0 );
 
-    my $results = Data::FormValidator->check(
-        $params,
-        form_profile( $form->{fields} ),
-    );
+    my $results;
+
+    if ( $self->validator ) {
+        $results = $self->validator->(
+            {
+                your_self => $your_self,
+                params    => $params,
+                form      => $form,
+                profile   => form_profile( $form->{fields} ),
+                action    => 'add',
+            }
+        );
+    }
+    else {
+        $results = Data::FormValidator->check(
+            $params,
+            form_profile( $form->{fields} ),
+        );
+    }
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
+    $show_form = 1 if ( $form->{ error_text } );
 
     if ( $show_form ) {
         # order is important, first put in the form...
@@ -212,13 +237,28 @@ sub edit {
     $show_form = 1 if ( keys %params == 0 );
 
     # Check form data
-    my $results = Data::FormValidator->check(
-        \%params,
-        form_profile( $form->{fields} ),
-    );
+    my $results;
+    if ( $self->validator ) {
+        $results = $self->validator(
+            {
+                your_self => $your_self,
+                params    => \%params,
+                form      => $form,
+                profile   => form_profile( $form->{ fields } ),
+                action    => 'edit',
+            }
+        );
+    }
+    else {
+        $results = Data::FormValidator->check(
+            \%params,
+            form_profile( $form->{ fields } ),
+        );
+    }
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
+    $show_form = 1 if ( $form->{ error_text } );
 
     # Form has errors
     if ( $show_form ) {
@@ -330,6 +370,33 @@ sub _find_redirect {
     return $retval;
 }
 
+#-----------------------------------------------------------
+# Helper functions offered for export
+#-----------------------------------------------------------
+
+sub select_multiple_closure {
+    my $field_name  = shift;
+    my $db_selected = shift;
+
+    return sub {
+        my $id     = shift;
+        my $params = shift;
+
+        my @real_keys = grep ! /^\./, keys %{ $params };
+
+        if ( @real_keys ) {
+            return unless $params->{ $field_name };
+            my @param_ids = split /\0/, $params->{ $field_name };
+            foreach my $param_id ( @param_ids ) {
+                return 1 if ( $param_id == $id );
+            }
+        }
+        else {
+            return $db_selected->{ $id };
+        }
+    };
+}
+
 1;
 
 __END__
@@ -347,6 +414,7 @@ Gantry::Plugins::CRUD - helper for somewhat interesting CRUD work
         edit_action     => \&user_update,
         delete_action   => \&user_delete,
         form            => \&user_form,
+        validator       => \&user_form_validator,
         redirect        => \&redirect_function,
         template        => 'your.tt',  # defulats to form.tt
         text_descr      => 'database row description',
@@ -474,6 +542,61 @@ _form with your self object and the row being edited (during editing)
 whereas this method ALWAYS receives both your self object and the
 data you supplied.
 
+=item validator (a code ref)
+
+Optional.
+
+By default, form parameters are validated with Data::FormValidator.  Supply
+a validator callback to do your own thing.  Your validator will be called
+with:
+
+    your self object
+    a hash ref of form paramters
+    $form
+    the form_profile of $form
+    'add' or 'edit'
+
+Where C<$form> is whatever your form callback returned, usually that is a
+hash reference for use by form.tt.  It describes the form and its fields.
+See the form paramter to new directly above.
+
+The last parameter is the name of the method from this module making the
+callback.  It can only be 'add' or 'edit.'
+
+The C<form_profile> (provided by Gantry::Utils::CRUDHelp) is a hash
+reference with three keys:
+
+    required
+    optional
+    constraint_methods
+
+C<required> and C<optional> are array references of field names.
+C<constraint_methods> is a hash reference keyed by field name, storing
+a constraint.  See Data::FormValidator for details on constraints.
+
+What you do with those parameters is entirely up to you.
+
+You must return:
+
+    an object which responds to the Data::FormValidator::Results API
+
+In particular, the object must respond to:
+
+    has_missing
+    has_invalid
+    missing
+    invalid
+
+The methods prefixes with C<has_> return booleans.  The return values for
+the other two depend on how they are called.  If called with no arguments,
+they return the number of missing or invalid fields.  If called with an
+argument, the argument is the name of a field.  The method returns true
+if field is missing or invalid, false otherwise.
+
+Note that you may also set C<error_text> in the form hash.  This will
+also count as validation failure.  Use this to get total control of how
+your errors are reported.
+
 =item redirect (optional, defaults to $your_self->location() )
 
 NOTE WELL: It is a bad idea to name your redirect callback 'redirect'.
@@ -595,13 +718,33 @@ to $your_self->relocate.
 
 =back
 
-You can pick an choose which CRUD help you want from this module.  It is
+You can pick and choose which CRUD help you want from this module.  It is
 designed to give you maximum flexibility, while doing the most repetative
 things in a reasonable way.  It is perfectly good use of this module to
 have only one method which calls edit.  On the other hand, you might have
 two methods that call edit on two different instances, two methods
 that call add on those same instances and a method that calls delete on
 one of the instances.  Mix and match.
+
+=head1 HELPER FUNCTIONS
+
+=over 4
+
+=item select_multiple_closure
+
+If you have a form field of type select_multiple, one of the form.tt keys
+is selected.  It wants a sub ref so it can reselect items when the form
+fails to validate.  This function will generate the proper sub ref (aka
+closure).
+
+Parameters:
+    form field name
+    hash reference of default selections (usually the ones in the database)
+
+Returns: a closure suitable for immediate use as the selected hash key value
+for a form field of type select_multiple.
+
+=back
 
 =head1 SEE ALSO
 

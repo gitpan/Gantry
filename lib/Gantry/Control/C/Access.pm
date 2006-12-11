@@ -29,13 +29,14 @@ sub handler : method {
 
     my $ignore = $r->dir_config( 'AccessNoOverRide' );
 
-    if ( $r->dir_config( 'ignore_access_handler' ) =~/^y/i ) {
-        $ignore = 1;
+    if ( defined $r->dir_config( 'ignore_access_handler' ) ) {
+        if ( $r->dir_config( 'ignore_access_handler' ) =~/^y/i ) {
+            $ignore = 1;
+        }
+        elsif ( $r->dir_config( 'ignore_access_handler' ) =~ /^n/i ) {
+            $ignore = 0;
+        }
     }
-    elsif ( $r->dir_config( 'ignore_access_handler' ) =~ /^n/i ) {
-        $ignore = 0;
-    }
-
     
     $ignore     = 0 if ( ! defined $ignore );
 

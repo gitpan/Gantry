@@ -110,6 +110,9 @@ sub log_error {
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
 
+    $error_page ||= '';
+    $die_msg    ||= '';
+
     my $status = ( $self->status() ? $self->status() 
         : $self->status_const( 'BAD_REQUEST' ) );
     

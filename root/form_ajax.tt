@@ -36,6 +36,7 @@
 		</table>
 	</div>
 	
+	<br style="clear: both" />
 </fieldset>
 
 [% IF view.form.back %]
