@@ -21,7 +21,7 @@ sub get_listing {
     $attrs->{ page } = $params->{ page } if ( defined $params->{ page } );
 
     return $params->{ schema }->resultset( $class->table_name )->search(
-        undef, $attrs
+        $params->{ where }, $attrs
     )
 }
 
@@ -70,7 +70,7 @@ sub stringify_self {
 sub create {
     my ( $class, $args ) = @_;
 
-    my $new_row = $args->{ schema }->resultset( $class->table )->create(
+    my $new_row = $args->{ schema }->resultset( $class->table_name )->create(
             $args->{ values }
     );
 
@@ -88,14 +88,18 @@ sub gsearch {
     my $class       = shift;
     my $gantry_site = shift;
 
-    return $gantry_site->get_schema->resultset( $class->table )->search( @_ );
+    return $gantry_site->get_schema->resultset( $class->table_name )->search(
+            @_
+    );
 }
 
 sub gfind {
     my $class       = shift;
     my $gantry_site = shift;
 
-    return $gantry_site->get_schema->resultset( $class->table )->find( @_ );
+    return $gantry_site->get_schema->resultset( $class->table_name )->find(
+            @_
+    );
 }
 
 sub gfind_or_create {
@@ -103,7 +107,7 @@ sub gfind_or_create {
     my $gantry_site = shift;
 
     return $gantry_site->get_schema->
-                resultset( $class->table )->find_or_create( @_ );
+                resultset( $class->table_name )->find_or_create( @_ );
 }
 
 sub gupdate_or_create {
@@ -111,42 +115,42 @@ sub gupdate_or_create {
     my $gantry_site = shift;
 
     return $gantry_site->get_schema->
-                resultset( $class->table )->update_or_create( @_ );
+                resultset( $class->table_name )->update_or_create( @_ );
 }
 
 sub screate {
     my $class  = shift;
     my $schema = shift;
 
-    return $schema->resultset( $class->table )->create( @_ );
+    return $schema->resultset( $class->table_name )->create( @_ );
 }
 
 sub ssearch {
     my $class  = shift;
     my $schema = shift;
 
-    return $schema->resultset( $class->table )->search( @_ );
+    return $schema->resultset( $class->table_name )->search( @_ );
 }
 
 sub sfind {
     my $class  = shift;
     my $schema = shift;
 
-    return $schema->resultset( $class->table )->find( @_ );
+    return $schema->resultset( $class->table_name )->find( @_ );
 }
 
 sub sfind_or_create {
     my $class  = shift;
     my $schema = shift;
 
-    return $schema->resultset( $class->table )->find_or_create( @_ );
+    return $schema->resultset( $class->table_name )->find_or_create( @_ );
 }
 
 sub supdate_or_create {
     my $class  = shift;
     my $schema = shift;
 
-    return $schema->resultset( $class->table )->update_or_create( @_ );
+    return $schema->resultset( $class->table_name )->update_or_create( @_ );
 }
 
 1;

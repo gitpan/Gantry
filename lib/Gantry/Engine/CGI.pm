@@ -36,6 +36,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     get_config
     get_dbh
     locations
+    log_error
     get_arg_hash
     header_in
     header_out
@@ -518,6 +519,15 @@ sub locations {
     return $self->{cgi_obj}{locations};
 } # end locations
 
+#--------------------------------------------------
+# $self->log_error( $text )
+#--------------------------------------------------
+sub log_error {
+    my ( $self, $text ) = @_;
+
+    warn "$text\n";
+}
+
 #-------------------------------------------------
 # $self->redirect_response( )
 #-------------------------------------------------
@@ -994,6 +1004,11 @@ Change the value of a response header, or create a new one.
 =item $self->is_status_declined
 
 Returns true if the current status is DECLINED, or false otherwise.
+
+=item $self->log_error
+
+Prints text to STDERR so you can do the same thing under mod_perl
+without code changes.
 
 =item $self->locations
 

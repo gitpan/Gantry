@@ -86,7 +86,7 @@ sub import {
         # Import the proper engine
         if (/^-Engine=(.*)$/) { 
             $engine = "Gantry::Engine::$1";
-            eval "use $engine"; 
+            eval( "use $engine" ); 
             if ( $@ ) {
                 die "unable to load engine $1 ($@)";
             }   

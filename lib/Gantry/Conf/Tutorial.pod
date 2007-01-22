@@ -1,18 +1,3 @@
-package Gantry::Conf::Tutorial; 
-
-#####################################################################
-# 
-#  Name        :    Gantry::Conf::Provider 
-#  Author      :    Frank Wiles <frank@revsys.com> 
-#
-#  Description :    How to use Gantry::Conf
-#
-#####################################################################
-
-1;
-
-__END__
-
 =head1 NAME
 
 Gantry::Conf::Tutorial - Tutorial on how to use Gantry::Conf

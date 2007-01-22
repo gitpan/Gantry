@@ -53,6 +53,8 @@ my $build = $subclass->new(
         'URI'                       => 0,
         'Data::UUID'                => 0,
         'DBI'                       => 0,
+        'HTML::Prototype'           => 0,
+        'Hash::Merge'               => 0,
         'File::Copy::Recursive'     => 0,
         'HTTP::Server::Simple::CGI' => 0,
     },

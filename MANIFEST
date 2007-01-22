@@ -8,8 +8,9 @@ docs/gantry.conf
 docs/httpd.conf
 docs/README
 lib/Gantry.pm
+lib/Gantry/Build.pm
 lib/Gantry/Conf.pm
-lib/Gantry/Conf/FAQ.pm
+lib/Gantry/Conf/FAQ.pod
 lib/Gantry/Conf/Provider.pm
 lib/Gantry/Conf/Provider/FlatFile/Config/General.pm
 lib/Gantry/Conf/Provider/FlatFile/Config/Tiny.pm
@@ -18,7 +19,7 @@ lib/Gantry/Conf/Provider/HTTP/Config/General.pm
 lib/Gantry/Conf/Provider/ParamBuilder.pm
 lib/Gantry/Conf/Provider/PerlSetVar.pm
 lib/Gantry/Conf/Provider/SQL/PostgreSQL.pm
-lib/Gantry/Conf/Tutorial.pm
+lib/Gantry/Conf/Tutorial.pod
 lib/Gantry/Control.pm
 lib/Gantry/Control/C/Access.pm
 lib/Gantry/Control/C/AuthenBase.pm
@@ -56,13 +57,20 @@ lib/Gantry/Engine/CGI.pm
 lib/Gantry/Engine/MP13.pm
 lib/Gantry/Engine/MP20.pm
 lib/Gantry/Init.pm
+lib/Gantry/Plugins/AjaxCRUD.pm
+lib/Gantry/Plugins/AjaxFORM.pm
 lib/Gantry/Plugins/AuthCookie.pm
 lib/Gantry/Plugins/AutoCRUD.pm
 lib/Gantry/Plugins/AutoCRUDHelper/CDBI.pm
 lib/Gantry/Plugins/AutoCRUDHelper/DBIxClass.pm
+lib/Gantry/Plugins/Cache.pm
+lib/Gantry/Plugins/Cache/FastMmap.pm
+lib/Gantry/Plugins/Cache/Memcached.pm
 lib/Gantry/Plugins/Calendar.pm
 lib/Gantry/Plugins/CRUD.pm
 lib/Gantry/Plugins/DBIxClassConn.pm
+lib/Gantry/Plugins/Session.pm
+lib/Gantry/Plugins/SOAPMP20.pm
 lib/Gantry/Plugins/Static.pm
 lib/Gantry/Plugins/Validate.pm
 lib/Gantry/Server.pm
@@ -100,6 +108,7 @@ META.yml
 README
 root/control_wrapper.tt
 root/css/default.css
+root/default.tt
 root/delete.tt
 root/editor_init.ttc
 root/form.tt
@@ -112,7 +121,9 @@ root/pod_wrapper.tt
 root/results.tt
 root/sample_wrapper.tt
 root/search.tt
+root/session.tt
 root/wrapper.tt
+root/wsdl.tt
 t/01pod.t
 t/01podcoverage.t
 t/01use.t
@@ -146,6 +157,7 @@ t/plugins/02_crud.t
 t/plugins/03_calendar.t
 t/plugins/04_validate.t
 t/plugins/05_authcookie.t
+t/plugins/06_ajaxform.t
 t/template/01template_tt.t
 t/template/02template_default.t
 t/utils/01_validate.t

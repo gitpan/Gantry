@@ -14,6 +14,7 @@ use Apache2::RequestRec;
 use Apache2::RequestUtil;
 use Apache2::ServerUtil;;
 use Apache2::Response ();
+use Apache2::Upload;
 
 use Gantry::Conf;
 use Gantry::Utils::DBConnHelper::MP20;
@@ -80,7 +81,7 @@ sub file_upload {
     my $apr = $self->ap_req;
     my $status = $apr->parse;
 
-    if ( $status ) { die "upload error: $status" };
+    if ( $status ne 'Success' ) { die "upload error: $status" };
 
     my $upload = $apr->upload( $param );
     
@@ -744,6 +745,36 @@ mime type of file
 a handle you can read the file from
 
 =back
+
+=item cast_custom_error
+
+=item declined_response
+
+=item engine_init
+
+Used internally by Gantry.pm.
+
+=item fish_config
+
+Call this with the name of a config param to retrieve its value.
+Intelligently choose conf source.  It tries Gantry::Conf first, then
+falls back on dir_config.
+
+=item get_cached_config
+
+For internal use.
+
+=item is_status_declined
+
+=item redirect_response
+
+=item send_error_output
+
+=item send_http_header
+
+=item set_cached_config
+
+=item success_code
 
 =back
 

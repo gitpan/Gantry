@@ -70,10 +70,12 @@ sub do_process {
             $self->stash->view->template( $self->template );
         }
         
-        return( $self->stash->view->data . $self->stash->controller->data ) 
-            if ! $self->stash->view->template();
+        return( 
+            ( $self->stash->view->data || '' )
+            . ( $self->stash->controller->data || '' )
+        ) if ! $self->stash->view->template();
 
-        my $page;
+        my $page = '';
         $tt{ $self->uri }->process( $self->stash->view->template, 
             { self => $self, site => $self, view => $self->stash->view }, 
             \$page 

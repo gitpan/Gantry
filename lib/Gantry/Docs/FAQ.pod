@@ -339,7 +339,7 @@ values for that row.  Make your changes in the params hash.  For example,
 you could insert a new key:
 
  sub edit_pre_action {
-   my ( $row, $params_hash_ref ) = @_;
+   my ( $self, $row, $params_hash_ref ) = @_;
      $params_hash_ref{ modified } = 'now';
  }
 
@@ -360,7 +360,7 @@ look roughly like this:
      return $self->{__OLD_STATUS__};
  }
  sub edit_pre_action { # sets the old_status attribute
-     my ( $row, $params_ref ) = @_;
+     my ( $self, $row, $params_ref ) = @_;
 
      $self->old_status( $row->status );
  }

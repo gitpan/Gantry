@@ -26,6 +26,8 @@ our @EXPORT = qw(
     auth_user_field
     auth_password_field
     auth_logout_url
+    auth_cookie_name
+    auth_cookie_domain
 );
 
 my %registered_callbacks;
@@ -38,8 +40,8 @@ sub get_callbacks {
 
     return if ( $registered_callbacks{ $namespace }++ );
 
-    warn "Your app needs a 'namespace' method which doesn't return 'Gantry'"
-            if ( $namespace eq 'Gantry' );
+    warn 'Use -PluginNamespace=something when you use '
+        .   'Gantry::Plugins::AuthCookie' if ( $namespace eq 'Gantry' );
 
     return (
         { phase => 'init',      callback => \&initialize },
@@ -79,7 +81,19 @@ sub initialize {
     
     $gobj->auth_groups( $gobj->fish_config( 'auth_groups' ) || '' );
     $gobj->auth_secret( $gobj->fish_config( 'auth_secret' ) || 'w3s3cR7' );
-        
+
+    eval {
+        $gobj->auth_cookie_name(
+            $gobj->fish_config( 'auth_cookie_name' ) || 'auth_cookie'
+        );
+    };
+
+    eval {
+        $gobj->auth_cookie_domain(
+            $gobj->fish_config( 'auth_cookie_domain' )
+        );
+    };
+
     # initialize these in the Gantry object
     $gobj->auth_user_row( {} );
     $gobj->auth_user_groups( {} );
@@ -120,6 +134,9 @@ sub validate_user {
     my $regex     = qr/^${app_rootp}\/(login|static).*/;
     
     return 1 if $gobj->uri =~ /^$regex/;
+
+    my $cookie_name = 'auth_cookie';
+    eval { $cookie_name = $gobj->auth_cookie_name(); };
 
     my $cookie    = $gobj->get_cookies( 'auth_cookie' );
     return 0 if ! $cookie;
@@ -173,11 +190,23 @@ sub validate_user {
             $gobj->auth_user_field()   => $username,
             $gobj->auth_password_field() => $password,
         } );
-	
-    	return 0 unless @user_rows;
 
-        # put the user row into the gantry object
-        $gobj->auth_user_row( $user_rows[0] );
+        if ( @user_rows ) {
+            # put the user row into the gantry object
+            $gobj->auth_user_row( $user_rows[0] );
+        }
+	    else {
+	        my $hash = {};
+            my $obj = bless(
+                     $hash, 'Gantry::Plugins::AuthCookie::HtpasswdRow' 
+            );
+
+            $gobj->auth_user_row( $obj );
+
+            # set empty user row
+        	return 0;	        
+	    }
+
 
         my $dbh = $sch->storage->dbh;
 
@@ -227,13 +256,19 @@ sub do_login {
 
 	my %param = $self->get_param_hash();
 
+    my $cookie_name = 'auth_cookie';
+    my $domain;
+    eval { $cookie_name = $self->auth_cookie_name();   };
+    eval { $domain      = $self->auth_cookie_domain(); };
+
     if ( defined $param{logout} ) {
 
     	$self->set_cookie( {  
-                name     => 'auth_cookie',
+                name     => $cookie_name,
                 value    => '', 
                 expires  => 0, 
                 path     => '/',
+                domain   => $domain,
         } );  
 
         my $relocation;
@@ -272,15 +307,24 @@ sub do_login {
 
 		# set cookie, redirect to do_frontpage.
         $self->set_cookie( {  
-            name     => 'auth_cookie', 
+            name     => $cookie_name,
             value    => $encd, 
             path     => '/',
+            domain   => $domain,
         } ); 
 
-        if ( $page ) {
+        # check for url param then redirect
+        if ( $param{url} ) {
+            $self->relocate( $param{url} );        
+        }
+        
+        # check for ":" separated paths then redirect
+        elsif ( $page ) {
             $page =~ s/\:/\//g;
             $self->relocate( $page );
         }
+        
+        # else them to the application root
         else {
             $self->relocate( $self->app_rootp . '/' );
         }
@@ -289,10 +333,12 @@ sub do_login {
 	}
 
     my $retval = {};
+    my $url    = $param{url} || '';
 
     $retval->{page}       = $page;
+    $retval->{url}        = $url;
     $retval->{param}      = \%param;
-    $retval->{login_form} = login_form( $self, $page );
+    $retval->{login_form} = login_form( $self, $page, $url );
     $retval->{errors}     = ( $self->is_post() ) ? \@errors : 0;
     
     $self->status( $self->status_const( 'FORBIDDEN' ) );
@@ -304,14 +350,16 @@ sub do_login {
 # login_form( $self )
 #-------------------------------------------------
 sub login_form {
-	my ( $self, $page ) = @_;
+	my ( $self, $page, $url ) = @_;
     
     my %in    = $self->get_param_hash();
     $in{page} = $page;
+    $in{url}  = $url;
     
     my @form = ( ht_form( $self->uri ),
 			q!<TABLE border=0>!,
                 ht_input( 'page', 'hidden', \%in ),
+                ht_input( 'url',  'hidden', \%in ),
 			q!<TR><TD><B>Username</B><BR>!,
 			ht_input( 'username', 'text', \%in, 'size=15 id="username"' ),
 			qq!</TD></TR>!,
@@ -336,6 +384,8 @@ sub login_form {
 #-------------------------------------------------
 sub decrypt_cookie {
 	my ( $self, $encrypted ) = @_;
+
+    $encrypted ||= '';
 	
 	$^W = 0; # Crappy perl module dosen't run without warnings.
 
@@ -351,9 +401,13 @@ sub decrypt_cookie {
 	
 	$c->finish();
 
-	my ( $user, $pass, $md5 ) = split( ':;:', $p_text );
+    my ( $user, $pass, $md5 ) = split( ':;:', $p_text );
 
-	my $omd5 = md5_hex( $user . $pass );
+	$user ||= '';
+    $pass ||= '';
+    $md5  ||= '';
+
+	my $omd5 = md5_hex( $user . $pass ) || '';
 
 #	$^W = 1;	
 
@@ -599,6 +653,28 @@ sub auth_logout_url {
     
 } # end auth_logout_url
 
+#-------------------------------------------------
+# $self->auth_cookie_name
+#-------------------------------------------------
+sub auth_cookie_name {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_COOKIE_NAME__} = $p if defined $p;
+    return( $$self{__AUTH_COOKIE_NAME__} || 'auth_cookie' );
+    
+} # end auth_cookie_name
+
+#-------------------------------------------------
+# $self->auth_cookie_domain
+#-------------------------------------------------
+sub auth_cookie_domain {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_COOKIE_DOMAIN__} = $p if defined $p;
+    return( $$self{__AUTH_COOKIE_DOMAIN__} );
+    
+} # end auth_cookie_name
+
 package Gantry::Plugins::AuthCookie::HtpasswdRow;
 
 sub id {
@@ -636,7 +712,12 @@ In Apache Perl startup or app.cgi or app.server:
 
     <Perl>
         # ...
-        use MyApp qw{ -Engine=CGI -TemplateEngine=TT AuthCookie };
+        use MyApp qw{
+                -Engine=CGI
+                -TemplateEngine=TT
+                -PluginNamespace=your_module_name
+                AuthCookie
+        };
     </Perl>
     
 Inside MyApp.pm:
@@ -644,7 +725,8 @@ Inside MyApp.pm:
     use Gantry::Plugins::AuthCookie;
 
     sub namespace {
-        return 'wantauthcookie'; # the string is up to you
+        return 'your_module_name';
+        # the string is up to you, but needs to match -PluginNamespace
     }
 
 =head1 DESCRIPTION
@@ -679,6 +761,8 @@ the $self->auth_user_row and $self->auth_user_groups accessors.
  auth_require        'valid-user' or 'group'   # default 'valid-user'
  auth_groups         'group1,group2'           # allow these groups
  auth_secret         'encryption_key'          # default 'w3s3cR7'
+ auth_cookie_name    'my_auth_cookie'          # default 'auth_cookie'
+ auth_cookie_domain  'www.example.com'         # default URL full domain
  
 =head1 METHODS
 
@@ -759,6 +843,19 @@ default the default value.
 accessor for auth_logout_url.  auth_logout_url is a full URL where the
 user will go when they log out.  Logging out happens when the do_login
 method is called with a query_string parameter logout=1.
+
+=item auth_cookie_name
+
+accessor for name of auth cookie.  By default the cookie is called
+'auth_cookie'.  Import this and define a conf variable of the same name
+to change the cookie's name.
+
+=item auth_cookie_domain
+
+accessor for the auth cookie's domain.  By default undef is used, so the
+cookie will be set on the fully qualified domain of the login page.  Import
+this method and define a conf variable of the same name to change the
+domain.
 
 =back
 

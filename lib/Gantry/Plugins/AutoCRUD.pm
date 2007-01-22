@@ -3,7 +3,7 @@ package Gantry::Plugins::AutoCRUD;
 use strict;
 use Data::FormValidator;
 
-use Gantry::Utils::CRUDHelp qw( clean_params form_profile );
+use Gantry::Utils::CRUDHelp qw( clean_params form_profile write_file );
 
 use Exporter;
 use Carp;
@@ -17,6 +17,7 @@ our @EXPORT = qw(
     do_edit
     do_delete
     form_name
+    write_file
 );
 
 our $orm_helper;
@@ -507,6 +508,11 @@ and both rows and cols for textarea types.
 
 =item add_pre_action
 
+  sub add_pre_action {
+    my ( $self, $params ) = @_;
+    ...  
+  }   
+
 Optional.
 Called immediately before a new row is inserted into the database with
 the hash that will be passed directly to the ORM helper's insert method.
@@ -515,12 +521,22 @@ remove things that can't have '' as a value, etc.).
 
 =item add_post_action
 
+  sub add_post_action {
+    my ( $self, $params ) = @_;
+    ...  
+  }   
+
 Optional.
 Called immediately after a new row has been inserted (and committed) into
 the database with the newly minted row object.  This is a useful place
 to make change log entries, send email, etc.
 
 =item edit_pre_action
+  
+  sub edit_pre_action {
+    my ( $self, $row, $params ) = @_;
+    ...  
+  }   
 
 Optional.
 Like add_pre_action, but receives the row to be updated and the params hash
@@ -528,16 +544,31 @@ that is about to be set on it.
 
 =item edit_post_action
 
+  sub edit_post_action {
+    my ( $self, $row, $params ) = @_;
+    ...  
+  }   
+
 Optional.
 Just like add_post_action, but for edit.
 
 =item delete_pre_action
+
+  sub delete_pre_action {
+    my ( $self, $row, $params ) = @_;
+    ...  
+  }   
 
 Optional.
 Called just before a row is removed from the database with the row
 object.
 
 =item delete_post_action
+
+  sub delete_post_action {
+    my ( $self, $row, $params ) = @_;
+    ...  
+  }   
 
 Optional.
 Called just after a row has been removed from the database with the former

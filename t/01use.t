@@ -1,7 +1,9 @@
-use Test::More tests => 19;
+use Test::More tests => 20;
 
 # server
 use_ok('Gantry::Server');
+
+use_ok('Gantry::Build');
 
 # utilities
 use_ok('Gantry::Utils::DB');

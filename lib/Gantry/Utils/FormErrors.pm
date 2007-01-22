@@ -44,6 +44,18 @@ sub invalid {
     else              { return keys %{ $self->{ invalid } };     }
 }
 
+sub get_missing_hash {
+    my $self = shift;
+
+    return $self->{ missing };
+}
+
+sub get_invalid_hash {
+    my $self = shift;
+
+    return $self->{ invalid };
+}
+
 1;
 
 =head1 NAME
@@ -128,6 +140,22 @@ missing hash and 0 otherwise.
 =item invalid
 
 Same as missing, but checks the invalid hash.
+
+=item get_missing_hash
+
+Returns the hash reference of missing fields.  Keys are field names values
+are usually 1 (but they must be true).
+
+This is useful if two validation routines are cooperating to form the
+final lists.
+
+=item get_invalid_hash
+
+Returns the hash reference of invalid fields.  Keys are field names values
+are usually 1 (but they must be true).
+
+This is useful if two validation routines are cooperating to form the
+final lists.
 
 =back
 

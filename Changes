@@ -1,5 +1,29 @@
 This file documents the revision history for Perl extension Gantry
 
+3.47 Mon Jan 22 09:11:06 CST 2007
+    - Added Gantry::Plugins::Session
+    - Added Ganty SOAP Support
+    - AuthCookie will not redirect to a full url if the 'url' param is passed.
+      i.e. <input type="hidden" name="url" value="http://www.here.com/" />
+    - added test for AjaxFORM
+    - Added auth_cookie_name and auth_cookie_domain as optional conf based
+      accessors for AuthCookie plugin.
+    - Added log_error method to CGI engine, so all engines have it.
+    - Added AJAX form plugin.
+    - Added Session plugin with pluggable caching storage mechanism.
+      (thanks to Kevin Esteb for all the plugins in this release except SOAP)
+    - Added SOAP plugin (mod_perl 2 only).
+    - Changed how plugin namespaces work.  Use the new -PluginNamespace
+      wherever you use -Engine, follow that with the plugins you want.
+
+3.46 Wed Dec 20 12:18:43 CST 2006
+    - Fixed uninitialized warnings in the TT template engine.
+    - Fixed CRUD plugin's validator callback use in edit.
+    - Added Gantry::Build to simplify Build.PLs that need to install
+      web content.
+    - Added Gantry::Plugins::AjaxCRUD, thanks to Kevin Esteb for
+      submitting it.
+    
 3.45 Mon Dec 11 10:10:13 CST 2006
     - Arranged documenation
     - Fixed namespace issue with Gantry::Plugins::AuthCookie

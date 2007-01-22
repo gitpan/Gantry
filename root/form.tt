@@ -185,7 +185,11 @@ Parameters:
 			width="[% view.form.width || '100%' %]"	>
 			
 			[% FOREACH field IN view.form.fields %]
-			[% IF field.raw_html %][% field.raw_html %][% END %]
+		
+			[%- IF field.raw_html %]
+			    [%- field.raw_html %]
+			[%- END %]
+			
 			<tr>
 				[% IF view.form.results.missing( "${field.name}" ) %]
 					[% style_str = ' style="color: red"' %]

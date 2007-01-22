@@ -415,7 +415,7 @@ Gantry::Conf - Gantry's Flexible Configuration System
   use Gantry::Conf; 
 
   # Retrieve a simple instance 
-  my $conf = Gantry::Conf->retrieve( instance => 'foo' );
+  my $conf = Gantry::Conf->retrieve( { instance => 'foo' } );
 
   # Retrieve an instance from an alternate configuration file
   # other than /etc/gantry.conf 

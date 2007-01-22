@@ -1,6 +1,6 @@
 ---
 name: Gantry
-version: 3.45
+version: 3.47
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
@@ -15,7 +15,9 @@ requires:
   Data::UUID: 0
   Date::Calc: 0
   File::Copy::Recursive: 0
+  HTML::Prototype: 0
   HTTP::Server::Simple::CGI: 0
+  Hash::Merge: 0
   Template: 2.0
   URI: 0
   perl: 5.8
@@ -25,11 +27,15 @@ build_requires:
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.45
+    version: 3.47
+  Gantry::Build:
+    file: lib/Gantry/Build.pm
+  Gantry::Cache::FastMmap:
+    file: lib/Gantry/Plugins/Cache/FastMmap.pm
+  Gantry::Cache::Memcached:
+    file: lib/Gantry/Plugins/Cache/Memcached.pm
   Gantry::Conf:
     file: lib/Gantry/Conf.pm
-  Gantry::Conf::FAQ:
-    file: lib/Gantry/Conf/FAQ.pm
   Gantry::Conf::Provider:
     file: lib/Gantry/Conf/Provider.pm
   Gantry::Conf::Provider::FlatFile::Config::General:
@@ -46,8 +52,6 @@ provides:
     file: lib/Gantry/Conf/Provider/PerlSetVar.pm
   Gantry::Conf::Provider::SQL::PostgreSQL:
     file: lib/Gantry/Conf/Provider/SQL/PostgreSQL.pm
-  Gantry::Conf::Tutorial:
-    file: lib/Gantry/Conf/Tutorial.pm
   Gantry::Control:
     file: lib/Gantry/Control.pm
   Gantry::Control::C::Access:
@@ -110,6 +114,10 @@ provides:
     file: lib/Gantry/Init.pm
   Gantry::Plugin::Validate:
     file: lib/Gantry/Plugins/Validate.pm
+  Gantry::Plugins::AjaxCRUD:
+    file: lib/Gantry/Plugins/AjaxCRUD.pm
+  Gantry::Plugins::AjaxFORM:
+    file: lib/Gantry/Plugins/AjaxFORM.pm
   Gantry::Plugins::AuthCookie:
     file: lib/Gantry/Plugins/AuthCookie.pm
   Gantry::Plugins::AuthCookie::HtpasswdRow:
@@ -122,10 +130,16 @@ provides:
     file: lib/Gantry/Plugins/AutoCRUDHelper/DBIxClass.pm
   Gantry::Plugins::CRUD:
     file: lib/Gantry/Plugins/CRUD.pm
+  Gantry::Plugins::Cache:
+    file: lib/Gantry/Plugins/Cache.pm
   Gantry::Plugins::Calendar:
     file: lib/Gantry/Plugins/Calendar.pm
   Gantry::Plugins::DBIxClassConn:
     file: lib/Gantry/Plugins/DBIxClassConn.pm
+  Gantry::Plugins::SOAPMP20:
+    file: lib/Gantry/Plugins/SOAPMP20.pm
+  Gantry::Plugins::Session:
+    file: lib/Gantry/Plugins/Session.pm
   Gantry::Plugins::Static:
     file: lib/Gantry/Plugins/Static.pm
   Gantry::Server:

@@ -3,12 +3,25 @@ use strict; no warnings;
 use File::Copy;
 
 BEGIN {
+    my $message;
+
+    eval {
+        require HTML::Prototype;
+    };
+    if ( $@ ) {
+        $message = 'Gantry Auth Application requires HTML::Prototype';
+    }
+
     eval { 
         require DBD::SQLite;
     };
-    
     if ( $@ ) {
-	    plan skip_all => 'Gantry Auth Application tests require DBD::SQLite';
+        $message .= ' ' if ( $message );
+	    $message .= 'Gantry Auth Application tests require DBD::SQLite';
+    }
+
+    if ( $message ) {
+        plan skip_all => $message;
     }
     else {
         plan qw(no_plan);

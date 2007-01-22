@@ -1,15 +1,14 @@
-package Gantry::Plugins::CRUD;
+package Gantry::Plugins::AjaxCRUD;
 
 use strict;
 use Carp;
 use Data::FormValidator;
 
-use Gantry::Utils::CRUDHelp qw( clean_dates 
-    clean_params form_profile write_file );
+use Gantry::Utils::CRUDHelp qw( clean_dates clean_params form_profile );
 
 use base 'Exporter';
 
-our @EXPORT_OK = qw( select_multiple_closure write_file );
+our @EXPORT_OK = qw( select_multiple_closure );
 
 #-----------------------------------------------------------
 # Constructor
@@ -63,6 +62,39 @@ sub delete_action {
     }
 }
 
+sub setup_action {
+    my $self = shift;
+
+    if ( defined $self->{setup_action} ) {
+        return $self->{setup_action}
+    }
+    else {
+        croak 'setup_action not defined or misspelled';
+    }
+}
+
+sub cancel_action {
+    my $self = shift;
+
+    if ( defined $self->{cancel_action} ) {
+        return $self->{cancel_action}
+    }
+    else {
+        croak 'cancel_action not defined or misspelled';
+    }
+}
+
+sub success_action {
+    my $self = shift;
+
+    if ( defined $self->{success_action} ) {
+        return $self->{success_action}
+    }
+    else {
+        croak 'success_action not defined or misspelled';
+    }
+}
+
 sub form {
     my $self = shift;
 
@@ -72,16 +104,6 @@ sub form {
     else {
         croak 'form not defined or misspelled';
     }
-}
-
-sub redirect {
-    my $self = shift;
-    return $self->{redirect}
-}
-
-sub template {
-    my $self = shift;
-    return $self->{template}
 }
 
 sub text_descr {
@@ -99,11 +121,6 @@ sub turn_off_clean_params {
     return $self->{turn_off_clean_params};
 }
 
-sub validator {
-    my $self = shift;
-    return $self->{validator}
-}
-
 #-----------------------------------------------------------
 # Methods users call
 #-----------------------------------------------------------
@@ -114,24 +131,17 @@ sub validator {
 sub add {
     my ( $self, $your_self, $data ) = @_;
 
-    $your_self->stash->view->template( $self->template );
-    $your_self->stash->view->title( 'Add ' . $self->text_descr )
-            unless $your_self->stash->view->title;
+    eval {
+        $self->setup_action->( $your_self, $data, 'add', $self->text_descr );
+    };  # failure means they don't wan this
 
     my $params   = $your_self->get_param_hash();
 
     # Redirect if user pressed 'Cancel'
     if ( $params->{cancel} ) {
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                user_req    => 'add',
-                action      => 'cancel',
-            }
-        );
 
-        return $your_self->relocate( $redirect );
+        return $self->cancel_action->( $your_self, $data, 'add', 'cancel' );
+
     }
 
     # get and hold the form description
@@ -142,29 +152,13 @@ sub add {
 
     $show_form = 1 if ( keys %{ $params } == 0 );
 
-    my $results;
-
-    if ( $self->validator ) {
-        $results = $self->validator->(
-            {
-                your_self => $your_self,
-                params    => $params,
-                form      => $form,
-                profile   => form_profile( $form->{fields} ),
-                action    => 'add',
-            }
-        );
-    }
-    else {
-        $results = Data::FormValidator->check(
-            $params,
-            form_profile( $form->{fields} ),
-        );
-    }
+    my $results = Data::FormValidator->check(
+        $params,
+        form_profile( $form->{fields} ),
+    );
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
-    $show_form = 1 if ( $form->{ error_text } );
 
     if ( $show_form ) {
         # order is important, first put in the form...
@@ -191,15 +185,8 @@ sub add {
         $self->add_action->( $your_self, $params, $data );
 
         # move along, we're all done here
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'submit',
-                user_req    => 'add'
-            }
-        );
-        return $your_self->relocate( $redirect );
+
+        return $self->success_action->( $your_self, $data, 'submit', 'add' );
     }
 } # END: add
 
@@ -209,23 +196,17 @@ sub add {
 sub edit {
     my ( $self, $your_self, $data ) = @_;
 
-    $your_self->stash->view->template( $self->template() );
-    $your_self->stash->view->title( 'Edit ' . $self->text_descr() )
-            unless $your_self->stash->view->title;
+    eval {
+        $self->setup_action->( $your_self, $data, 'edit', $self->text_descr );
+    }; # failure means they don't wan this
 
     my %params = $your_self->get_param_hash();
 
     # Redirect if 'Cancel'
     if ( $params{cancel} ) {
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'cancel',
-                user_req    => 'edit',
-            }
-        );
-        return $your_self->relocate( $redirect );
+
+        return $self->cancel_action->( $your_self, $data, 'cancel', 'edit' );
+
     }
 
     # get and hold the form description
@@ -238,28 +219,13 @@ sub edit {
     $show_form = 1 if ( keys %params == 0 );
 
     # Check form data
-    my $results;
-    if ( $self->validator ) {
-        $results = $self->validator->(
-            {
-                your_self => $your_self,
-                params    => \%params,
-                form      => $form,
-                profile   => form_profile( $form->{ fields } ),
-                action    => 'edit',
-            }
-        );
-    }
-    else {
-        $results = Data::FormValidator->check(
-            \%params,
-            form_profile( $form->{ fields } ),
-        );
-    }
+    my $results = Data::FormValidator->check(
+        \%params,
+        form_profile( $form->{fields} ),
+    );
 
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
-    $show_form = 1 if ( $form->{ error_text } );
 
     # Form has errors
     if ( $show_form ) {
@@ -290,15 +256,8 @@ sub edit {
         $self->edit_action->( $your_self, \%params, $data );
         
         # all done, move along
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'submit',
-                user_req    => 'edit'
-            }
-        );
-        return $your_self->relocate( $redirect );
+
+        return $self->success_action->( $your_self, $data, 'submit', 'edit' );
     }
 } # END: edit
 
@@ -308,20 +267,16 @@ sub edit {
 sub delete {
     my ( $self, $your_self, $yes, $data ) = @_;
 
-    $your_self->stash->view->template( 'delete.tt' );
-    $your_self->stash->view->title( 'Delete' )
-            unless $your_self->stash->view->title;
+    eval {
+        $self->setup_action->(
+                $your_self, $data, 'delete', $self->text_descr
+        );
+    }; # failure means they don't wan this
 
     if ( $your_self->params->{cancel} ) {
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'cancel',
-                user_req    => 'delete'
-            }
-        );
-        return $your_self->relocate( $redirect );
+
+        return $self->cancel_action->( $your_self, $data, 'cancel', 'delete' );
+
     }
 
     if ( ( defined $yes ) and ( $yes eq 'yes' ) ) {
@@ -329,46 +284,14 @@ sub delete {
         $self->delete_action->( $your_self, $data );
 
         # Move along, it's already dead
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'submit',
-                user_req    => 'delete'
-            }
-        );
-        return $your_self->relocate( $redirect );
+
+        return $self->success_action->( $your_self, $data, 'submit', 'delete' );
     }
     else {
         $your_self->stash->view->form->message (
             'Delete ' . $self->text_descr() . '?'
         );
     }
-}
-
-#-----------------------------------------------------------
-# Helpers
-#-----------------------------------------------------------
-
-sub _find_redirect {
-    my ( $self, $args ) = @_;
-    my $your_self = $args->{ gantry_site };
-    my $data      = $args->{ data };
-    my $action    = $args->{ action };
-    my $user_req  = $args->{ user_req };
-
-    my $retval;
-
-    my $redirect_sub = $self->redirect;
-
-    if ( $redirect_sub ) {
-        $retval = $redirect_sub->( $your_self, $data, $action, $user_req );
-    }
-    else {
-        $retval = $your_self->location();
-    }
-
-    return $retval;
 }
 
 #-----------------------------------------------------------
@@ -404,20 +327,20 @@ __END__
 
 =head1 NAME 
 
-Gantry::Plugins::CRUD - helper for somewhat interesting CRUD work
+Gantry::Plugins::AjaxCRUD - helper for AJAX based CRUD work
 
 =head1 SYNOPSIS
 
-    use Gantry::Plugins::CRUD;
+    use Gantry::Plugins::AjaxCRUD;
 
-    my $user_crud = Gantry::Plugins::CRUD->new(
+    my $user_crud = Gantry::Plugins::AjaxCRUD->new(
         add_action      => \&user_insert,
         edit_action     => \&user_update,
         delete_action   => \&user_delete,
         form            => \&user_form,
-        validator       => \&user_form_validator,
-        redirect        => \&redirect_function,
-        template        => 'your.tt',  # defulats to form.tt
+        setup_action    => \&user_setup,
+        cancel_action   => \&user_cancel,
+        success_action  => \&user_success,
         text_descr      => 'database row description',
         use_clean_dates => 1,
         turn_off_clean_params => 1,
@@ -452,26 +375,60 @@ Gantry::Plugins::CRUD - helper for somewhat interesting CRUD work
         My::Model->dbi_commit;
     }
 
+    sub user_success {
+        my $self = shift;
+
+        $self->do_main( @_ );
+    }
+
+    sub user_cancel {
+        my $self = shift;
+
+        $self->do_main( @_ );
+    }
+
+    sub user_setup {
+        my ( $self, $data, $action, $text_descr ) = @_;
+
+        $self->template_wrapper('nowrapper.tt');
+        $self->stash->view->template('form.tt');
+
+        $self->stash->view->title('Add' . $text_descr)
+                if ($action eq 'add');
+        $self->stash->view->title('Edit' . $text_descr)
+                if ($action eq 'edit');
+        $self->stash->view->title('Delete' . $text_descr)
+                if ($action eq 'delete');
+
+    }
+
 =head1 DESCRIPTION
 
-This plugin helps you perform Create, Update, and Delete (commonly called
-CRUD, except that R is retrieve which you still have to implement separately).
+This module is very similar to C<Gantry::Plugins::CRUD>, but it is aimed
+at AJAX based systems.  Therefore, it resists all urges to refresh the
+page.  This leads to three extra callbacks as shown in the summary above
+and discussed below.
 
-Warning: most plugins export methods into your package, this one does NOT.
+For those who don't know, CRUD is short for CReate, Update, and Delete.
+(Some people include retrieve in this list, but users of Perl ORMs can
+use those for retrievals.)  While AJAX stands for Asynchronous JavaScript 
+and XML.  With varying emphasis on the XML part. 
 
-Normally, you can use C<Gantry::Plugins::AutoCRUD> when you are controlling
-a single table.  But, since its do_add, do_edit, and do_delete are genuine
-template methods*, sometimes it is not enough.  For instance, if you need to
-allow a regular user and an admin edit for the same database table, you need
-two methods for each action (two for do_add, two for do_edit, and two
-for do_delete).  This module can help.
+What this all means, is that your application is now being driven from 
+the browser and not from the server.  So a differant style of CRUD needs to
+be used.
 
-* A template method has a series of steps.  At each step, it calls a method
-via a hard coded name.
+Notice: most plugins export methods into your package, this one does NOT.
 
-This module still does basically the same things that AutoCRUD does:
+This module differs from C<Gantry::Plugins::AutoCRUD> in the same ways
+that C<Gantry::Plugins::CRUD> does.  It differs from C<Gantry::Plugins::CRUD>
+in how it responds to requests.  This module exists to support AJAX forms.
+As such, it does not do anything which might cause a page refresh by the
+browser.
 
-    redirect to listing page if user presses cancel
+This module still does basically the same things that CRUD does:
+
+    redispatch to listing page if user presses cancel
     if form parameters are valid:
         callback to action method
     else:
@@ -479,21 +436,26 @@ This module still does basically the same things that AutoCRUD does:
             add form validation errors
         (re)display form
 
+And as such is an almost drop in replace for CRUD.
+
 =head1 METHODS
 
 This is an object oriented only module (it doesn't export like the other
-plugins).
+plugins).  It has many of the same methods as C<Gantry::Plugins::CRUD> plus
+three extras.
 
 =over 4
 
 =item new
 
-Constructs a new CRUD helper.  Pass in a list of the following callbacks
-and config parameters:
+Constructs a new AjaxCRUD helper.  Pass in a list of the following callbacks
+and config parameters (similar, but not the same as in CRUD):
 
 =over 4
 
 =item add_action (a code ref)
+
+Same as in CRUD.
 
 Called with:
 
@@ -501,11 +463,13 @@ Called with:
     hash of form parameters
     the data you passed to add
 
-Called only when the form parameters are valid.
-You should insert into the database and not die (unless the insert fails,
-then feel free to die).  You don't need to change your location, but you may.
+Called only when the form parameters are valid. You should insert into the 
+database and not die (unless the insert fails, then feel free to die).  You 
+don't need to change your location, but you may.
 
 =item edit_action (a code ref)
+
+Same as in CRUD.
 
 Called with:
 
@@ -513,11 +477,13 @@ Called with:
     hash of form parameters
     the data you passed to edit
 
-Called only when form parameters are valid.
-You should update and not die (unless the update fails, then feel free
-to die).  You don't need to change your location, but you may.
+Called only when form parameters are valid. You should update and not die 
+(unless the update fails, then feel free to die).  You don't need to change 
+your location, but you may.
 
 =item delete_action (a code ref)
+
+Same as in CRUD.
 
 Called with:
 
@@ -531,6 +497,8 @@ but you may.
 
 =item form (a code ref)
 
+Same as in CRUD.
+
 Called with:
 
     your self object
@@ -543,85 +511,89 @@ _form with your self object and the row being edited (during editing)
 whereas this method ALWAYS receives both your self object and the
 data you supplied.
 
-=item validator (a code ref)
+=item setup_action (a code ref)
 
-Optional.
-
-By default, form parameters are validated with Data::FormValidator.  Supply
-a validator callback to do your own thing.  Your validator will be called
-with:
+Called with:
 
     your self object
-    a hash ref of form paramters
-    $form
-    the form_profile of $form
-    'add' or 'edit'
+    the data you passed to add, edit or deltet
+    the desired action (add, edit or delete)
+    the text description
 
-Where C<$form> is whatever your form callback returned, usually that is a
-hash reference for use by form.tt.  It describes the form and its fields.
-See the form paramter to new directly above.
+This method is called immediately by C<add_action>, C<edit_action>, and
+C<delete_action> to set the forms title and template. The default action
+for CRUD is to use form.tt as the template and to wrap your form with the 
+site template. Using the site wrapper will cause a page reload. By exposing 
+this default, you can change how this is handled.
 
-The last parameter is the name of the method from this module making the
-callback.  It can only be 'add' or 'edit.'
+In the above example this is done by calling $self->template_wrapper() 
+with the template nowrapper.tt. What nowrapper.tt needs to do, depends on
+which AJAX toolkit is being used on the browser. But it could be just as
+simple as the following:
 
-The C<form_profile> (provided by Gantry::Utils::CRUDHelp) is a hash
-reference with three keys:
+    [% content %]
 
-    required
-    optional
-    constraint_methods
+At this point your form is now just a HTML fragment.
 
-C<required> and C<optional> are array references of field names.
-C<constraint_methods> is a hash reference keyed by field name, storing
-a constraint.  See Data::FormValidator for details on constraints.
+Another example, lets say that your boss has just returned from the latest 
+Web Developer conference and is all aglow with the possibilites of an AJAX 
+front end. He has deemed that all forms should be rendered on the client 
+side and JSON will be used to send the form parameters. What to do? 
+Well CPAN to the rescue. Install the TT filter for JSON, along with the 
+JSON.pm module. Now create a template named json.tt like this:
 
-What you do with those parameters is entirely up to you.
+    [% USE JSON %]
+    [% view.data.json %]
 
-You must return:
+Change the froms template from form.tt to json.tt and add the following 
+statement:
 
-    an object which responds to the Data::FormValidator::Results API
+    $self->content_type('application/json');
 
-In particular, the object must respond to:
+You are now sending your form as a JSON datastream.
 
-    has_missing
-    has_invalid
-    missing
-    invalid
+=item cancel_action (a code ref)
 
-The methods prefixes with C<has_> return booleans.  The return values for
-the other two depend on how they are called.  If called with no arguments,
-they return the number of missing or invalid fields.  If called with an
-argument, the argument is the name of a field.  The method returns true
-if field is missing or invalid, false otherwise.
+Called with:
 
-Note that you may also set C<error_text> in the form hash.  This will
-also count as validation failure.  Use this to get total control of how
-your errors are reported.
+    your self object
+    the data you passed to add, edit or deltet
+    the action (add, edit or delete)
+    the user request
 
-=item redirect (optional, defaults to $your_self->location() )
+Triggered by the user successfully submitting the form.
+This and C<success_action> replaces the redirect callback used by
+C<Gantry::Plugins::CRUD>.  They should redispatch directly to a do_* method
+like this:
 
-NOTE WELL: It is a bad idea to name your redirect callback 'redirect'.
-That name is used internally in Gantry.pm.
+    sub _my_cancel_action {
+        my $self = shift;
 
-Where you want to go whenever an action is complete.  If you need control
-on a per action basis end your action callback with:
+        $self->do_something( @_ );
+    }
 
-    $your_self->location( 'http://location.of/your/choice' );
+=item success_action (a code ref)
 
-Your redirect is called with your self object and the data you passed to
-the add, edit, or delete method of this package.  This allows you complete
-control, even on cancellation.
+Called with:
 
-=item template (optional, defaults to form.tt)
+    your self object
+    the data you passed to add, edit or delete
+    the action (add, edit or delete)
+    the user request
 
-The name of your form template.
+Just like the C<cancel_action>, but triggered when the user presses the Cancel 
+button.
 
 =item text_descr
+
+Same as in CRUD.
 
 The text string used in the page titles and in the delete confirmation
 message.
 
 =item use_clean_dates (optional, defaults to false)
+
+Same as in CRUD.
 
 This is ignored unless you turn_off_clean_params, since it is redundant
 when clean_params is in use.
@@ -638,6 +610,8 @@ For this to work your form fields must have this key: C<<is => 'date'>>.
 
 =item turn_off_clean_params (optional, defaults to false)
 
+Same as in CRUD.
+
 By default, right before an SQL insert or update, the params hash from the
 form is passed through the clean_params routine which sets all non-boolean
 fields which are false to undef.  This prevents SQL errors with ORMs that
@@ -653,7 +627,7 @@ by this module before any callback is made.
 
 =item add
 
-Call this in your do_add on a C<Gantry::Plugins::CRUD> instance:
+Call this in your do_add on a C<Gantry::Plugins::AjaxCRUD> instance:
 
     sub do_special_add {
         my $self = shift;
@@ -665,12 +639,9 @@ It will die unless you passed the following to the constructor:
         add_action
         form
 
-You may also pass C<redirect> which must return a location suitable for passing
-to $your_self->relocate.
-
 =item edit
 
-Call this in your do_edit on a C<Gantry::Plugins::CRUD> instance:
+Call this in your do_edit on a C<Gantry::Plugins::AjaxCRUD> instance:
 
     sub do_special_edit {
         my $self = shift;
@@ -684,12 +655,9 @@ It will die unless you passed the following to the constructor:
         edit_action
         form
 
-You may also pass C<redirect> which must return a location suitable for passing
-to $your_self->relocate.
-
 =item delete
 
-Call this in your do_delete on a C<Gantry::Plugins::CRUD> instance:
+Call this in your do_delete on a C<Gantry::Plugins::AjaxCRUD> instance:
 
     sub do_special_delete {
         my $self    = shift;
@@ -713,9 +681,6 @@ which is taken as confirmation.
 It will die unless you passed the following to the constructor:
 
         delete_action
-
-You may also pass C<redirect> which must return a location suitable for passing
-to $your_self->relocate.
 
 =back
 
@@ -749,24 +714,19 @@ for a form field of type select_multiple.
 
 =head1 SEE ALSO
 
+ Gantry::Plugins::CRUD (for the same approach with page refreshes)
+
  Gantry::Plugins::AutoCRUD (for simpler situations)
 
  Gantry and the other Gantry::Plugins
 
-=head1 LIMITATIONS
-
-Currently only one redirection can be defined.  You can get more control
-by ending your action callback like this:
-
-    return $self->relocate( 'http://location.of/your/choice' );
-
 =head1 AUTHOR
 
-Phil Crow <philcrow2000@yahoo.com>
+Kevin Esteb
 
 =head1 COPYRIGHT and LICENSE
 
-Copyright (c) 2005, Phil Crow
+Copyright (c) 2006, Kevin Esteb
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.6 or,

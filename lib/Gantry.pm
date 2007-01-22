@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.45';
+our $VERSION = '3.47';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 our %plugin_callbacks;
@@ -43,7 +43,7 @@ sub handler : method {
         foreach my $callback (
                 @{ $plugin_callbacks{ $namespace }{ pre_init } }
         ) {
-            $callback->( $self );
+            $callback->( $self, $r_or_cgi );
         } 
 
         $self->init( $r_or_cgi );
@@ -360,6 +360,8 @@ sub import {
     my ( $class, @options ) = @_;
 
     my( $engine, $tplugin, $plugin, $conf_instance, $conf_file );
+
+    my $plugin_namespace = 'Gantry';
     
     foreach (@options) {
         
@@ -390,6 +392,10 @@ sub import {
             };
             if ($@) { die qq/Could not load plugin "$tplugin", "$@"/ }
         }
+
+        elsif ( /^-PluginNamespace=(\S+)/ ) {
+            $plugin_namespace = $1;
+        }
     
         else {
             $plugin = "Gantry::Plugins::$_";
@@ -404,12 +410,17 @@ sub import {
             if ($@) { die qq/Could not load plugin "$plugin", "$@"/ }
         
             eval {
-                my $namespace     = $class->namespace();
-                my @new_callbacks = $plugin->get_callbacks( $namespace );
+                if ( $plugin_namespace eq 'Gantry' ) {
+                    $plugin_namespace = $class->namespace;
+                }
+
+                my @new_callbacks = $plugin->get_callbacks(
+                        $plugin_namespace
+                );
 
                 foreach my $callback ( @new_callbacks ) {
                     push @{
-                            $plugin_callbacks{ $namespace }
+                            $plugin_callbacks{ $plugin_namespace }
                                              { $callback->{ phase } }
                          }, $callback->{ callback };
                 }
@@ -1245,6 +1256,25 @@ be registered from any module and are not limited to just plugins.
      my $gantry_site_object = shift;
      ...
  }
+
+Note that the pre_init callback receives an additional parameter which
+is either the request object (for mod_perl) or the CGI object.
+
+If your plugin in registers callbacks, please document this for your users.
+They should add -PluginNamespace to the full use list, and it must come
+before the plugins which register callbacks.  Example:
+
+    use Some::Gantry::App qw(
+        -Engine=MP20
+        -Template=TT
+        -PluginNamespace=module_name
+        SOAPMP20
+    );
+
+Then, they should implement method called namespace at the top of each
+heirarchy which needs the plugins:
+
+    sub namespace { return 'module_name'; }
  
 =item declined 
 

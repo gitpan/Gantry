@@ -6,6 +6,8 @@ Gantry::Docs - Table of Contents for Gantry documentation
 
 This is a list of the Gantry documentation pages.
 
+=over 4
+
 =item L<Gantry::Docs::About>
     About
 
@@ -42,6 +44,8 @@ a simple application with Gantry.
 
 Explains you should use a framework at all, whether it is Gantry or
 one of the many others.
+
+=back
 
 =head1 JOIN US
 
