@@ -11,9 +11,32 @@
     <!-- ADD the search form generation code here -->
 </div>
 [% END %]
+[%- IF self.fish_config( 'show_dev_navigation' ) %]
+<table class="dev_nav">
+    <tr>
+    <td>
+        
+        <select id="linkMenu" 
+            onchange="window.location = this.options[this.selectedIndex].value">
+            [% FOREACH page IN self.site_links.sort( 'label' ) %]
+            <option value='[% page.link %]'
+                [% page.link == self.location ? 'selected="selected"' : '' %]>
+                [%- page.label %] </option>
+            [% END %]
+        </select>    
+        
+        [%- IF view.data.livesearch %]
+        <input type="text"   name="livesearch" id="livesearch" value="" />
+        <input type="button" name="search" value="search"
+            onclick="javascript: livesearch();">
+        [%- END %]
+    </td>
+</tr>
+</table>	
+[%- END %]
 
 <div class="box">       
-	<table id="results">
+	<table id="results" class="results">
 		<tr>
 			[% FOREACH heading IN view.data.headings %]
 			<td class="hdr">[% heading %]</td>
@@ -33,7 +56,7 @@
 		</tr>	  	
 		
 		[% FOREACH row IN view.data.rows %]
-		<tr>
+		<tr class="results-row">
 			[% FOREACH elem IN row.data %]
 				<td class="dta">[% elem %]</td>							
 			

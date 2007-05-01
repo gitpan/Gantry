@@ -252,11 +252,11 @@ hash reference of group ids to their name that the user is in.
 
 =item Gantry::Control::C::Access
 
-=item Gantry::Control::C::Authen
+=item Gantry::Control::C::AuthenRegular
 
 This module allows authentication against a database. Woo.
 
-=item Gantry::Control::C::Authz
+=item Gantry::Control::C::AuthzRegular
 
 This is a simple database driven autorization system. This module also
 details the other Authz modules in the library.

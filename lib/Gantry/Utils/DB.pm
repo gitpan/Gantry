@@ -251,7 +251,7 @@ __END__
 
 =head1 NAME
 
-Gantry::Utils::DB - Database wrapper fucntions, specfic to PostgreSQL
+Gantry::Utils::DB - Database wrapper functions, specfic to PostgreSQL
 
 =head1 SYNOPSIS
 

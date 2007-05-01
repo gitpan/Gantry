@@ -10,10 +10,11 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.47';
+our $VERSION = '3.49';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 our %plugin_callbacks;
+our $engine_cycle = 0;
 
 ############################################################
 # Functions                                                #
@@ -29,6 +30,7 @@ sub handler : method {
 
     # Create the stash object
     $self->make_stash();
+    $self->_increment_engine_cycle();
 
     # die if we don't know the engine
     if ( ! $self->can( 'engine' ) ) {
@@ -36,9 +38,10 @@ sub handler : method {
     }
     
     my $namespace = $class->namespace;
-    my $action;
+    my( @p, $p1 );
+    
     eval {                              
-
+        
         # Do the plugin callbacks for the 'pre_init' phase 
         foreach my $callback (
                 @{ $plugin_callbacks{ $namespace }{ pre_init } }
@@ -47,21 +50,39 @@ sub handler : method {
         } 
 
         $self->init( $r_or_cgi );
+    
+        @p  = $self->cleanroot( $self->dispatch_location() );
+        $p1 = ( shift( @p ) || 'main' );
+
+        # set the action         
+        $self->action( 'do_'. $p1 );
 
         # Do the plugin callbacks for the 'post_init' phase 
-        foreach my $callback (
-                @{ $plugin_callbacks{ $namespace }{ post_init } }
-        ) {
-            $callback->( $self );
+        foreach my $cb ( @{ $plugin_callbacks{$namespace}{post_init} } ) {
+            $cb->( $self );
         } 
-                
-        my @p       = $self->cleanroot( $self->dispatch_location );
-        my $p1      = ( shift( @p ) || 'main' );
-        $action     = 'do_'. $p1;
+    };
+
+    # Call do_error and Return 
+    if( $@ ) {
+        my $e = $@;
+        return( $self->cast_custom_error( $self->custom_error( $e ), $e ) );
+    }
+    
+    # check for response page -- used primarily for caching
+    if ( $self->gantry_response_page() ) {
+        $self->set_content_type();
+        $self->set_no_cache();       
+        $self->send_http_header();
+        $self->print_output( $self->gantry_response_page() );
+        return( $self->success_code() );            
+    }
+    
+    eval {    
 
         # Do action if valid
-        if ( $self->can( $action ) ) {  
-            $self->do_action( $action, @p );
+        if ( $self->can( $self->action() ) ) {  
+            $self->do_action( $self->action(), @p );
             $self->cleanup( );  # Cleanup.
         }
         
@@ -84,7 +105,7 @@ sub handler : method {
     return $self->redirect_response() if ( $self->redirect );
     
     # Return DECLINED
-    return $self->declined_response( $action ) if ( $self->declined );
+    return $self->declined_response( $self->action() ) if ( $self->declined );
         
     # Call do_error and Return 
     if( $@ ) {
@@ -101,20 +122,15 @@ sub handler : method {
     eval {
 
         # Do the plugin callbacks for the 'pre_template_process' phase 
-        foreach my $callback (
-                @{ $plugin_callbacks{ $namespace }{ pre_process } }
-        ) {
-            $callback->( $self );
+        foreach my $cb ( @{ $plugin_callbacks{$namespace}{pre_process} } ) {
+            $cb->( $self );
         } 
 
-        $self->{__RESPONSE_PAGE__} = '';
-        $self->{__RESPONSE_PAGE__} = $self->do_process( );
+        $self->gantry_response_page( $self->do_process() || '' );
 
         # Do the plugin callbacks for the 'pre_template_process' phase 
-        foreach my $callback (
-                @{ $plugin_callbacks{ $namespace }{ post_process } }
-        ) {
-            $callback->( $self );
+        foreach my $cb ( @{ $plugin_callbacks{$namespace}{post_process} } ) {
+            $cb->( $self );
         } 
 
         my $status = $self->status() ? $self->status() : 200;
@@ -122,12 +138,12 @@ sub handler : method {
         if ( $status < 400 ) {
             
             $self->send_http_header();
-            $self->print_output( $self->{__RESPONSE_PAGE__} );
+            $self->print_output( $self->gantry_response_page() );
         
         }
         else {
-            $self->cast_custom_error( $self->{__RESPONSE_PAGE__} ) 
-                if $self->{__RESPONSE_PAGE__};
+            $self->cast_custom_error( $self->gantry_response_page() ) 
+                if $self->gantry_response_page();
         }
     };
 
@@ -147,6 +163,13 @@ sub handler : method {
     }
     
 } # end handler
+
+#-------------------------------------------------
+# $self->gantry_version( )
+#-------------------------------------------------
+sub gantry_version {
+    return $VERSION;
+}
 
 #-------------------------------------------------
 # $self->make_stash( )
@@ -171,6 +194,26 @@ sub stash {
 } # end stash
 
 #-------------------------------------------------
+# $self->engine_cycle()
+#-------------------------------------------------
+sub engine_cycle {
+    my ( $self ) = ( shift );
+
+    return( $engine_cycle );
+    
+} # end engine_cycle
+
+#-------------------------------------------------
+# $self->_increment_engine_cycle()
+#-------------------------------------------------
+sub _increment_engine_cycle {
+    my ( $self ) = ( shift );
+
+    ++$engine_cycle;
+    
+} # end _increment_engine_cycle
+
+#-------------------------------------------------
 # $self->declined( value )
 #-------------------------------------------------
 sub declined {
@@ -180,6 +223,17 @@ sub declined {
     return( $$self{__DECLINED__} ); 
     
 } # end declined
+
+#-------------------------------------------------
+# $self->gantry_response_page( value )
+#-------------------------------------------------
+sub gantry_response_page {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__RESPONSE_PAGE__} = $p if defined $p;
+    return( $$self{__RESPONSE_PAGE__} ); 
+    
+} # end gantry_response_page
 
 #-------------------------------------------------
 # $self->redirect( value )
@@ -374,7 +428,7 @@ sub import {
 
             eval {
                 require $engine_file;
-                import $engine;
+                $engine->import();
             };
             if ( $@ ) { die qq/Could not load engine "$engine", "$@"/ }
         }
@@ -388,7 +442,7 @@ sub import {
 
             eval {
                 require $tfile;
-                import $tplugin;
+                $tplugin->import();
             };
             if ($@) { die qq/Could not load plugin "$tplugin", "$@"/ }
         }
@@ -398,14 +452,26 @@ sub import {
         }
     
         else {
-            $plugin = "Gantry::Plugins::$_";
-            my $plugin_file = File::Spec->catfile( 
-                'Gantry', 'Plugins', "${_}.pm" 
-            );
+            $plugin         = "Gantry::Plugins::$_";
+
+            my @name_pieces = split /::/, $_;
+            my $last_piece  = pop @name_pieces;
+
+            my $plugin_file;
+            if ( @name_pieces ) {
+                $plugin_file = File::Spec->catfile( 
+                    'Gantry', 'Plugins', @name_pieces, "${last_piece}.pm" 
+                );
+            }
+            else {
+                $plugin_file = File::Spec->catfile( 
+                    'Gantry', 'Plugins', "${last_piece}.pm" 
+                );
+            }
 
             eval {
                  require $plugin_file;
-                 import $plugin;
+                 $plugin->import();
             };
             if ($@) { die qq/Could not load plugin "$plugin", "$@"/ }
         
@@ -473,6 +539,13 @@ sub init {
 
     $self->engine_init( $r_or_cgi );
 
+    # Do the plugin callbacks for the 'init' phase 
+    foreach my $callback (
+        @{ $plugin_callbacks{$self->namespace}{ post_engine_init } }
+    ) {
+        $callback->( $self );
+    }    
+
     $self->uri( $self->fish_uri() );
     $self->location( $self->fish_location() );
     $self->path_info( $self->fish_path_info() );
@@ -502,11 +575,12 @@ sub init {
     
     # set application directory variables
     my $app_root = $self->fish_config( 'root' ) || '';
-
-    $self->root( join ':', $app_root, Gantry::Init::base_root() );
+    
+    $self->root( $app_root );
     $self->doc_root( $self->fish_config( 'doc_root' ) );
     $self->css_root( $self->fish_config( 'css_root' ) );
     $self->img_root( $self->fish_config( 'img_root' ) );
+    $self->js_root( $self->fish_config( 'js_root' ) );
     $self->tmp_root( $self->fish_config( 'tmp_root' ) );
     
     # set application uri variables
@@ -515,6 +589,7 @@ sub init {
     $self->app_rootp( $self->fish_config( 'app_rootp' ) );
     $self->img_rootp( $self->fish_config( 'img_rootp' ) );
     $self->css_rootp( $self->fish_config( 'css_rootp' ) );
+    $self->js_rootp( $self->fish_config( 'js_rootp' ) );
     $self->tmp_rootp( $self->fish_config( 'tmp_rootp' ) );
     $self->editor_rootp( $self->fish_config( 'editor_rootp' ) );
     
@@ -605,6 +680,17 @@ sub location {
     return( $self->{__LOCATION__} || '' );
         
 } # end location
+
+#-------------------------------------------------
+# $self->action( value )
+#-------------------------------------------------
+sub action {
+    my ( $self, $p ) = @_;
+
+    $self->{__ACTION__} = $p if ( defined $p );
+    return( $self->{__ACTION__} || '' );
+        
+} # end action
 
 #-------------------------------------------------
 # $self->current_url( )
@@ -759,6 +845,17 @@ sub img_root {
 } # end img_root
 
 #-------------------------------------------------
+# $self->js_root( value )
+#-------------------------------------------------
+sub js_root {
+    my ( $self, $p ) = @_;
+
+    $self->{__JS_ROOT__} = $p if ( defined $p );
+    return( $self->{__JS_ROOT__} || '' );
+        
+} # end js_root
+
+#-------------------------------------------------
 # $self->app_rootp( value )
 #-------------------------------------------------
 sub app_rootp {
@@ -795,6 +892,17 @@ sub doc_rootp {
     return( $self->{__DOC_ROOTP__} || '' );
         
 } # end doc_rootp
+
+#-------------------------------------------------
+# $self->js_rootp( value )
+#-------------------------------------------------
+sub js_rootp {
+    my ( $self, $p ) = @_;
+
+    $self->{__JS_ROOTP__} = $p if ( defined $p );
+    return( $self->{__JS_ROOTP__} || '' );
+        
+} # end js_rootp
 
 #-------------------------------------------------
 # $self->doc_root( value )
@@ -1014,6 +1122,13 @@ sub is_post {
     return( $self->method eq 'POST' ? 1 : 0 );
         
 } # end is_post
+
+#-------------------------------------------------
+# $self->controller_config()
+#-------------------------------------------------
+sub controller_config {
+    return {};
+} # end controller_config
 
 ##-------------------------------------------------
 ## $self->get_conf( )
@@ -1275,8 +1390,8 @@ Then, they should implement method called namespace at the top of each
 heirarchy which needs the plugins:
 
     sub namespace { return 'module_name'; }
- 
-=item declined 
+
+=item declined
 
  $self->declined( 1 );
 
@@ -1301,6 +1416,12 @@ Set and unset the redirect flag
 
 Set and unset the no cache flag. This directive informs Apache to
 either send the the no_cache header or not. 
+
+=item gantry_response_page
+
+Dual use accessor for caching page content.  If a plugin prior to the
+action phase populates this value, that value will be directly returned
+to the browser, no dispatch will occur.
 
 =item template_disable 
 
@@ -1328,6 +1449,18 @@ locations.
 
 This method is called at the end of the request phase to cleanup,
 disconnect for a database, etc.
+
+=item icrement_engine_cycle
+
+ $self->_increment_engine_cycle
+
+Increments the the engine cycles total. 
+
+=item engine_cycle
+
+ $self->engine_cycle
+
+Returns the engine cycle total.  
 
 =item custom_error
 
@@ -1544,6 +1677,14 @@ the root URI location for the web application css files.
 Set/get for the tmp_rootp value. This value is used to identify the
 the root URI location for the web application temporary files.
 
+=item js_rootp
+
+ $self->js_rootp( '/myapp/js' );
+ $js_rootp = $self->js_rootp;
+
+Set/get for the js_rootp value. This value is used to identify the
+the root URI location for the web application javascript files.
+
 =item editor_rootp
 
  $self->editor_rootp( '/fck' );
@@ -1560,6 +1701,14 @@ the root URI location for the html editor.
 Set/get for the tmp_root value. This value is used to identify the
 the root directory location for the web application temporary files.
 
+=item js_root
+
+ $self->js_rootp( '/home/httpd/html/myapp/js' );
+ $js_root = $self->js_root;
+
+Set/get for the js_root value. This value is used to identify the
+the root directory location for the web application javascript files.
+
 =item stash
 
 Use this to store things for your template system, etc.  See Gantry::Stash.
@@ -1575,6 +1724,15 @@ An obscure accessor for storing smtp_host.
 
 Set/get for the user value. Return the full user name of the active user.
 This value only exists if the user has successfully logged in.
+
+=item controller_config
+
+This method is used by the AutoCRUD plugin and others to get code controlled
+config information, like table permissions for row level auth contro.
+
+The method in this module returns an empty hash, making it safe to call
+this method from any Gantry subclass.  If you want to do anything useful,
+you need to override this method in your controller.
 
 =item get_auth_model_name
 
@@ -1725,6 +1883,15 @@ Otherwise, every app in your Apache server will have to use the plugin,
 even those that don't need it.
 
 Currently, the only plugin that registers callbacks is AuthCookie.
+
+=item gantry_version
+
+Returns the current Gantry version number.  Like using C<$Gantry::VERSION>
+but via a method.
+
+=item action
+
+Returns the name of the current do_ method (like 'do_edit').
 
 =back
 

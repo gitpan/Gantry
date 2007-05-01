@@ -20,6 +20,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     cgi_obj
     config
     cast_custom_error
+    consume_post_body
     declined_response
     dispatch_location
     engine
@@ -35,11 +36,13 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     get_cached_config
     get_config
     get_dbh
+    get_post_body
     locations
     log_error
     get_arg_hash
     header_in
     header_out
+    hostname
     is_status_declined
     port
     print_output
@@ -120,12 +123,46 @@ sub add_location {
 } # end add_location
 
 #--------------------------------------------------
+# $self->consume_post_body();
+#--------------------------------------------------
+sub consume_post_body {
+    my $self = shift;
+    my $cgi  = shift;
+
+    my $content_length = $ENV{ CONTENT_LENGTH };
+
+    return unless $content_length; # nothing to consume
+
+    $content_length    = 1e6 if $content_length > 1e6; # limit to ~ 1Meg
+
+    # just read STDIN
+    my $content;
+    my $buffer;
+    while ( read( STDIN, $buffer, $content_length ) ) {
+        $content .= $buffer;
+
+        $content_length -= length $buffer;
+    }
+
+    $self->{__POST_BODY__} = $content;
+}
+
+#--------------------------------------------------
+# $self->get_post_body();
+#--------------------------------------------------
+sub get_post_body {
+    my $self = shift;
+
+    return $self->{__POST_BODY__};
+}
+
+#--------------------------------------------------
 # $self->dispatch();
 #--------------------------------------------------
 sub dispatch {
     my( $self ) = @_;
 
-    my @path = ( split( /\//, $ENV{PATH_INFO} ) );          
+    my @path = ( split( m|/|, $ENV{PATH_INFO}||'' ) );         
 
     LOOP:
     while ( @path ) {
@@ -175,7 +212,10 @@ sub file_upload {
     my $filename = $q->param( $param );
     $filename =~ s/\\/\//g;
     
-    my( $name, $path, $suffix ) = fileparse( $filename, qr/\.[^.]*/ ); 
+    my( $name, $path, $suffix ) = fileparse( 
+		$filename, 
+		qr/\.(tar\.gz$|[^.]*)/ 
+	);  
     
     return( {
         unique_key => time . rand( 6 ),
@@ -233,6 +273,16 @@ sub base_server {
     return( $ENV{HTTP_SERVER} || $ENV{HTTP_HOST} );
     
 } # end base_server
+
+#-------------------------------------------------
+# $self->hostname( )
+#-------------------------------------------------
+sub hostname {
+    my( $self ) = ( shift );
+
+    return( $ENV{HTTP_SERVER} || $ENV{HTTP_HOST} );
+    
+} # end hostname
 
 #--------------------------------------------------
 # $self->cgi_obj( $hash_ref )
@@ -308,17 +358,28 @@ sub engine {
 sub engine_init {
     my $self    = shift;
     my $cgi_obj = shift;
- 
+
     #$cgi_obj->{params} = parse_env();
     $CGI::Simple::DISABLE_UPLOADS = 
         $self->fish_config( 'disable_uploads' ) || 0;
-        
-    $CGI::Simple::POST_MAX = $self->fish_config( 'post_max' )  ||'20000000000';    
-        
-    my $c = CGI::Simple->new();
+
+    $CGI::Simple::POST_MAX = $self->fish_config( 'post_max' )  ||'20000000000';
+
+    my $c;
+    if ( $self->get_post_body() ) {
+        my $params = $ENV{ QUERY_STRING };
+        $params   .= '&' if $params;
+        $params   .= $self->get_post_body;
+
+        $c = CGI::Simple->new( $params );
+    }
+    else {
+        $c = CGI::Simple->new();
+    }
+
     $cgi_obj->{params} = $c->Vars;
-    
     $self->cgi_obj( $cgi_obj );
+
     $self->cgi( $c );
 
 } # END engine_init
@@ -378,7 +439,7 @@ sub fish_uri {
 sub fish_user {
     my $self = shift;
 
-    return $self->{cgi_obj}{config}{user} || $ENV{ USER };
+    return $self->user() || $self->{cgi_obj}{config}{user} || '';
 } # END fish_user
 
 #--------------------------------------------------
@@ -413,17 +474,53 @@ sub get_config {
     my $cached   = 0;
     my $location = '';
 
+
     eval {
         $location = $self->location;
     };
+
+    $conf = $self->get_cached_config( $instance, $location );
+    if ( defined $conf ) {
+        return $conf;
+    }
+    
+    my $gantry_cache     = 0;
+    my $gantry_cache_key = '';
+    my $gantry_cache_hit = 0;
+    eval { 
+        ++$gantry_cache if $self->cache_inited();
+    };
+    
+    # are we using gantry cache ?
+    if ( $gantry_cache ) {
+
+        # blow the gantry conf cache when server starts
+        if ( $self->engine_cycle() == 1 ) {
+            
+            foreach my $key ( @{ $self->cache_keys() } ) {
+                my @a = split( ':', $key );                
+                if ( $a[0] eq 'gantryconf' ) {
+                    $self->cache_del( $key );
+                }
+            }
+        }
+                
+        # build cache key
+        $gantry_cache_key = join( ':',
+            "gantryconf",
+            ( $self->namespace() || '' ),
+            $instance,
+            $location
+        );
+
+        $conf = $self->cache_get( $gantry_cache_key );
+        
+        ++$gantry_cache_hit if defined $conf;
+    }
+    
     # There will be an error if this method was called during construction
     # that is before their is a Gantry descended object as the invocant.
-    # In that case, we don't care about the location anyway.
-    
-    $conf        = $self->get_cached_config( $instance, $location );
-
-    $cached++ if ( defined $conf );
-
+    # In that case, we don't care about the location anyway.    
     require Gantry::Conf;
 
     $conf      ||= Gantry::Conf->retrieve(
@@ -433,9 +530,14 @@ sub get_config {
             location    => $location
         }
     );
-
-    $self->set_cached_config( $instance, $location, $conf )
-            if ( not $cached and defined $conf );
+    
+    if ( defined $conf ) {        
+        $self->set_cached_config( $instance, $location, $conf );
+    
+        if ( $gantry_cache && ! $gantry_cache_hit ) {
+            $self->cache_set( $gantry_cache_key, $conf );
+        }
+    }
 
     return $conf;
 
@@ -446,15 +548,18 @@ my %conf_cache;
 sub get_cached_config {
     my $self     = shift;
     my $instance = shift;
-
-    return $conf_cache{ $instance };
+    my $location = shift;
+    
+    return $conf_cache{ $instance . $location } || undef;
 }
 
 sub set_cached_config {
     my $self     = shift;
     my $instance = shift;
-    shift;                 # not using location, this cache good for one page
+    my $location = shift;                 # not using location, this cache good for one page
     my $conf     = shift;
+
+    $conf_cache{ $instance . $location } = $conf;
 }
 
 #-------------------------------------------------
@@ -908,6 +1013,12 @@ Dual accessor for the CGI::Simple object.
 
 Dual accessor for updating the config hash in the CGI engine object.
 
+=item $self->consume_post_body
+
+This method is for plugins to use at the pre_init phase to catch XML
+requests and the like.  It is imcompatible with normal form processing.
+For example L<Gantry::Plugins::SOAP::Doc> uses it.
+
 =item $self->declined_response
 
 Returns the proper numerical code for DECLINED response.
@@ -990,6 +1101,12 @@ set receives those plus the conf hash it should cache.
 
 Returns the db handle (if there is one).
 
+=item $self->get_post_body
+
+Returns whatever C<consume_post_body> took from the post body.  Use this
+if you also use a plugin that consumes the post body like
+L<Gantry::Plugins::SOAP::Doc> does.
+
 =item $self->header_in
 
 Does nothing but meet the engine API.  mod_perl engines use this.
@@ -1000,6 +1117,11 @@ Deprecated, merely calls response_headers (defined in Gantry.pm)
 for you, which you should have done yourself.
 
 Change the value of a response header, or create a new one.
+
+=item $self->hostname
+
+Returns the current host name from the HTTP_SERVER or the HTTP_HOST
+environment variables.  HTTP_SERVER takes precedence.
 
 =item $self->is_status_declined
 

@@ -153,6 +153,35 @@ sub supdate_or_create {
     return $schema->resultset( $class->table_name )->update_or_create( @_ );
 }
 
+my $now;
+sub datetime_now {
+    return $now if $now;
+
+    # closure
+    my $class       = shift;
+    my $gantry_site = shift;
+    if ($gantry_site->fish_config('dbconn') =~ /mysql|pg/i) {
+        # mysql|pgsql
+        $now = 'NOW()';
+    }
+    else {
+        # sqlite
+        $now = \'datetime("now")';
+    }
+
+    return $now;
+
+    # XXX: could be made into a compile time constant if I could figure
+    # out how to get hold of $dbconn at this module's compile time. I
+    # guess AUTOLOAD could be used instead
+    #my $code = $dbconn =~ /mysql|pg/i
+    #   ? qq['NOW()']
+    #   : qq[\'datetime("now")'];
+    #eval "sub datetime_now () { $code }";
+
+}
+
+
 1;
 
 =head1 NAME
@@ -283,6 +312,25 @@ The available s* methods are:
 =item supdate_or_create
 
 =back
+
+
+Other helper methods:
+
+=over 4
+
+=item datetime_now
+
+returns the right SQL command for NOW() (datetime field) depending on
+whether sqlite or mysql or pgsql are used.
+
+For example in controller to set the 'modified' column:
+
+  $params->{modified} = $MY_MODEL->datetime_now($self);
+
+where $self is $gantry_site object.
+
+=back
+
 
 =head1 AUTHOR
 

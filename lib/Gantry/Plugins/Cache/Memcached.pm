@@ -1,16 +1,20 @@
-package Gantry::Cache::Memcached;
+package Gantry::Plugins::Cache::Memcached;
 
 use strict;
 use warnings;
 
 use Gantry;
 use Cache::Memcached;
+use Gantry::Plugins::Cache;
+
 use base 'Exporter';
 
 our @EXPORT = qw( 
     cache_del
     cache_get
     cache_set
+    cache_clear
+    cache_keys
     cache_init
     cache_handle
     cache_inited
@@ -101,6 +105,16 @@ sub cache_set {
 
 }
 
+sub cache_clear {
+    my ($gobj) = @_;
+    
+    $gobj->cache_handle->flush_all;
+}
+
+sub cache_keys {
+    # currently there is now way to retrieve the cache keys
+}
+
 sub cache_del {
     my ($gobj, $key) = @_;
 
@@ -118,16 +132,17 @@ __END__
 
 =head1 NAME
 
-Gantry::Cache::Memcached - A Plugin interface to a caching subsystem
+Gantry::Plugins::Cache::Memcached - A Plugin interface to a caching subsystem
 
 =head1 SYNOPSIS
 
-It is sometimes desireable to cache data between page accesess. This 
+It is sometimes desirable to cache data between page acceses. This 
 module gives access to the Cache::Memcached module to store that data.
-  
-Inside MyApp.pm
 
-    use Gantry::Cache::Memcached;
+  <Perl>
+    # ...
+    use MyApp qw{ -Engine=CGI -TemplateEngine=TT Cache::Memcached };
+  </Perl>
 
 =head1 DESCRIPTION
 
@@ -170,6 +185,13 @@ the application.
 
  $self->cache_init();
 
+=item cache_inited
+
+For internal use.
+
+Dual use accessor for init flag.  If cache_init has run this attribute
+is 1, otherwise it's 0.
+
 =item cache_namespace
 
 This method will get/set the current namespace for cache operations.
@@ -200,6 +222,16 @@ combination.
  $self->cache_namespace($namespace);
  $self->cache_set($key, $data);
 
+=item cache_keys
+
+This method is currently not available with memcached.
+
+=item cache_clear
+
+This method will clear the entire cache.
+
+ $self->cache_clear();
+     
 =item cache_del
 
 This method removes the data associated with the current namespace/key 
@@ -223,9 +255,10 @@ handler.
 
     Gantry
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Kevin L. Esteb <kesteb@wsipc.org>
+Kevin L. Esteb <kesteb@wsipc.org>,
+Tim Keefer <tim@timkeefer.com>
 
 =head1 COPYRIGHT AND LICENSE
 

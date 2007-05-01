@@ -1,16 +1,64 @@
-<div style="float: left">
-    [% IF view.data.page.previous_page %]
-    <a href="[% site.uri %]?page=[% view.data.page.previous_page %]">
-    << Previous
-    </a>
-    [% END %]
-</div>
+[% IF ( view.data.page.last_page || 0 ) > 1 %]
 
-<div style="float: right">
+<p class="pager_next" style="float: right; padding-left: 10px">
     [% IF view.data.page.next_page %]
     <a href="[% site.uri %]?page=[% view.data.page.next_page %]">
     Next >>
     </a>
     [% END %]
-</div>
+</p>
 
+[% 
+   fp = view.data.page.first_page + 0; 
+   cp = view.data.page.current_page + 0;
+   lp = view.data.page.last_page + 0;
+      
+   pages_in_set = self.fish_config( 'pages_in_set' ) || 10;
+  
+   last_page_diff  = lp - cp;
+   first_page_diff = cp - fp;
+   
+   IF ( last_page_diff > pages_in_set );
+      lp = cp + pages_in_set;
+      lp_shortened = 1;
+   END;
+
+   IF ( first_page_diff > pages_in_set );
+      fp = cp - pages_in_set;
+      fp_shortened = 1;
+   END;
+   
+%]
+
+<p  class="pager_pages" style="float: right; padding-left: 10px">
+
+[% IF fp_shortened %]
+    <a style="padding-right: 10px;" href="[% site.uri %]?page=1">1</a>
+[% END %]
+
+[% FOREACH page = [ fp .. lp ] %]
+    [% IF page == cp %]
+        <span class="current_page">[% page %]</span>
+    [% ELSE %]
+        <a href="[% site.uri %]?page=[% page %]">[% page %]</a>
+    [% END %]
+[% END %]
+
+[% IF lp_shortened %]
+    <a style="padding-left: 10px;" href="[% site.uri %]?page=[% view.data.page.last_page %]">
+        [% view.data.page.last_page %]
+    </a>
+[% END %]
+</p>
+
+<p class="pager_previous" style="float: right; padding-left: 10px">
+    [% IF view.data.page.previous_page %]
+    <a href="[% site.uri %]?page=[% view.data.page.previous_page %]">
+    << Previous
+    </a>
+    [% END %]
+</p>
+
+<br style="clear: both" />
+
+[% END %]

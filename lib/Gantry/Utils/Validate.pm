@@ -217,7 +217,7 @@ Standard constructor, call it first.  It takes nothing.
 =item is_date( $date )
 
 This function takes a date, C<$date>, and verifies that it is indeed a valid
-date. The date must be of the form "MM-DD-YYYY". The fucntion returns 
+date. The date must be of the form "MM-DD-YYYY". The function returns 
 either '1' or '0'.
 
 =item is_email( $email )

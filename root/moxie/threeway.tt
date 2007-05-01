@@ -1,0 +1,52 @@
+<script type="text/javascript">
+<!--
+function checkAll() {
+    var field = document.getElementsByTagName( 'input' );
+
+    for ( i = 0; i < field.length; i++ ) {          
+	    field[i].checked = true ;
+	}
+    
+}
+
+function uncheckAll() {
+    var field = document.getElementsByTagName( 'input' );
+
+    for ( i = 0; i < field.length; i++ ) {          
+	    field[i].checked = false ;
+	}
+}
+//  End -->
+</script>
+
+<form method="post" action="[% view.form.action || self.uri %]" 
+	id="[% view.form.name || 'myform' %]">
+
+    <div class="form-box">
+       <h5 class="heading">[% view.form.legend  || 'Make Selection' %]</h5>
+
+       <dl class="checklist">
+	   [%- WHILE ( available = view.data.available.next ) %]
+       [%- id = available.id %]
+       <dd>
+           <input type="checkbox" value="1" name="subscribe:[% id %]" 
+           [%- IF view.data.selected.$id %]
+               checked="checked"
+           [%- END %] />
+           
+           <span class="label">[% available.foreign_display %]</span>            
+       </dd>
+
+       [%- END %]
+       </dl>
+       <br style="clear: both" />
+    </div>
+
+    <div class="form-box actions">
+        <a href="javascript: checkAll();">Check All</a>
+        <a href="javascript: uncheckAll();">Uncheck All</a>
+        <input type="submit" name="submit" value="Submit" />
+        <input type="submit" name="cancel" value="Cancel" />
+    </div>
+
+</form>

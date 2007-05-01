@@ -1,10 +1,9 @@
-package Gantry::Plugins::SOAPMP20;
+package Gantry::Plugins::SOAP::RPC;
 
 use strict;
 
 use base 'Exporter';
 
-use Apache2::Request;
 use XML::Simple;
 use SOAP::Lite;
 
@@ -13,7 +12,7 @@ our @EXPORT = qw(
     soap_out
     do_main
     do_wsdl
-    custom_error
+    return_error
 );
 
 my %registered_callbacks;
@@ -27,7 +26,7 @@ sub get_callbacks {
     return if ( $registered_callbacks{ $namespace }++ );
 
     warn 'Use -PluginNamespace=something when you use '
-        .   'Gantry::Plugins::SOAPMP20' if ( $namespace eq 'Gantry' );
+        .   'Gantry::Plugins::SOAP::RPC' if ( $namespace eq 'Gantry' );
 
     return (
         { phase => 'pre_init', callback => \&steal_post_body }
@@ -35,24 +34,13 @@ sub get_callbacks {
 }
 
 #-----------------------------------------------------------
-# $self->steal_post_body( $r )
+# $self->steal_post_body( $r_or_cgi )
 #-----------------------------------------------------------
 sub steal_post_body {
-    my $self = shift;
-    my $r    = shift;
-    my $req  = Apache2::Request->new( $r );
+    my $self     = shift;
+    my $r_or_cgi = shift;
 
-    my $content_length = $r->headers_in->{'Content-length'};
-
-    if ( $content_length > 15 ) {
-        my ( $content, $buffer );
-
-        while ( $r->read( $buffer, $content_length ) ) {
-            $content .= $buffer;
-        }
-
-        $r->pnotes( 'raw_body', $content );
-    }
+    $self->consume_post_body( $r_or_cgi );
 }
 
 #-----------------------------------------------------------------
@@ -64,21 +52,20 @@ sub do_main {
     my $action      = $input->{ action };
     my $output_data;
 
-    eval {
-        $output_data = $self->$action( $input->{ data } );
-    };
-    if ( $@ =~ /Can't locate object method/ ) {
-        die "No such soap method: '$action'\n";
-    }
-    elsif ( $@ ) {
-        my $message = $@;
-        $message    =~ s/at \S+ line .*//;
-        die "$message\n";
-    }
-
     $self->template_wrapper( 0 );
     $self->template_disable( 1 );
     $self->content_type( 'text/xml' );
+
+    eval {
+        $output_data = $self->$action( $input->{ data } );
+    };
+    if ( $@ =~ /Can't locate object method "$action"/ ) {
+        return $self->return_error( "No such soap method: '$action'" );
+    }
+    elsif ( $@ ) {
+        my $message = $@;
+        return $self->return_error( "$message" );
+    }
 
     return $self->soap_out( $action, $output_data );
 } # END do_main
@@ -105,7 +92,7 @@ sub do_wsdl {
 sub soap_in {
     my $self = shift;
 
-    my $input_struct = XMLin( $self->r->pnotes( 'raw_body' ) );
+    my $input_struct = XMLin( $self->get_post_body );
     my $body         = $input_struct->{ 'soap:Body' };
 
     my ( $action )   = keys %{ $body };
@@ -158,7 +145,7 @@ sub soap_out {
     return $output;
 }
 
-sub custom_error {
+sub return_error {
     my ( $self, $error ) = @_;
 
     my $serializer = SOAP::Serializer->new();
@@ -173,20 +160,19 @@ sub custom_error {
 
 =head1 NAME
 
-Gantry::Plugins::SOAPMP20 - mod_perl 2 SOAP support
+Gantry::Plugins::SOAP::RPC - RPC style SOAP support
 
 =head1 SYNOPSIS
 
 In your GEN module:
 
-    use Your::App::BaseModule qw( -PluginNamespace=YourApp SOAPMP20 );
-    use Gantry::Plugins::SOAPMP20 qw(
-        soap_in
-        soap_out
-        do_main
-        do_wsdl
-        custom_error
-    );
+    use Your::App::BaseModule qw( -PluginNamespace=YourApp SOAP::RPC );
+    # this will export these into your package:
+    #    soap_in
+    #    soap_out
+    #    do_main
+    #    do_wsdl
+    #    return_error
 
     sub get_soap_ops {
         my $self = shift;
@@ -226,12 +212,13 @@ In your stub:
 Your data will have whatever was in your client's soap request.  You
 are responsible for diagnosing all errors and for returning the correct
 structure (it should match the returns list).  But feel free to just
-die when you spot an error, this module has a C<custom_error> method
-which sends valid SOAP fault messages.
+die when you spot an error, this module traps those and uses its
+C<return_error> method which sends valid SOAP fault messages.
 
 =head1 DESCRIPTION
 
-Currently SOAP is only supported for mod_perl 2.
+This plugin is for rpc style SOAP requests only.  If you need document
+style requests, you should use L<Gantry::Plugins::SOAP::Doc>.
 
 Bigtop can help a lot with the use of this plugin.  Below is what you need
 to do manually, should you choose that route.  But first, I'll explain what
@@ -354,7 +341,7 @@ as you use your base module:
 
     use Your::App qw(
         -PluginNamespace=module_name
-        SOAPMP20
+        SOAP::RPC
     );
 
 Note that you don't have to do this in the same place as you load the
@@ -365,11 +352,14 @@ C<steal_post_body>, leaving you without form data.
 Then, you must also implement a method called C<namespace> which returns
 the same string as the C<-PluginNamespace>.
 
+This method delegates its work to C<consume_post_body>, which is exported
+by each engine.
+
 =item do_main
 
-The SOAP service.  Fishes the POST body out of C<pnotes> (where it is
-called C<raw_body>), parses it using C<soap_in>, dispatches to your
-action method, makes the SOAP response with C<soap_out>, and returns it.
+The SOAP service.  Fishes the POST body with C<get_post_body> parses it
+using C<soap_in>, dispatches to your action method, makes the SOAP response
+with C<soap_out>, and returns it.
 
 =item do_wsdl
 
@@ -390,7 +380,7 @@ that this module may not be able to handle your complex types.
 It uses C<SOAP::Lite>'s C<SOAP::Data> and C<SOAP::Serializer>
 modules to generate the XML response.
 
-=item custom_error
+=item return_error
 
 Returns a valid SOAP fault response.  You must either accept this method
 in your imports or write one yourself.  The standard error is not SOAP

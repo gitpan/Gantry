@@ -6,6 +6,11 @@ use warnings;
 use Gantry;
 use File::Spec;
 
+use base 'Exporter';
+our @EXPORT = qw( 
+    get_callbacks
+);
+
 my %registered_callbacks;
 
 #-----------------------------------------------------------
@@ -20,7 +25,7 @@ sub get_callbacks {
             if ( $namespace eq 'Gantry' );
 
     return (
-        { phase => 'init', callback => \&initialize }
+        { phase => 'post_engine_init', callback => \&initialize }
     );
 }
 
@@ -48,13 +53,13 @@ In Apache Perl startup or app.cgi or app.server:
 
     <Perl>
         # ...
-        use MyApp qw{ -Engine=CGI -TemplateEngine=TT Cache };
+        use MyApp qw{ -Engine=CGI -TemplateEngine=TT Cache::FastMap };
+        
+        # or
+        use MyApp qw{ -Engine=CGI -TemplateEngine=TT Cache::Memcached };
+        
     </Perl>
 
-Inside MyApp.pm:
-
-    use Gantry::Plugins::Cache;
-    use Gantry::Cache::<module name>
 
 =head1 DESCRIPTION
 

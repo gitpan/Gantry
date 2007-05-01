@@ -5,13 +5,19 @@ use Gantry qw/-TemplateEngine=TT/;
 
 our @ISA = ( 'Gantry' );
 
-use lib qw( /home/gantry/perl/lib/usr/lib/perl5/site_perl/5.8.7 );
 use Gantry::Utils::HTML; 
 use Pod::POM::View::HTML;
 use Pod::POM;
 use File::Find;
 use Pod::Pdf;
 our $app_rootp = '';
+
+#-------------------------------------------------
+# $self->namespace();
+#-------------------------------------------------
+sub namespace {
+    return 'podviewer';
+}
 
 #-------------------------------------------------
 # $self->init( $self );
@@ -56,6 +62,18 @@ sub do_main {
     $file =~ s/::/\//g;
     $file = '/' . $file if $file;
     
+    my $base_module_data;
+    {   local $/ = undef; 
+        local *FILE; 
+        open FILE, "<$$self{__POD_DIR__}.pm" 
+            or die "unable to open $base_module"; 
+        $base_module_data = <FILE>; 
+        close FILE 
+    }
+    
+    my( $base_module_version ) 
+        = ( $base_module_data =~ /\$VERSION\s*=\s*'?"?([0-9\.]+)/is );
+    
     if ( $DO_PDF ) {
         $self->template_disable( 1 );
         $self->content_type( 'application/pdf' );
@@ -75,9 +93,24 @@ sub do_main {
 
     }
     
-    my $pom = $p->parse_file(
-     ( $self->{__POD_DIR__} . "${file}.pm" ) 
-    ) or die "$!";
+    my $pom;
+    if ( -e $self->{__POD_DIR__} . "${file}.pm" ) {
+        
+        $pom = $p->parse_file(
+            ( $self->{__POD_DIR__} . "${file}.pm" ) 
+            ) or die "$!";
+    
+    }
+    elsif ( -e $self->{__POD_DIR__} . "${file}.pod" ) {
+
+        $pom = $p->parse_file(
+            ( $self->{__POD_DIR__} . "${file}.pod" ) 
+            ) or die "$!";        
+
+    }
+    else {
+        die "unknown module";
+    }
     
     my $location = $self->location;
     
@@ -99,6 +132,7 @@ sub do_main {
     my @pm_files = _collect_pm_files( $self->{__POD_DIR__} );
         
     $self->stash->view->data( {
+        base_module_version => $base_module_version,
         base_module => $base_module,
         module_name     => $module,
         files       => \@pm_files,
@@ -121,7 +155,7 @@ sub _collect_pm_files {
         wanted => sub { 
             my $file = $File::Find::name;
             $file =~ s/$dir//;
-            push( @files, $file ) if $_ =~ /\.pm$/; 
+            push( @files, $file ) if $_ =~ /(\.pm|\.pod)$/; 
         }, 
         follow => 1 
         }, 
@@ -199,40 +233,47 @@ to an installed Perl module.
 
 If the deployment method is mod_perl:
 
-    <Location /pod >
-        PerlSetVar root                 '/home/gantry/templates'
-        PerlSetVar template_wrapper     'pod_wrapper.tt'
-        PerlSetVar pod_dir              '/home/perl/lib/Gantry'
-        
-        SetHandler perl-script
-        PerlHandler Gantry::Utils::PODViewer
-    </Location>
+   <Perl>
+     use Gantry::Utils::PODViewer qw/-Engine=MP20 -TemplateEngine=TT
+         -PluginNamespace=podviewer/;
+   </Perl>
 
+   <Location /pod/gantry>
+     PerlSetVar pod_dir '/usr/lib/perl5/site_perl/5.8.5/Gantry'
+     PerlSetVar app_rootp '/pod/gantry'
+     PerlSetVar template_wrapper 'pod_wrapper.tt'
+     PerlSetVar css_rootp '/style'
+     PerlSetVar img_rootp '/images'
+
+     SetHandler perl-script
+     PerlHandler Gantry::Utils::PODViewer
+
+   </Location>
 
 =head2 In CGI
 
 On the other hand, if the deployment method is CGI:
 
-#!/usr/local/bin/perl
-use strict;
+   #!/usr/local/bin/perl
+   use strict;
 
-use CGI::Carp qw(fatalsToBrowser);
-use Gantry::Utils::PODViewer qw( -Engine=CGI -TemplateEngine=TT );
-use Gantry::Engine::CGI;
+   use CGI::Carp qw(fatalsToBrowser);
+   use Gantry::Utils::PODViewer qw( -Engine=CGI -TemplateEngine=TT );
+   use Gantry::Engine::CGI;
 
-my $cgi = Gantry::Engine::CGI->new( {
-  locations => {
-    '/'        => 'Gantry::Utils::PODViewer',
-  },
-  config => {
-     pod_dir        => '/home/gantry/perl/lib/lib/Gantry',
-     app_rootp      => '/cgi-bin/gantry.cgi',
-     root           => '/home/gantry/templates',
-     template_wrapper => 'pod_wrapper.tt',
-  }
-} );
+   my $cgi = Gantry::Engine::CGI->new( {
+     locations => {
+       '/'        => 'Gantry::Utils::PODViewer',
+     },
+     config => {
+       pod_dir        => '/home/gantry/perl/lib/lib/Gantry',
+       app_rootp      => '/cgi-bin/gantry.cgi',
+       root           => '/home/gantry/templates',
+       template_wrapper => 'pod_wrapper.tt',
+     }
+   } );
 
-$cgi->dispatch;
+   $cgi->dispatch;
 
 =head1 METHODS
 
@@ -241,6 +282,8 @@ $cgi->dispatch;
 =item do_main
 
 =item init
+
+=item namespace
 
 =back
 

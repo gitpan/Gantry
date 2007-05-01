@@ -7,8 +7,23 @@ use engine::engine_methods qw( @engine_methods );
 eval "use mod_perl2;";
 my $mp2 = 1 unless $@;
 
+eval "use Apache2::Request;";
+my $has_libapreq = 1 unless $@;
+
 if ( ! $mp2 ) {
 	plan skip_all => "mod_perl2 not detected";
+}
+elsif ( ! $has_libapreq ) {
+    diag( "mod_perl2 detected" );
+    diag( "However Apache2::Request (libapreq2) was not." );
+    diag( "Gantry's mod_perl2 engine requires Apache2::Request." );
+    diag( "see http://httpd.apache.org/apreq/docs/libapreq2 for more" );
+    diag( "information about installing libapreq2" );
+    diag( "* this installation is painless and well worth it :-)" );
+    
+    plan qw(no_plan);
+    use_ok( 'Apache2::Request' );
+    
 }
 else {
 

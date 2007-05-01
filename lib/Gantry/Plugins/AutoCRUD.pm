@@ -3,7 +3,12 @@ package Gantry::Plugins::AutoCRUD;
 use strict;
 use Data::FormValidator;
 
-use Gantry::Utils::CRUDHelp qw( clean_params form_profile write_file );
+use Gantry::Utils::CRUDHelp qw(
+        clean_params
+        form_profile
+        write_file
+        verify_permission
+);
 
 use Exporter;
 use Carp;
@@ -31,21 +36,34 @@ sub form_name { return 'form.tt'; }
 # not exported
 sub get_cancel_loc {
     my     $self = shift;
-    return $self->location;
+    return( $self->location . ( $self->{__PID__} ? "/main/$$self{__PID__}" : '' ) );
 }
 
 # not exported
 sub get_submit_loc {
-    my     $self = shift;
-    return $self->location;
+    my     $self   = shift;
+    my     $action = shift;
+    
+    if ( $action eq 'add_another' ) {
+        return (
+            $self->location . "/add" 
+            .  ( $self->{__PID__} ? "/$$self{__PID__}" : '' )     
+        )
+    }
+
+    return(
+        $self->location
+        .  ( $self->{__PID__} ? "/main/$$self{__PID__}" : '' ) 
+    );
 }
 
 #-------------------------------------------------
 # $self->do_add( )
 #-------------------------------------------------
 sub do_add {
-    my ( $self ) = @_;
+    my ( $self, $pid ) = @_;
 
+    $self->{__PID__} = $pid;
     $self->stash->view->template( $self->form_name( 'add' ) );
     $self->stash->view->title( 'Add ' . $self->text_descr() );
 
@@ -85,10 +103,25 @@ sub do_add {
         form_profile( $form->{fields} ),
     );
 
+    $show_form = 1 if ( not $self->is_post );
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
 
+    # do row auth check to see if they are allowed to add
+    my $permissions = $self->controller_config->{ permissions };
+
+    if ( defined $permissions ) {
+        verify_permission(
+            {
+                site        => $self,
+                permissions => $permissions,
+                params      => $params,
+            }
+        );
+    }
+
     if ( $show_form ) {
+
         # order is important, first put in the form...
         $self->stash->view->form( $form );
 
@@ -98,9 +131,11 @@ sub do_add {
         }
     }
     else {
-        # remove submit button entry
+        
+        # remove submit buttons entries
+        my $submit_add_another = delete $params->{submit_add_another};
         delete $params->{submit};
-
+        
         clean_params( $params, $form->{fields} );
 
         # let subclass massage the params, but only if it wants to
@@ -118,7 +153,15 @@ sub do_add {
         }
 
         # move along, we're all done here
-        return $self->relocate( find_submit_loc( $self, 'add' ) );
+        my $redirect;
+        if ( $submit_add_another ) {
+            $redirect = find_submit_loc( $self, 'add_another' );
+        }
+        else {
+           $redirect = find_submit_loc( $self, 'add' ) 
+        }
+        
+        return $self->relocate( $redirect );
     }
 } # END: do_add
 
@@ -126,8 +169,9 @@ sub do_add {
 # $self->do_edit( $id )
 #-------------------------------------------------
 sub do_edit {
-    my ( $self, $id ) = @_;
-
+    my ( $self, $id, $pid ) = @_;
+    
+    $self->{__PID__} = $pid;
     $self->stash->view->template( $self->form_name( 'edit' ) );
     $self->stash->view->title( 'Edit ' . $self->text_descr() );
 
@@ -145,6 +189,7 @@ sub do_edit {
 
     my $show_form = 0;
 
+    $show_form = 1 if ( not $self->is_post );
     $show_form = 1 if ( keys %params == 0 );
 
     # get and hold the form description
@@ -173,6 +218,20 @@ sub do_edit {
     $show_form = 1 if ( $results->has_invalid );
     $show_form = 1 if ( $results->has_missing );
 
+    # do row auth check to see if they are allowed to add
+    my $permissions = $self->controller_config->{ permissions };
+
+    if ( defined $permissions ) {
+        verify_permission(
+            {
+                site        => $self,
+                permissions => $permissions,
+                params      => \%params,
+                row         => $row,
+            }
+        );
+    }
+
     # Form has errors
     if ( $show_form ) {
         # order matters, get form data first...
@@ -185,7 +244,9 @@ sub do_edit {
     }
     # Form looks good, make update
     else {
+  
         # remove submit button param
+        my $submit_add_another = delete $params{submit_add_another};
         delete $params{submit};
 
         clean_params( \%params, $form->{fields} );
@@ -204,7 +265,15 @@ sub do_edit {
         }
 
         # all done, move along
-        return $self->relocate( find_submit_loc( $self, 'edit' ) );
+        my $redirect;
+        if ( $submit_add_another ) {
+            $redirect = find_submit_loc( $self, 'add_another' )
+        }
+        else {
+            $redirect = find_submit_loc( $self, 'edit' );
+        }
+
+        return $self->relocate( $redirect );
     }
 } # END: do_edit
 
@@ -212,8 +281,16 @@ sub do_edit {
 # $self->do_delete( $id, $yes )
 #-------------------------------------------------
 sub do_delete {
-    my ( $self, $id, $yes ) = @_;
-
+    my ( $self, $id, $pid, $yes ) = @_;
+    
+    # look for a parent id and set the proper variables
+    if ( $pid =~ /yes|no/ ) {
+        $yes = $pid;
+    }
+    else {
+        $self->{__PID__} = $pid;
+    }
+    
     $self->stash->view->template( 'delete.tt' );
     $self->stash->view->title( 'Delete' );
 
@@ -222,12 +299,25 @@ sub do_delete {
         return $self->relocate( find_cancel_loc( $self, 'delete' ) );
     }
 
+    $orm_helper ||= find_orm_helper( $self );
+
+    # Get the doomed row
+    my $row = $orm_helper->retrieve( $self, $id );
+
+    # do row auth check to see if they are allowed to add
+    my $permissions = $self->controller_config->{ permissions };
+
+    if ( defined $permissions ) {
+        verify_permission(
+            {
+                site        => $self,
+                permissions => $permissions,
+                row         => $row,
+            }
+        );
+    }
+
     if ( ( defined $yes ) and ( $yes eq 'yes' ) ) {
-
-        $orm_helper ||= find_orm_helper( $self );
-
-        # Get the doomed row
-        my $row = $orm_helper->retrieve( $self, $id );
 
         # allow subclasses to do things before the delete
         if ( $self->can( 'delete_pre_action' ) ) {
@@ -293,7 +383,7 @@ sub find_submit_loc {
         }
         # ...or use ours
         else {
-            $submit_loc = get_submit_loc( $self );
+            $submit_loc = get_submit_loc( $self, $action );
         }
     }
 
@@ -438,7 +528,7 @@ Optional.
 Called with the action the user is cancelling (add, edit, or delete).
 Returns the url where users should go if they cancel form submission.
 Ignored if get_relocation is defined, otherwise defaults to
-C<<$self->location>>.
+$self->location.
 
 =item get_submit_loc
 
@@ -446,7 +536,7 @@ Optional.
 Called with the action the user is submitting (add, edit, or delete).
 Returns the url where users should go after they successfully submit a form.
 Ignored if get_relocation is defined, otherwise defaults to
-C<<$self->location>>.
+$self->location.
 
 Instead of implementing get_relocation or get_submit_loc, 
 you could implement one or more *_post_action method which alter the location
@@ -522,7 +612,7 @@ remove things that can't have '' as a value, etc.).
 =item add_post_action
 
   sub add_post_action {
-    my ( $self, $params ) = @_;
+    my ( $self, $new_row ) = @_;
     ...  
   }   
 

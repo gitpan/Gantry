@@ -12,8 +12,9 @@ my $cgi = Gantry::Engine::CGI->new( {
     config => {
         auth_dbconn => 'dbi:SQLite:dbname=docs/auth.sqlite.db',
         auth_dbuser => '',
-        template_wrapper => 'control_wrapper.tt',
-        root => 'root',
+        template_wrapper => 'gantry_wrapper.tt',
+        app_name => 'Auth',
+        root => 'root/moxie:root',
     },
     locations => {
         '/users'    => 'Gantry::Control::C::Users',

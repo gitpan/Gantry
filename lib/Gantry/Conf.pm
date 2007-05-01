@@ -115,6 +115,8 @@ sub _load_configuration {
     #
     #   -IncludeRelative        to allow including relative files 
     #
+    
+    
     my $cfg         = Config::General->new( 
                                 -ConfigFile         =>  $file,
                                 -UseApacheInclude   =>  1,
@@ -189,11 +191,40 @@ sub _load_configuration {
     # deal with location promotion
     if ( defined $location ) {
         my $locations     = delete $$self{__config__}{GantryLocation};
-        my $location_hash = $$locations{$location};
-
-        if ( defined $location_hash ) {
-            $$self{__config__} = merge( $location_hash, $$self{__config__} );
+        my @path          = split( '/', $location );
+        
+        my @check_paths;
+        
+        while ( @path ) {
+            my $path = join( '/', @path );
+            push( @check_paths, $path );
+            pop( @path );
         }
+
+        foreach my $path ( reverse( @check_paths ) ) {
+        
+            my $location_hash = $$locations{$path};
+            
+            if ( defined $location_hash ) {
+                
+                $$self{__config__} = merge( 
+                    $location_hash, 
+                    $$self{__config__} 
+                );
+            }
+        
+            
+        }
+
+        #my $location_hash = $$locations{$location};   
+        #if ( defined $location_hash ) {
+        #    warn( "defined!2 $location" );
+        #    $$self{__config__} = merge( 
+        #        $location_hash, 
+        #        $$self{__config__} 
+        #    );
+        #}
+        
     }
 
 } # END _load_configuration 

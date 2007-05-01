@@ -164,11 +164,10 @@ sub session_id {
 sub encrypt_cookie {
     my ($gobj, $session) = @_;
 
-    $^W = 0;     # turn off warnings
+    local $^W = 0;     # turn off warnings
 
     my $secret = $gobj->fish_config('session_secret') || 'w3s3cR7';
     my $c = Crypt::CBC->new(-key     => $secret,
-                            -iv      => '$KJh#(}q',
                             -cipher  => 'Blowfish',
                             -header  => 'none',
                             -padding => 'null');
@@ -178,8 +177,6 @@ sub encrypt_cookie {
     my $c_text = MIME::Base64::encode($encd, '');
 
     $c->finish();
-
-    $^W = 1;     # turn on warnings
 
     return($c_text);
 

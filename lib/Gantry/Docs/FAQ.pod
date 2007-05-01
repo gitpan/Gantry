@@ -918,7 +918,7 @@ put these into your app's database, or store them in another database.
 This allows you to share auth between multiple apps.
 
 The schema for the tables is in the SCHEMA FOR AUTH TABLES section
-of L<Gantry::Control>.
+of L<Gantry::Control#SCHEMA%20FOR%20AUTH%20TABLES>.
 
 =head2 How do I add authentication to my app?
 
@@ -928,7 +928,8 @@ into your app's database (see the previous question).
 
 Then, you need to add the following Apache directives to the base location
 for your app (or to the location at which auth should begin):
- 
+
+
  <Location /myloc>
    AuthType Basic
    AuthName "Your Auth Realm Name"
@@ -938,8 +939,8 @@ for your app (or to the location at which auth should begin):
    PerlSetVar auth_dbpass  super_secret
 
    PerlAuthenHandler Gantry::Control::C::Access
-   PerlAuthenHandler Gantry::Control::C::Authen
-   PerlAuthzHandler  Gantry::Control::C::Authz
+   PerlAuthenHandler Gantry::Control::C::AuthenRegular
+   PerlAuthzHandler  Gantry::Control::C::AuthzRegular
  </Location>
  
 You need to set auth_dbconn, auth_dbuser, and auth_dbpass even if your

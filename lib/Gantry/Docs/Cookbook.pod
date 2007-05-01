@@ -1,0 +1,465 @@
+=head1 Name
+
+Gantry::Docs::Cookbook - Gantry How Tos
+
+=head1 Intro
+
+This document is set up like a cookbook, but all the recipes are fully
+implemented in Gantry::Samples.  The first recipe explains how to run
+the samples.
+
+You might also be interested in L<Gantry::Docs::FAQ> which answers a different
+set of questions that are not covered in Gantry::Samples.  Bigtop has
+its own L<Bigtop::Docs::Cookbook> and full documentation suite, see
+L<Bigtop::Docs::TOC>.
+
+The questions are:
+
+=over 4
+
+=item *
+
+L<How do I run the samples?>
+
+=item *
+
+L<How do I upload files?>
+
+=item *
+
+L<How do I authenticate users?>
+
+=item *
+
+L<How do I authorize users?>
+
+=item *
+
+L<How do I authorize based at the row level?>
+
+=item *
+
+L<What is a three way join?>
+
+=item *
+
+L<How do I work with a simple three way join?>
+
+=item *
+
+L<How do I make my Gantry app respond to SOAP requests?>
+
+=back
+
+=head1 How do I run the samples?
+
+To run the samples, you need sqlite 3 and Gantry.  Once those are in place
+just change to the samples directory of the Gantry distribution and type:
+
+    ./app.server
+
+The stand alone server will print a list of available URLs like this:
+
+  Available urls:
+    http://localhost:8080/
+    http://localhost:8080/ajaxrequest
+    http://localhost:8080/authcookie
+    http://localhost:8080/authcookie/sqlite
+    http://localhost:8080/authcookie/sqlite/closed
+    http://localhost:8080/fileupload
+    http://localhost:8080/table_perms
+    http://localhost:8080/table_perms_crud
+    http://localhost:8080/user
+    http://localhost:8080/user/group
+
+These locations will be mentioned again in the appropriate sections below.
+
+=head1 How do I upload files?
+
+You need three things to upload a file...
+
+=over 4
+
+=item 1
+
+A controller method expecting the file, which knows what to do with it.
+
+=item 2
+
+A form for the user to supply the file info from their browser.
+
+=item 3
+
+The C<file_upload> method supplied by all engines.
+
+=back
+
+Note that there is no special plugin to load.  Gantry engines all know
+how to upload files and are happy to do so at any time.
+
+L<Gantry::Samples::FileUpload> provides an example.  It has a single
+do_ method, C<do_main>, which uses C<fileupload.tt> supplied in the
+samples C<html/templates> sub directory.
+
+Once the form validates, C<do_main> says:
+
+    my $upload = $self->file_upload( 'file' );
+
+where file is the name of the form field containing the file name.  This
+method returns a hash ref with thses keys:
+
+=over 4
+
+=item unique_key
+
+A unique identifier for the file based on the current time and a random number.
+
+=item name
+
+Base name of user's file.
+
+=item suffix     => $suffix,
+
+File suffix (e.g. txt).
+
+=item fullname
+
+Name of user's file including suffix.
+
+=item size
+
+Number of bytes in file.
+
+=item mime
+
+Mime type of file.
+
+=item filehandle
+
+The handle from which you read the file.
+
+=back
+
+To see how to catch and store the file, see do_main in
+L<Gantry::Samples::FileUpload>.
+
+Note that Bigtop does not help with file uploads, since the actual upload is
+done by a single method call and the details of processing the received
+file vary too much for a generic scheme.
+
+=head1 How do I authenticate users?
+
+=head1 How do I authorize users?
+
+=head1 How do I authorize based at the row level?
+
+=head1 What is a three way join?
+
+A three way join is a many-to-many relationship between two tables.
+For example, the relationship between authors and books.  An author
+of one book likely has written other books.  For each author, there
+are many books.  But, in the other direction a good number of books
+have multiple authors.  For each book there could be many authors.
+
+Generally, you need a special extra table to hold the relationship:
+
+    +--------+             +------+
+    | author |             | book |
+    +--------+             +------+
+           ^                 ^
+            \               /
+          +-------------------+
+          |    author_book    |
+          +-------------------+
+
+Here the author_book table has only two (or three fields if you give it
+an id).  Both are foriegn keys to the tables on the end of the relationship.
+
+=head1 How do I work with a simple three way join?
+
+You need two things for easy use of a three way structure, once your
+SQL is in place.  First, you need your model to understand it.  Second,
+you need an easy way to perform CRUD on the join table rows.
+
+=head2 Making and using the model directly
+
+Making the model understand your three way preferences is easy.  Start
+with the two tables on the ends of the relationship as normal.  Then add
+this to the bigtop file:
+
+    join_table author_book {
+        joins author => book;
+    }
+
+You can do this with kickstart syntax when you make or augment the
+bigtop file:
+
+    bigtop -n BookStore 'author(name)<->book(title,year:int4)'
+
+That will make the two regular tables and the joining table.
+
+=head2 The Threeway utils module
+
+Once you have a three way structure, you can use L<Gantry::Utils::Threeway>
+to manage the tables in the joining table (the one in the middle).  You
+can do this from the controller for the table on either end of the
+many-to-many relationship, or for both of them.
+
+To show this, I'll pull code from L<Gantry::Samples::User>.
+
+First, use the module:
+
+    use Gantry::Utils::Threeway;
+
+Then provide a do_ method.  The one in the user example manages group
+membership for users.  In kickstart syntax, the relationship is
+user<->groups.  The full method is:
+
+ #-----------------------------------------------------------------
+ # $self->do_groups(  )
+ #-----------------------------------------------------------------
+ sub do_groups {
+     my ( $self, $user_id ) = @_;
+
+     my $threeway = Gantry::Utils::Threeway->new( {
+         self            => $self,
+         primary_id      => $user_id,
+         primary_table   => 'user',
+         join_table      => 'user_user_group',
+         secondary_table => 'user_group',
+         legend          => 'Assign Groups to User'        
+     } );
+
+     $threeway->process();
+
+ } # END do_groups
+
+All you have to do is construct the three way object and call process
+on it.  This displays a form with a check box for each group.  The current
+memberships are already checked.  Clicking in the boxes and submitting
+the forms updates them.
+
+The keys needed by C<new> are:
+
+=over 4
+
+=item self
+
+The Gantry site object.
+
+=item primary_id
+
+The name of the foreign key in the joining table that points to this
+controller.
+
+=item primary_table
+
+The name of the controller's table.
+
+=item join_table
+
+The name of the joining table.
+
+=item secondary_table => 'user_group',
+
+The name of the table on the other end of the many-to-many.
+
+=item legend
+
+HTML fieldset legend around the form where new joining table rows
+are created from check box values.
+
+=back
+
+=head3 Using the three way manually
+
+If you want to access rows fromthe table on the other end of the
+many-to-many relationship, use the C<many_to_many> relationship in the model:
+
+    my @groups = $user->user_groups();
+
+That will return an array of groups to which the current user belongs.
+You can turn that around through a group row:
+
+    my @members = $group->users();
+
+If you need the rows from the joining table, use the C<has_many>
+relationship from the model:
+
+    my @joining_rows = $user->user_user_groups();
+
+=head3 Making a three way manuall
+
+By far, the easiest way to create a three way joining structure is
+with a bigtop C<join_table> block as shown above.  But you can do
+it yourself.  In your author model, add calls like these:
+
+    __PACKAGE__->has_many(
+        author_books => 'Gantry::Samples::Model::author_book',
+        'author' # your table name
+    );
+    __PACKAGE__->many_to_many(
+        books => 'author_books',  # value matches the has many above
+        'book' # the other table name
+    );
+
+Then do the same in the book model.  Finally, make sure you have a model
+for the joining rows with a normal foreign key C<has_many> for each of
+the end point tables.
+
+=head1 How do I make my Gantry app respond to SOAP requests?
+
+There are two types or 'styles' of SOAP requests.  Gantry can help with
+either, but it is better at the document style, so that is what I'll
+discuss here.
+
+To see a sample of this approach, run the samples app.server in one
+shell and samples/bin/soap_client in another.  Give the client a
+Farenheit temperature and you should see first a SOAP request packet,
+which the client will then send to the server.  Finally, you should
+see a SOAP response packet with the temperature in Celcius.
+
+Here's what you need to do to make your own server (and I apologize
+in advance for the fact that Bigtop can't help much here).
+
+Make a controller.  For instance, you could add this to your bigtop file:
+
+    controller SOAP {
+        rel_location GantrySoapService;
+        skip_test 1;
+        method do_f2c is stub {
+        }
+    }
+
+When you regenerate, you'll need to make some changes.  First, the
+top of the new SOAP.pm looks like this:
+
+    package Gantry::Samples::SOAP;
+
+    use strict;
+    use warnings;
+
+    use base 'Gantry::Samples';
+
+Replace that with:
+
+    package Gantry::Samples::SOAP;
+
+    use strict;
+    use warnings;
+
+    use Gantry::Samples qw{
+        -PluginNamespace=Gantry::Samples::SOAP
+        SOAP::Doc
+    };
+
+    our @ISA = ( 'Gantry::Samples' );
+
+    sub namespace {
+            return 'Gantry::Samples::SOAP';
+    }
+
+That will load L<Gantry::Plugins::SOAP::Doc> and apply it to this controller
+only (due to the namespace).  Again, I admit that this is too much work
+and hope to automate it through bigtop as time permits.
+
+The remainder of the process is specific to your application.  Bigtop
+made this stub:
+
+    #-----------------------------------------------------------------
+    # $self->do_f2c(  )
+    #-----------------------------------------------------------------
+    sub do_f2c {
+        my ( $self ) = @_;
+    }
+
+All we need to do is fill it in.
+
+If all the SOAP request parameters are at the same level in their packet
+(a fairly common case), you can take advantage of the plugin's automated
+conversion of the SOAP packet into form parameters.  If your SOAP packet
+is more complex, you'll need to parse the XML with XML::LibXML, XML::Twig,
+etc.  The sample's packets are simple.
+
+Here is the finished routine (less comments offering advice on XML::LibXML):
+
+  1   sub do_f2c {
+  2     my ( $self ) = @_;
+  3     my $request  = $self->get_post_body();
+  4     my $time     = $self->soap_current_time();
+  5     my $params   = $self->get_param_hash();  # easy way
+  6
+  7     my $f_temp   = $params->{ farenheit };
+  8     my $celcius  = 5.0 * ( $f_temp - 32 ) / 9.0;
+  9
+ 10     my $ret_struct = [
+ 11         {
+ 12             GantrySoapServiceResponse => [
+ 13                 { currentUTCTime => $time },
+ 14                 { celcius        => $celcius },
+ 15             ]
+ 16         }
+ 17     ];
+ 18
+ 19     $self->soap_namespace_set(
+ 20         'http://usegantry.org/soapservice'
+ 21     );
+ 22
+ 23     return $self->soap_out( $ret_struct, 'internal', 'pretty' );
+ 24 } # END do_f2c
+
+First, you need to call C<get_post_body> (line 3) to get the full XML packet.
+This method is exported by each engine.  It only works when a plugin
+has registered C<consume_post_body> as a C<pre_init> callback, luckily
+L<Gantry::Plugins::SOAP::Doc> does that.
+
+If you need to tell your client the UTC time of your response in valid
+SOAP time format, call C<soap_current_time>, as I did on line 4.
+
+Since my server's SOAP requests are simple, I can call C<get_param_hash>
+on line 5, just as I would to handle form parameters.  The input
+parameter is in the C<farenheit> key (line 7).  A grade school formula
+does the conversion on line 8.
+
+Lines 10-17 build the structure of the return packet.  The top level
+tag is C<GantrySoapServiceResponse>.  Inside it will be a list of tags
+(order often matters to DTDs), one for the time, the other for the
+converted temperature.
+
+To control the namespace of C<GantrySoapServiceResponse> and its children,
+I called C<soap_namespace_set> (line 19).
+
+Finally, line 23 uses C<soap_out> to send the packet back to the client.
+It expects:
+
+=over 4
+
+=item return structure
+
+See the example above.  If you need a empty tag like <empty />, use
+
+    { empty => undef }
+
+=item namespace position
+
+This must be a string chosen from 'prefix' or 'internal'.  The default
+is prefix.  This governs where the namespace is defined, and therefore
+has a cosmetic effect on the SOAP packet.  A prefix namespace is
+defined in the SOAP Envelope tag where it is given the prefix tns.
+That prefix appears on all tags in the returned packet.
+
+If you use internal instead, the namespace is defined in the top level tag:
+
+    <GantrySoapServiceResponse
+        xmlns="http://usegantry.org/soapservice">
+
+Then the elements in the body of the response have no explicit namespace
+prefix.
+
+=item pretty print
+
+If this has a true value, the resulting XML packet will have various
+whitespace added to it to improve human readability.  No whitespace will
+be added anywhere that would affect parsing the result.
+
+=back

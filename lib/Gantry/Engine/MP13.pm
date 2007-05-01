@@ -22,6 +22,7 @@ use vars qw( @ISA @EXPORT );
     apache_request
     base_server
     cast_custom_error
+    consume_post_body
     declined_response
     dispatch_location
     engine
@@ -38,8 +39,10 @@ use vars qw( @ISA @EXPORT );
     get_cached_config
     get_config
     get_dbh
+    get_post_body
     header_in
     header_out
+    hostname
     is_status_declined
     log_error
     port
@@ -80,7 +83,10 @@ sub file_upload {
     my $filename = $upload->filename;
     $filename =~ s/\\/\//g;
     
-    my( $name, $path, $suffix ) = fileparse( $filename, qr/\.[^.]*/ ); 
+    my( $name, $path, $suffix ) = fileparse( 
+		$filename, 
+		qr/\.(tar\.gz$|[^.]*)/ 
+	);  
     
     return( {
         unique_key => time . rand( 6 ),
@@ -129,8 +135,16 @@ sub cast_custom_error {
 sub apache_param_hash {
     my( $self, $req ) = @_;
     
-    my $hash = $req->param;
+    my $hash = {};
+    
+    my @param_names = $req->param;
+    foreach my $p ( @param_names ) {
+        my @values = $req->param( $p );
         
+        $hash->{$p} = join( "\0", @values );
+
+    }   
+     
     return( $hash );
 
 } # end: apache_param_hash
@@ -158,6 +172,40 @@ sub base_server {
         : $self->r->server->server_hostname );
     
 } # end base_server
+
+#-------------------------------------------------
+# $self->hostname( $r )
+#-------------------------------------------------
+sub hostname {
+    my( $self, $r ) = ( shift, shift );
+
+    return( 
+        $r ? $r->hostname
+        : $self->r->hostname );
+    
+} # end hostname
+
+#-------------------------------------------------
+# $self->consume_post_body( $r )
+#-------------------------------------------------
+sub consume_post_body {
+    my $self = shift;
+    my $r    = shift;
+
+    my $content_length = $r->headers_in->{'Content-length'};
+
+    return unless $content_length;
+
+     $content_length    = 1e6 if $content_length > 1e6; # limit to ~ 1Meg
+
+    my ( $content, $buffer );
+
+    while ( $r->read( $buffer, $content_length ) ) {
+        $content .= $buffer;
+    }
+
+    $self->{__POST_BODY__} = $content;
+}
 
 #-------------------------------------------------
 # $self->declined_response( )
@@ -263,7 +311,7 @@ sub fish_uri {
 sub fish_user {
     my $self = shift;
 
-    return $self->r()->user;
+    return $self->user() || $self->r()->user;
 } # END fish_user
 
 #-------------------------------------------------
@@ -295,51 +343,104 @@ sub get_auth_dbh {
 # $self->get_config( )
 #-------------------------------------------------
 sub get_config {
-    my ( $self, $param_name ) = @_;
+    my ( $self ) = @_;
 
-    # see if there is Gantry::Conf data
-    my $instance = $self->r()->dir_config( 'GantryConfInstance' );
+    # see if there Gantry::Conf data
+    my $instance  = $self->r()->dir_config( 'GantryConfInstance' );
 
     return unless defined $instance;
 
-    my $file     = $self->r()->dir_config( 'GantryConfFile'     );
-
+    my $file      = $self->r()->dir_config( 'GantryConfFile'     );
+    
     my $conf;
-    my $cached   = 0;
-    my $location = $self->location;
-    $conf        = $self->get_cached_config( $instance, $location );
+    my $cached    = 0;
+    my $location  = '';
+    
+    eval {
+        $location = $self->location;
+    };
 
-    $cached++ if ( defined $conf );
+    $conf = $self->get_cached_config( $instance, $location );
 
+    if ( defined $conf ) {
+        return $conf;
+    }
+ 
+    my $gantry_cache     = 0;
+    my $gantry_cache_key = '';
+    my $gantry_cache_hit = 0;
+    eval { 
+        ++$gantry_cache if $self->cache_inited();
+    };
+    
+    # are we using gantry cache ?
+    if ( $gantry_cache ) {
+
+        # blow the gantry conf cache when server starts
+        if ( $self->engine_cycle() == 1 ) {
+            
+            foreach my $key ( @{ $self->cache_keys() } ) {
+                my @a = split( ':', $key );                
+                if ( $a[0] eq 'gantryconf' ) {
+                    $self->cache_del( $key );
+                }
+            }
+        }
+                
+        # build cache key
+        $gantry_cache_key = join( ':',
+            "gantryconf",
+            ( $self->namespace() || '' ),
+            $instance,
+            $location
+        );
+    
+        $conf = $self->cache_get( $gantry_cache_key );
+        
+        ++$gantry_cache_hit if defined $conf;
+    }
+    
     $conf ||= Gantry::Conf->retrieve(
         {
             instance    => $instance, 
             config_file => $file,
-            location    => $location,
+            location    => $location
         }
     );
 
-    $self->set_cached_config( $instance, $location, $conf )
-            if ( not $cached and defined $conf );
-
-    return $conf;
+    if ( defined $conf ) {        
+        $self->set_cached_config( $instance, $location, $conf );
     
+        if ( $gantry_cache && ! $gantry_cache_hit ) {
+            $self->cache_set( $gantry_cache_key, $conf );
+        }
+    }
+            
+    return $conf;
+
 } # END get_config
 
+#-------------------------------------------------
+# $self->get_cached_config( $instance, $location )
+#-------------------------------------------------
 sub get_cached_config {
     my $self     = shift;
     my $instance = shift;
+    my $location = shift;
 
-    return $self->r()->pnotes( "conf_$instance" );
+    return $self->r()->pnotes( "conf_${instance}_${location}" );
 }
 
+#-------------------------------------------------
+# $self->set_cached_config( $instance, $location, $conf )
+#-------------------------------------------------
 sub set_cached_config {
     my $self     = shift;
     my $instance = shift;
-    shift;  # ignore location, cache for one request only
+    my $location = shift;  
     my $conf     = shift;
 
-    $self->r()->pnotes( "conf_$instance", $conf );
+    $self->r()->pnotes( "conf_${instance}_${location}", $conf );
 }
 
 #-------------------------------------------------
@@ -347,6 +448,15 @@ sub set_cached_config {
 #-------------------------------------------------
 sub get_dbh {
     return Gantry::Utils::DBConnHelper::MP13->get_dbh;
+}
+
+#-------------------------------------------------
+# $self->get_post_body( )
+#-------------------------------------------------
+sub get_post_body {
+    my $self = shift;
+
+    return $self->{__POST_BODY__};
 }
 
 #-------------------------------------------------
@@ -554,12 +664,22 @@ libapreq(3) manpage for more details.
 Returns the physical server this connection came in
 on (main server or vhost):
 
+=item $self->hostname
+
+Returns the virtual server name 
+
 =item $self->cast_custom_error
 
 Called by the handler in Gantry.pm when things go wrong.  It receives
 html output and a death message.  It logs the death message and sets
 the html output via the custom_response routine of the request object.
 Returns FORBIDDEN status code.
+
+=item $self->consume_post_body
+
+This must be used by a plugin at the pre_init phase.  It takes all of the
+data from the body of the HTTP POST request, storing it for retrieval
+via C<get_post_body>.  You cannot mix this with regular form handling.
 
 =item $self->declined_response
 
@@ -650,6 +770,11 @@ set receives those plus the conf hash it should cache.
 
 Returns the current regular database connection if one is available or
 undef otherwise.
+
+=item $self->get_post_body
+
+If C<consume_post_body> was used by a plugin during the pre_init phase,
+this method returns the consumed body of the HTTP POST request.
 
 =item $self->header_in
 

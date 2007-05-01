@@ -20,6 +20,7 @@ sub set_net_server {
 
 sub handler {
     my $self = shift;
+
     eval { $self->handle_request() };
     if ( $@ ) {
         warn "$@\n";
@@ -80,7 +81,7 @@ sub setup_server_url {
 
 sub handle_request {
     my ( $self  ) = @_;
-    
+
     # divert STDOUT to another handle that stores the returned data
     my $out_handle      = gensym;
     my $out             = tie   *$out_handle, "Gantry::Server::Tier";
@@ -119,7 +120,7 @@ EO_FAILURE_RESPONSE
 }
 
 package Gantry::Server::Tier;
-use strict; use warnings;
+use strict;
 
 sub get_output {
     my $self = shift;
@@ -136,6 +137,8 @@ sub TIEHANDLE {
 
 sub PRINT {
     my $self    = shift;
+
+    no warnings;    
     $self->[1] .= join '', @_;
 }
 

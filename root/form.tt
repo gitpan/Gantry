@@ -108,6 +108,12 @@ Parameters:
 	[% INCLUDE "editor_init.ttc" %]
 [% END %]
 
+[% IF view.form.description %]
+<div id='class_description'>
+[% view.form.description %]
+</div>
+[% END %]
+
 <form 	
 	method="[% view.form.method || 'post' %]" 
 	action="[% view.form.action || self.uri %]" 
@@ -184,24 +190,33 @@ Parameters:
 			border="0" 
 			width="[% view.form.width || '100%' %]"	>
 			
-			[% FOREACH field IN view.form.fields %]
+			[%- FOREACH field IN view.form.fields -%]
 		
 			[%- IF field.raw_html %]
 			    [%- field.raw_html %]
 			[%- END %]
+
+            [%- IF field.type == 'hidden' %]
+                <input type="[% field.type %]" 
+				    size="[% field.display_size || 30 %]"
+				    value="[% field.default_value  %]" 
+                    id="[% field.name %]" 
+				    name="[% field.name %]" />
+			    [%- NEXT %]
+			[%- END %]
 			
-			<tr>
-				[% IF view.form.results.missing( "${field.name}" ) %]
+			<tr class="results-row">
+				[%- IF view.form.results.missing( "${field.name}" ) %]
 					[% style_str = ' style="color: red"' %]
-                [% ELSE %]
+                [%- ELSE %]
                     [% style_str = '' %]
-                [% END %]
+                [%- END %]
 
 				<!-- LABEL -->
 				<td class="shd" valign="top"[% style_str %] style="width: [%-
 					field.label_width || '30%' %]">		
 					[%- field.label %]
-                    [% IF field.content %][% field.content %][% END %]
+                    [%- IF field.content %][% field.content %][% END %]
 					[%- UNLESS field.optional 
                             or field.type == 'checkbox'
                             or field.type == 'display' -%]*[% END %]
@@ -211,8 +226,18 @@ Parameters:
 				<td class="dta" style="width: [% field.width 
 					|| '70%' %]" valign="top">
 					
-					[% IF field.type == 'select' %]
-						<select name="[% field.name %]">
+					[%- IF field.type == 'select' %]
+                        [%- IF field.onchange -%]
+                        <select 
+                            id="[% field.name %]" 
+                            class="[% field.class %]"
+                            name="[% field.name %]"
+                                onchange='javascript:[% field.onchange %](
+                                    this
+                                )' >
+                        [%- ELSE %]
+						<select name="[% field.name %]" id="[% field.name %]">
+                        [%- END %]
                         
                         [%-# clear field_val_hash for each loop %]
                         [%- field_val_hash = {} -%]
@@ -261,7 +286,8 @@ Parameters:
 						[%- END %]
 						</select>
                     [%- ELSIF field.type == 'select_multiple' %]
-						<select multiple name="[% field.name %]">
+						<select multiple name="[% field.name %]"
+                            id="[% field.name %]">
 						[%- FOR option IN field.options %]
                             <option value="[% option.value %]"
 							 [% IF field.selected( option.value, self.params );
@@ -282,7 +308,9 @@ Parameters:
                                input_value = field.default_value;
                            END;
                         -%]
-						<textarea name="[% field.name %]" id="[% field.id %]"
+						<textarea name="[% field.name %]" 
+                            class="[% field.class %]"
+                            id="[% field.name %]"
 							rows="[% field.rows || '0' %]"
 							cols="[% field.cols || '0' %]"
 						>[%- input_value -%]</textarea>
@@ -290,12 +318,14 @@ Parameters:
 					[%- ELSIF field.type == 'checkbox' %]
                         <input type="checkbox"
                             name="[% field.name %]"
+                            class="[% field.class %]"
+                            id="[% field.name %]"
                             value="[% field.value %]"
                             [%- IF field.checked -%]checked[%- END -%]
                         />
 									
 					[%- ELSIF field.type == 'html' -%]
-						[% field.html %]
+						[% field.text || field.html %]
 					
 					[%- ELSIF field.type == 'display' -%]
 						[% IF field.foreign %]
@@ -332,7 +362,9 @@ Parameters:
 						<input type="[% field.type %]" 
 							size="[% field.display_size || 30 %]"
 							value="[% input_value  %]" 
+                            class="[% field.class %]"
 							name="[% field.name %]"
+							id="[% field.name %]"
 						 />
 						[%- IF field.date_select_text -%]
 							[% popup = "datepopup('$field.name')" %]
@@ -340,11 +372,14 @@ Parameters:
 							[% field.date_select_text %]
 							</a>
 						[%- END %]
-					[% END %]
+					[%- END %]
+					<div class="hint">
+                        [% field.hint ? field.hint : '' %]
+                    </div>
 				</td>
 			</tr>
 			
-			[% END %]			
+			[%- END %]			
 			
             <tr>
                 <td colspan="2" class="shd">
@@ -353,13 +388,19 @@ Parameters:
             </tr>
 			<tr>
 				<td colspan="2" class="rshd">
-				<input type="submit" name="submit" value="Save" />
-				<input type="submit" name="cancel" value="Cancel" />
+    			<input type="submit" name="submit" value="Submit" />
+				[% IF view.form.submit_and_add_another %] 
+				    <input type="submit" name="submit_add_another" 
+				    value="Submit &amp; Add Another" />
+				[% END %]
+                [% UNLESS view.form.no_cancel %]
+				    <input type="submit" name="cancel" value="Cancel" />
+                [% END %]
 				</td>
 			</tr>
 		</table>
 	</div>
-	
+
 	<br style="clear: both" />	
 </fieldset>
 

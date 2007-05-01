@@ -1,16 +1,19 @@
-package Gantry::Cache::FastMmap;
+package Gantry::Plugins::Cache::FastMmap;
 
 use strict;
 use warnings;
 
 use Gantry;
 use Cache::FastMmap;
+use Gantry::Plugins::Cache;
 
 use base 'Exporter';
 our @EXPORT = qw( 
+    cache_clear
     cache_del
     cache_get
     cache_set
+    cache_keys
     cache_init
     cache_handle
     cache_inited
@@ -25,7 +28,8 @@ sub cache_init {
     my $num_pages = $gobj->fish_config('cache_pages') || '256';
     my $page_size = $gobj->fish_config('cache_pagesize') || '256k';
     my $expire_time = $gobj->fish_config('cache_expires') || '1h';
-    my $share_file = $gobj->fish_config('cache_filename') || '/tmp/gantry.cache';
+    my $share_file = $gobj->fish_config('cache_filename') 
+        || '/tmp/gantry.fastMmap.cache';
 
     eval {
 
@@ -83,7 +87,7 @@ sub cache_get {
     my ($gobj, $key) = @_;
 
     my $handle = $gobj->cache_handle();
-    my $namespace = $gobj->cache_namespace();
+    my $namespace = $gobj->cache_namespace() || '';
     my $skey = $namespace . ':' . $key;
 
     return $handle->get($skey);
@@ -94,18 +98,39 @@ sub cache_set {
     my ($gobj, $key, $val) = @_;
 
     my $handle = $gobj->cache_handle();
-    my $namespace = $gobj->cache_namespace();
+    my $namespace = $gobj->cache_namespace() || '';
     my $skey = $namespace . ':' . $key;
 
     $handle->set($skey, $val);
 
 }
 
+sub cache_clear {
+    my($gobj) = @_;
+    
+    $gobj->cache_handle()->clear();
+}
+
+sub cache_keys {
+    my($gobj ) = @_;
+
+    my $namespace = $gobj->cache_namespace() || '';
+    
+    my @keys = $gobj->cache_handle()->get_keys();
+    my @keys_new;
+    foreach my $k ( @keys ) {
+        $k =~ s/^$namespace\://;
+        push( @keys_new, $k );
+    }
+
+    return \@keys_new;
+}
+
 sub cache_del {
     my ($gobj, $key) = @_;
 
     my $handle = $gobj->cache_handle();
-    my $namespace = $gobj->cache_namespace();
+    my $namespace = $gobj->cache_namespace() || '';
     my $skey = $namespace . ':' . $key;
 
     $handle->remove($skey);
@@ -118,16 +143,18 @@ __END__
 
 =head1 NAME
 
-Gantry::Cache::FastMmap - A Plugin interface to a caching subsystem
+Gantry::Plugins::Cache::FastMmap - A Plugin interface to a caching subsystem
 
 =head1 SYNOPSIS
 
 It is sometimes desireable to cache data between page accesess. This 
 module gives access to the Cache::FastMmap module to store that data.
+
+  <Perl>
+     # ...
+     use MyApp qw{ -Engine=CGI -TemplateEngine=TT Cache::FastMap };
+  </Perl>
   
-Inside MyApp.pm
-  
-    use Gantry::Cache::FastMmap;
 
 =head1 DESCRIPTION
 
@@ -173,6 +200,13 @@ the application.
 
  $self->cache_init();
 
+=item cache_inited
+
+For internal use.
+
+Dual use accessor for init flag.  If cache_init has run this attribute
+is 1, otherwise it's 0.
+
 =item cache_namespace
 
 This method will get/set the current namespace for cache operations.
@@ -203,6 +237,18 @@ combination.
  $self->cache_namespace($namespace);
  $self->cache_set($key, $data);
 
+=item cache_keys
+
+This method returns an arry reference of cache keys.
+
+  my $arrayref = $self->cache_keys();
+
+=item cache_clear
+
+This method will clear the entire cache.
+
+    $self->cache_clear();
+
 =item cache_del
 
 This method removes the data associated with the current namespace/key 
@@ -226,9 +272,10 @@ the underlining cache handler.
 
     Gantry
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Kevin L. Esteb <kesteb@wsipc.org>
+Kevin L. Esteb <kesteb@wsipc.org>,
+Tim Keefer <tim@timkeefer.com>
 
 =head1 COPYRIGHT AND LICENSE
 

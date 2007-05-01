@@ -1,6 +1,6 @@
 ---
 name: Gantry
-version: 3.47
+version: 3.49
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
@@ -10,15 +10,20 @@ resources:
   license: http://dev.perl.org/licenses/
 requires:
   CGI::Simple: 0
+  Config::General: 2.31
   DBI: 0
   Data::FormValidator: 0
   Data::UUID: 0
   Date::Calc: 0
   File::Copy::Recursive: 0
   HTML::Prototype: 0
+  HTML::SuperForm: 0
   HTTP::Server::Simple::CGI: 0
   Hash::Merge: 0
+  JSON: 0
+  Sub::Install: 0
   Template: 2.0
+  Template::Plugin::HTML::SuperForm: 0
   URI: 0
   perl: 5.8
 build_requires:
@@ -27,13 +32,9 @@ build_requires:
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.47
+    version: 3.49
   Gantry::Build:
     file: lib/Gantry/Build.pm
-  Gantry::Cache::FastMmap:
-    file: lib/Gantry/Plugins/Cache/FastMmap.pm
-  Gantry::Cache::Memcached:
-    file: lib/Gantry/Plugins/Cache/Memcached.pm
   Gantry::Conf:
     file: lib/Gantry/Conf.pm
   Gantry::Conf::Provider:
@@ -120,7 +121,7 @@ provides:
     file: lib/Gantry/Plugins/AjaxFORM.pm
   Gantry::Plugins::AuthCookie:
     file: lib/Gantry/Plugins/AuthCookie.pm
-  Gantry::Plugins::AuthCookie::HtpasswdRow:
+  Gantry::Plugins::AuthCookie::AuthUserObject:
     file: lib/Gantry/Plugins/AuthCookie.pm
   Gantry::Plugins::AutoCRUD:
     file: lib/Gantry/Plugins/AutoCRUD.pm
@@ -132,12 +133,22 @@ provides:
     file: lib/Gantry/Plugins/CRUD.pm
   Gantry::Plugins::Cache:
     file: lib/Gantry/Plugins/Cache.pm
+  Gantry::Plugins::Cache::FastMmap:
+    file: lib/Gantry/Plugins/Cache/FastMmap.pm
+  Gantry::Plugins::Cache::Memcached:
+    file: lib/Gantry/Plugins/Cache/Memcached.pm
+  Gantry::Plugins::Cache::Storable:
+    file: lib/Gantry/Plugins/Cache/Storable.pm
   Gantry::Plugins::Calendar:
     file: lib/Gantry/Plugins/Calendar.pm
   Gantry::Plugins::DBIxClassConn:
     file: lib/Gantry/Plugins/DBIxClassConn.pm
-  Gantry::Plugins::SOAPMP20:
-    file: lib/Gantry/Plugins/SOAPMP20.pm
+  Gantry::Plugins::PageCache:
+    file: lib/Gantry/Plugins/PageCache.pm
+  Gantry::Plugins::SOAP::Doc:
+    file: lib/Gantry/Plugins/SOAP/Doc.pm
+  Gantry::Plugins::SOAP::RPC:
+    file: lib/Gantry/Plugins/SOAP/RPC.pm
   Gantry::Plugins::Session:
     file: lib/Gantry/Plugins/Session.pm
   Gantry::Plugins::Static:
@@ -180,6 +191,8 @@ provides:
     file: lib/Gantry/Utils/DBIxClass.pm
   Gantry::Utils::FormErrors:
     file: lib/Gantry/Utils/FormErrors.pm
+  Gantry::Utils::FormMunger:
+    file: lib/Gantry/Utils/FormMunger.pm
   Gantry::Utils::HTML:
     file: lib/Gantry/Utils/HTML.pm
   Gantry::Utils::Model:
@@ -196,6 +209,10 @@ provides:
     file: lib/Gantry/Utils/PerlbalFixup.pm
   Gantry::Utils::SQL:
     file: lib/Gantry/Utils/SQL.pm
+  Gantry::Utils::TablePerms:
+    file: lib/Gantry/Utils/TablePerms.pm
+  Gantry::Utils::Threeway:
+    file: lib/Gantry/Utils/Threeway.pm
   Gantry::Utils::Validate:
     file: lib/Gantry/Utils/Validate.pm
   My::View:

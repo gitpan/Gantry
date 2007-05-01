@@ -1,7 +1,10 @@
 package Gantry::Plugins::Static;
+
+use strict; use warnings;
+
 use File::Spec;
 use MIME::Types 'by_suffix';
-use strict; use warnings;
+use Gantry::Init;
 
 use base 'Exporter';
 
@@ -14,8 +17,14 @@ sub do_static {
     my( $self, @path ) = @_;
 
     $self->template_disable( 1 );
-    my @base_dirs = split( ":", $self->root() );
-    
+
+    my $tmpl_install_dir = '';
+    eval {
+        $tmpl_install_dir = Gantry::Init->base_root();
+    };
+        
+    my @base_dirs = split( ":", ( $self->root() . ":" . $tmpl_install_dir ) );
+        
     my $filename = pop( @path );
     my $path = File::Spec->catfile( @path, $filename );
     
@@ -34,7 +43,7 @@ sub do_static {
         }
     }
     
-    die "not found $path";
+    die "not found $path\n";
     
 }
 
@@ -60,9 +69,20 @@ Gantry::Plugins::Static - Static file method
 
 =head1 DESCRIPTION
 
-This plugins mixes in a method that will server a static file from disk.
+This plugins mixes in a do_static method that serves static files from disk.
 
-[app_rootp]/static/somefile.ext
+This plugin grabs everything after "/static" and  walks the applications
+root directories and delivers the file with the correct mime type.
+
+   root => html:html/templates:../root
+
+   /static/dir1/dir2/somefile.ext
+
+will crawl html, html/templates, and ../root in the order that the appear
+in the list.
+
+It will also search the directory where you installed the default Gantry 
+templates. Gantry::Init->base_root();
 
 =head1 METHODS
 

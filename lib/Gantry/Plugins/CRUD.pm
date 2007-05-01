@@ -4,12 +4,13 @@ use strict;
 use Carp;
 use Data::FormValidator;
 
-use Gantry::Utils::CRUDHelp qw( clean_dates 
-    clean_params form_profile write_file );
+use Gantry::Utils::CRUDHelp qw(
+    clean_dates clean_params form_profile write_file verify_permission
+);
 
 use base 'Exporter';
 
-our @EXPORT_OK = qw( select_multiple_closure write_file );
+our @EXPORT_OK = qw( select_multiple_closure write_file verify_permission );
 
 #-----------------------------------------------------------
 # Constructor
@@ -140,6 +141,7 @@ sub add {
     # Check form data
     my $show_form = 0;
 
+    $show_form = 1 if ( not $your_self->is_post );
     $show_form = 1 if ( keys %{ $params } == 0 );
 
     my $results;
@@ -176,8 +178,36 @@ sub add {
         }
     }
     else {
+
+        my $redirect;
+        if ( $params->{submit_add_another} ) {
+
+            # move along, we're all done here
+            $redirect = $self->_find_redirect(
+                {
+                    gantry_site => $your_self,
+                    data        => $data,
+                    action      => 'submit_add_another',
+                    user_req    => 'add'
+                }
+            );            
+
+        }
+        else {
+            # move along, we're all done here
+            $redirect = $self->_find_redirect(
+                {
+                    gantry_site => $your_self,
+                    data        => $data,
+                    action      => 'submit',
+                    user_req    => 'add'
+                }
+            );            
+        }
+        
         # remove submit button entry
         delete $params->{submit};
+        delete $params->{submit_add_another};
 
         if ( $self->turn_off_clean_params ) {
             if ( $self->use_clean_dates ) {
@@ -190,15 +220,6 @@ sub add {
 
         $self->add_action->( $your_self, $params, $data );
 
-        # move along, we're all done here
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'submit',
-                user_req    => 'add'
-            }
-        );
         return $your_self->relocate( $redirect );
     }
 } # END: add
@@ -235,6 +256,7 @@ sub edit {
 
     my $show_form = 0;
 
+    $show_form = 1 if ( not $your_self->is_post );
     $show_form = 1 if ( keys %params == 0 );
 
     # Check form data
@@ -275,9 +297,36 @@ sub edit {
     # Form looks good, make update
     else {
         
-        # remove submit button param
-        delete $params{submit};
+        my $redirect;
+        if ( $params{submit_add_another} ) {
 
+            # move along, we're all done here
+            $redirect = $self->_find_redirect(
+                {
+                    gantry_site => $your_self,
+                    data        => $data,
+                    action      => 'submit_add_another',
+                    user_req    => 'edit'
+                }
+            );            
+
+        }
+        else {
+            # move along, we're all done here
+            $redirect = $self->_find_redirect(
+                {
+                    gantry_site => $your_self,
+                    data        => $data,
+                    action      => 'submit',
+                    user_req    => 'edit'
+                }
+            );            
+        }
+        
+        # remove submit button entry
+        delete $params{submit};
+        delete $params{submit_add_another};
+               
         if ( $self->turn_off_clean_params ) {
             if ( $self->use_clean_dates ) {
                 clean_dates( \%params, $form->{ fields } );
@@ -289,15 +338,6 @@ sub edit {
 
         $self->edit_action->( $your_self, \%params, $data );
         
-        # all done, move along
-        my $redirect = $self->_find_redirect(
-            {
-                gantry_site => $your_self,
-                data        => $data,
-                action      => 'submit',
-                user_req    => 'edit'
-            }
-        );
         return $your_self->relocate( $redirect );
     }
 } # END: edit
@@ -581,7 +621,10 @@ You must return:
 
     an object which responds to the Data::FormValidator::Results API
 
-In particular, the object must respond to:
+You might find L<Gantry::Utils::FormErrors> helpful, since it implements
+the required API for you.
+
+But, if you want to implement your own, the objects must respond to:
 
     has_missing
     has_invalid

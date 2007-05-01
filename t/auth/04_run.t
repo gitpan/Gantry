@@ -69,10 +69,10 @@ foreach my $location ( @tests ) {
     my( $status, $page ) = $server->handle_request_test( $location );
     
     if ( $location =~ /^POST/ ) {
-        ok( $status =~ /^(302)/,
+        ok( $status =~ /^(302|200)/,
             "expected 200/302, received $status for $location" );
 
-        if ( $status !~ /^(302)$/ ) {
+        if ( $status !~ /^(302|200)$/ ) {
             #diag( $page );   
         }
     }

@@ -1,6 +1,7 @@
 package Gantry::Template::TT;
 require Exporter;
 
+use Gantry::Init;
 use Template;
 use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 
@@ -58,9 +59,14 @@ sub do_process {
     # Process through template tookit
     else {
         if ( not defined $tt{ $self->uri } ) {
+            my $tmpl_install_dir = '';
+            eval {
+                $tmpl_install_dir = Gantry::Init->base_root();
+            };
+            
             $tt{ $self->uri } = Template->new({
                 WRAPPER         => $self->template_wrapper,
-                INCLUDE_PATH    => $self->root,         
+                INCLUDE_PATH    => ( $self->root . ":$tmpl_install_dir" ),         
                 DEFAULT         => $self->template_default,
             });
         }

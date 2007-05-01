@@ -9,6 +9,7 @@ use MIME::Base64;
 use Digest::MD5 qw( md5_hex );
 use Authen::Htpasswd;
 use Authen::Htpasswd::User;
+use Sub::Install;
 
 # lets export a do method and some conf accessors
 use base 'Exporter';
@@ -25,9 +26,13 @@ our @EXPORT = qw(
     auth_secret
     auth_user_field
     auth_password_field
+    auth_group_table
+    auth_group_join_table
     auth_logout_url
     auth_cookie_name
     auth_cookie_domain
+    auth_execute_login
+    auth_execute_logout
 );
 
 my %registered_callbacks;
@@ -39,9 +44,6 @@ sub get_callbacks {
     my ( $class, $namespace ) = @_;
 
     return if ( $registered_callbacks{ $namespace }++ );
-
-    warn 'Use -PluginNamespace=something when you use '
-        .   'Gantry::Plugins::AuthCookie' if ( $namespace eq 'Gantry' );
 
     return (
         { phase => 'init',      callback => \&initialize },
@@ -66,11 +68,18 @@ sub initialize {
     $gobj->auth_deny( $gobj->fish_config( 'auth_deny' ) || 'no' );
     $gobj->auth_table( $gobj->fish_config( 'auth_table' ) || 'user' );
     $gobj->auth_file( $gobj->fish_config( 'auth_file' ) || '' );
+  
+    $gobj->auth_group_table(
+        $gobj->fish_config( 'auth_group_table' ) || 'user_group'
+    );
+    $gobj->auth_group_join_table(
+        $gobj->fish_config( 'auth_group_join_table' ) || 'user_groups'
+    );
     
     $gobj->auth_user_field( 
         $gobj->fish_config( 'auth_user_field' ) || 'ident'
     );
-    
+        
     $gobj->auth_password_field(
         $gobj->fish_config( 'auth_password_field' ) || 'password'
     );
@@ -105,8 +114,32 @@ sub initialize {
 #-----------------------------------------------------------
 sub auth_check {
     my $gobj = shift;
+    
+    # check for controller config, look for auth stuff and process
+    if ( my $config_ref = $gobj->can( 'controller_config' ) ) {
 
-    if ( $gobj->auth_optional() eq 'yes' ) {
+        my $config = $config_ref->();
+
+        foreach my $m ( @{ $config->{authed_methods} } ) {
+
+            if ( $m->{action} eq $gobj->action() ) {
+                
+                $gobj->auth_deny( 'yes' ); 
+                    
+                # set group access
+                if ( $m->{group} ) {
+                    $gobj->auth_require( 'group' );
+                    $gobj->auth_groups( $m->{group} );
+                }
+                # set valid-user access
+                else {
+                    $gobj->auth_require( 'valid-user' );
+                }
+            }            
+        }
+    }
+    
+    if ( $gobj->auth_optional() eq 'yes' && $gobj->auth_deny() ne 'yes' ) {
         validate_user( $gobj );
     }
     elsif ( $gobj->auth_deny() eq 'yes' ) {
@@ -115,9 +148,15 @@ sub auth_check {
         if ( ! validate_user( $gobj ) ) {
             
             # set to to the login page
+            my $loc = $gobj->location;
             my $uri = $gobj->uri;
-            $uri    =~ s!/!:!g;                
-            $gobj->relocate( $gobj->app_rootp . "/login/$uri" );
+            
+            $uri =~ s/^$loc//;
+            
+            my $goto = '';
+            $goto    = "?url=$uri" if $uri;
+
+            $gobj->relocate( $gobj->location . "/login${goto}" );
         }
 
     }
@@ -129,22 +168,32 @@ sub auth_check {
 sub validate_user {
     my $gobj = shift;
 
+    # stash an empty object
+    my $obj  = Gantry::Plugins::AuthCookie::AuthUserObject->new( {
+        'id'                         => '',
+        'user_id'                    => '',
+        $gobj->auth_user_field()     => '',
+        $gobj->auth_password_field() => '',
+    } );
+    
+    $gobj->auth_user_row( $obj );
+ 
     # immediately return success for login and static
     my $app_rootp = $gobj->app_rootp() || '';
     my $regex     = qr/^${app_rootp}\/(login|static).*/;
     
-    return 1 if $gobj->uri =~ /^$regex/;
+    return 1 if $gobj->uri =~ /^$regex|login$/;
 
     my $cookie_name = 'auth_cookie';
     eval { $cookie_name = $gobj->auth_cookie_name(); };
 
-    my $cookie    = $gobj->get_cookies( 'auth_cookie' );
+    my $cookie    = $gobj->get_cookies( $cookie_name );
     return 0 if ! $cookie;
         
-	my( $username, $password ) = decrypt_cookie( $gobj, $cookie );
-
-	return 0 if ( ! $username || ! $password );
-
+    my( $username, $password ) = decrypt_cookie( $gobj, $cookie );
+    
+    return 0 if ( ! $username || ! $password );
+    
     my $user_groups = {};
 
     if ( $gobj->auth_file() ) {
@@ -154,84 +203,81 @@ sub validate_user {
         
         my $user = $pwfile->lookup_user( $username );
         return 0 if ! $user;
+ 
+        if ( $user && $user->check_password( $password ) ) {
         
-        if ( $user->check_password( $password ) ) {
-            
-            my $pwfile = Authen::Htpasswd->new(
-                $gobj->auth_file(), { encrypt_hash => 'md5' }
-            );
-
-            my $user = $pwfile->lookup_user( $username );
-
-            if ( $user && $user->check_password( $password ) ) {
-                my $hash = {
-                    user_id => $username,
-                    password => $password,
-                };
-                my $obj = bless(
-                     $hash, 'Gantry::Plugins::AuthCookie::HtpasswdRow' 
-                );
-                
-                $gobj->auth_user_row( $obj );
-            }
-            else {
-                return 0;             
-            }
-            
+            my $obj  = Gantry::Plugins::AuthCookie::AuthUserObject->new( {
+                id       => $username,
+                user_id  => $username,
+                $gobj->auth_user_field()     => $username,
+            } );
+                       
+           $gobj->auth_user_row( $obj );
+           $gobj->user( $username );
         }
         else {
-            return 0;
+            return 0;             
         }
     }
     # look up via DBIC
     else {
         my $sch       = $gobj->get_schema();
-        my @user_rows = $sch->resultset( $gobj->auth_table() )->search( { 
-            $gobj->auth_user_field()   => $username,
+        my $user_row  = $sch->resultset( $gobj->auth_table() )->search( { 
+            $gobj->auth_user_field()     => $username,
             $gobj->auth_password_field() => $password,
-        } );
+        } )->next;
 
-        if ( @user_rows ) {
+        if ( $user_row ) {
             # put the user row into the gantry object
-            $gobj->auth_user_row( $user_rows[0] );
+            $gobj->auth_user_row( $user_row );
+            $gobj->user( $username );
         }
-	    else {
-	        my $hash = {};
-            my $obj = bless(
-                     $hash, 'Gantry::Plugins::AuthCookie::HtpasswdRow' 
+        else {
+            return 0;            
+        }
+
+        eval {  # Try to pull groups, don't complain if it fails.
+            my $dbh = $sch->storage->dbh;
+
+            my $user_table      = $gobj->auth_table();
+            my $grp_table       = $gobj->auth_group_table();
+            my $grp_join_table  = $gobj->auth_group_join_table();
+            
+            my @sql;
+            my $group_ident = '';
+            
+            push( @sql,
+                "select g.ident from $user_table u, $grp_join_table m,",
+                "$grp_table g",
+                "where m.user = u.id and m.$grp_table = g.id",
+                'and u.id = ', $user_row->id
             );
 
-            $gobj->auth_user_row( $obj );
+            {
+                # DBI, please keep quiet
+                local $dbh->{ PrintWarn  };
+                local $dbh->{ PrintError };
+                $dbh->{ PrintWarn  } = 0;
+                $dbh->{ PrintError } = 0;
 
-            # set empty user row
-        	return 0;	        
-	    }
+                my $q = $dbh->prepare( join( ' ', @sql ) );
+                $q->execute();
+                $q->bind_columns( \$group_ident );
 
+                foreach ( $q->fetchrow_arrayref ) {
+                    ++$user_groups->{ $group_ident } if $group_ident;
+                }
+            }
 
-        my $dbh = $sch->storage->dbh;
-
-        my( @sql, $group_ident );
-        
-        push( @sql,
-            'select g.ident from user u, user_groups m, user_group g',
-            'where m.user = u.id and m.user_group = g.id',
-            'and u.id = ', $user_rows[0]->id
-        );
-        
-        my $q = $dbh->prepare( join( ' ', @sql ) );
-        $q->execute();
-        $q->bind_columns( \$group_ident );
-
-        foreach ( $q->fetchrow_arrayref ) {
-            ++$user_groups->{ $group_ident };
-        }  
-        
+        };
+        # We don't care if the above does not work.  Groups are optional.
     }
 
     # put the user groups into the gantry object
-    $gobj->auth_user_groups( $user_groups );	
+    $gobj->auth_user_groups( $user_groups );    
 
     if ( $gobj->auth_require() eq 'group' ) {
+        
         my @groups = split( /\s*,\s*/, $gobj->auth_groups() );
 
         # loop over groups and return 1 if user group exists
@@ -249,12 +295,66 @@ sub validate_user {
 } # end validate_user
 
 #-----------------------------------------------------------
+# auth_execute_login
+#-----------------------------------------------------------
+sub auth_execute_login {
+    my ( $self, $opts ) = @_;
+
+    if ( ! $opts->{user} || ! $opts->{password} ) {
+        die "user/password required";
+    }
+    
+    my $cookie_name = 'auth_cookie';
+    my $domain;
+
+    eval { $cookie_name = $self->auth_cookie_name();   };
+    eval { $domain      = $self->auth_cookie_domain(); };
+    
+    my $encd = encrypt_cookie( 
+        $self, 
+        $opts->{user}, 
+        $opts->{password} 
+    );
+
+    # set cookie, redirect to do_frontpage.
+    $self->set_cookie( {  
+        name     => $cookie_name,
+        value    => $encd, 
+        path     => '/',
+        domain   => $domain,
+    } ); 
+    
+}
+
+#-----------------------------------------------------------
+# auth_execute_logout
+#-----------------------------------------------------------
+sub auth_execute_logout {
+    my ( $self ) = @_;
+
+    my $cookie_name = 'auth_cookie';
+    my $domain;
+
+    eval { $cookie_name = $self->auth_cookie_name();   };
+    eval { $domain      = $self->auth_cookie_domain(); };
+    
+    $self->set_cookie( {  
+            name     => $cookie_name,
+            value    => '', 
+            expires  => 0, 
+            path     => '/',
+            domain   => $domain,
+    } );  
+    
+}
+
+#-----------------------------------------------------------
 # do_login
 #-----------------------------------------------------------
 sub do_login {
- 	my ( $self, $page ) = @_;
+     my ( $self, $page ) = @_;
 
-	my %param = $self->get_param_hash();
+    my %param = $self->get_param_hash();
 
     my $cookie_name = 'auth_cookie';
     my $domain;
@@ -263,13 +363,7 @@ sub do_login {
 
     if ( defined $param{logout} ) {
 
-    	$self->set_cookie( {  
-                name     => $cookie_name,
-                value    => '', 
-                expires  => 0, 
-                path     => '/',
-                domain   => $domain,
-        } );  
+        $self->auth_execute_logout();
 
         my $relocation;
 
@@ -280,7 +374,7 @@ sub do_login {
             $relocation = auth_logout_url( $self );
         }
 
-        $self->relocate( $relocation );
+        $self->relocate( $relocation );        
         return();    
     }
     
@@ -297,40 +391,31 @@ sub do_login {
     } ); 
     
     my @errors;
-	if ( ! ( @errors = checkvals( $self )  ) ) {
-
-		my $encd = encrypt_cookie( 
-		    $self, 
-		    $param{username}, 
-		    $param{password} 
-		);
-
-		# set cookie, redirect to do_frontpage.
-        $self->set_cookie( {  
-            name     => $cookie_name,
-            value    => $encd, 
-            path     => '/',
-            domain   => $domain,
-        } ); 
+    if ( ! ( @errors = checkvals( $self )  ) ) {
+        
+        $self->auth_execute_login( {
+            user     => $param{username},
+            password => $param{password}
+        } );
 
         # check for url param then redirect
-        if ( $param{url} ) {
-            $self->relocate( $param{url} );        
+        if ( $param{url} ) {            
+            $self->relocate( $self->location . $param{url} );        
         }
-        
+
         # check for ":" separated paths then redirect
         elsif ( $page ) {
             $page =~ s/\:/\//g;
             $self->relocate( $page );
         }
-        
+
         # else them to the application root
         else {
-            $self->relocate( $self->app_rootp . '/' );
+            $self->relocate( $self->location );
         }
-        
+
         return();
-	}
+    }
 
     my $retval = {};
     my $url    = $param{url} || '';
@@ -350,30 +435,30 @@ sub do_login {
 # login_form( $self )
 #-------------------------------------------------
 sub login_form {
-	my ( $self, $page, $url ) = @_;
+    my ( $self, $page, $url ) = @_;
     
     my %in    = $self->get_param_hash();
     $in{page} = $page;
     $in{url}  = $url;
     
     my @form = ( ht_form( $self->uri ),
-			q!<TABLE border=0>!,
-                ht_input( 'page', 'hidden', \%in ),
-                ht_input( 'url',  'hidden', \%in ),
-			q!<TR><TD><B>Username</B><BR>!,
-			ht_input( 'username', 'text', \%in, 'size=15 id="username"' ),
-			qq!</TD></TR>!,
+        q!<TABLE border=0>!,
+            ht_input( 'page', 'hidden', \%in ),
+            ht_input( 'url',  'hidden', \%in ),
+        q!<TR><TD><B>Username</B><BR>!,
+        ht_input( 'username', 'text', \%in, 'size=15 id="username"' ),
+        qq!</TD></TR>!,
 
-			q!<TR><TD><B>Password</B><BR>!,
-			ht_input( 'password', 'password', \%in, 'size=15' ),
-			q!</TD></TR>!,
+        q!<TR><TD><B>Password</B><BR>!,
+        ht_input( 'password', 'password', \%in, 'size=15' ),
+        q!</TD></TR>!,
 
-			q!<TR><TD align=right>!,
-			ht_submit( 'submit', 'Log In' ),
-			q!</TD></TR>!,
+        q!<TR><TD align=right>!,
+        ht_submit( 'submit', 'Log In' ),
+        q!</TD></TR>!,
 
-			q!</TABLE>!,
-			ht_uform() 
+        q!</TABLE>!,
+        ht_uform() 
     );
 
     return( join( ' ', @form ) );
@@ -383,40 +468,44 @@ sub login_form {
 # decrypt_cookie
 #-------------------------------------------------
 sub decrypt_cookie {
-	my ( $self, $encrypted ) = @_;
+    my ( $self, $encrypted ) = @_;
 
     $encrypted ||= '';
-	
-	$^W = 0; # Crappy perl module dosen't run without warnings.
+    
+    local $^W = 0; # Crappy perl module dosen't run without warnings.
+    
+    my $c;
+    eval {
+        $c = new Crypt::CBC ( {    
+            'key'         => $self->auth_secret(),
+            'cipher'     => 'Blowfish',
+            'padding'    => 'null',
+            'heading' => 'none',
+        } );
+    };
+    if ( $@ ) {
+        die "Error building CBC object are your Crypt::CBC and"
+            .   " Crypt::Blowfish up to date?  Actual error: $@";
+    }
 
-	my $c = new Crypt::CBC ( {	
-        'key' 		=> $self->auth_secret(),
-        'iv'        => '$KJh#(}q',
-        'cipher' 	=> 'Blowfish',
-        'padding'	=> 'null',
-        'header'    => 'none',
-    } );
-
-	my $p_text = $c->decrypt( MIME::Base64::decode( $encrypted ) );
-	
-	$c->finish();
+    my $p_text = $c->decrypt( MIME::Base64::decode( $encrypted ) );
+    
+    $c->finish();
 
     my ( $user, $pass, $md5 ) = split( ':;:', $p_text );
 
-	$user ||= '';
+    $user ||= '';
     $pass ||= '';
     $md5  ||= '';
 
-	my $omd5 = md5_hex( $user . $pass ) || '';
+    my $omd5 = md5_hex( $user . $pass ) || '';
 
-#	$^W = 1;	
-
-	if ( $omd5 eq $md5 ) {
-		return( $user, $pass );
-	}
-	else {
-		return( $user, undef );
-	}
+    if ( $omd5 eq $md5 ) {
+        return( $user, $pass );
+    }
+    else {
+        return( $user, undef );
+    }
 
 } # END decrypt_cookie
 
@@ -424,54 +513,58 @@ sub decrypt_cookie {
 # encrypt_cookie
 #-------------------------------------------------
 sub encrypt_cookie {
-	my ( $self, $username, $pass ) = @_;
+    my ( $self, $username, $pass ) = @_;
 
-	$^W = 0;	
+    local $^W = 0;    
 
-	$username 	||= '';
-	$pass 		||= '';
+    $username     ||= '';
+    $pass         ||= '';
 
-	my $c = new Crypt::CBC( {	
-        'key' 		=> $self->auth_secret(),
-        'iv'        => '$KJh#(}q',
-        'cipher' 	=> 'Blowfish',
-        'header'    => 'none',
-        'padding'	=> 'null' } );
+    my $c;
+    eval {
+        $c = new Crypt::CBC( {    
+            'key'         => $self->auth_secret(),
+            'cipher'     => 'Blowfish',
+            'padding'    => 'null',
+        } );
+    };
+    if ( $@ ) {
+        die "Error building CBC object are your Crypt::CBC and"
+            .   " Crypt::Blowfish up to date?  Actual error: $@";
+    }
 
-	my $md5 = md5_hex( $username . $pass );
-	
-	my $encd 	= $c->encrypt("$username:;:$pass:;:$md5");
-	my $c_text 	= MIME::Base64::encode( $encd, '');
+    my $md5 = md5_hex( $username . $pass );
+    
+    my $encd     = $c->encrypt("$username:;:$pass:;:$md5");
+    my $c_text     = MIME::Base64::encode( $encd, '');
 
-	$c->finish();
-
-	$^W = 1;	
-
-	return( $c_text );
+    $c->finish();
+ 
+    return( $c_text );
     
 } # END encrypt_cookie
 
 #-------------------------------------------------
-# login_checkvals( $in )
+# checkvals
 #-------------------------------------------------
 sub checkvals {
-	my ( $self ) = @_;
+    my ( $self ) = @_;
 
     my %in = $self->get_param_hash();
     
-	my @errors;
+    my @errors;
 
-	if ( ! $in{username} ) {
-		push( @errors, 'Enter your username' );
-	}
-	
-	if ( ! $in{password} ) {
-		push( @errors, 'Enter your password' );
-	}
+    if ( ! $in{username} ) {
+        push( @errors, 'Enter your username' );
+    }
+    
+    if ( ! $in{password} ) {
+        push( @errors, 'Enter your password' );
+    }
 
-	#if ( $self->get_cookies( 'acceptcookies' ) ) {
-	#	push( @errors, '<B>You must have cookies enabled.</B>' );
-	#}
+    #if ( $self->get_cookies( 'acceptcookies' ) ) {
+    #    push( @errors, '<B>You must have cookies enabled.</B>' );
+    #}
 
     if ( ! @errors ) {
         if ( $self->auth_file() ) {
@@ -482,15 +575,16 @@ sub checkvals {
             my $user = $pwfile->lookup_user( $in{username} );
 
             if ( $user && $user->check_password( $in{password} ) ) {
-                my $hash = {
-                    user_id => $in{username},
-                    password => $in{password},
-                };
-                my $obj = bless(
-                     $hash, 'Gantry::Plugins::AuthCookie::HtpasswdRow' 
-                );
-                
+
+                my $obj  = Gantry::Plugins::AuthCookie::AuthUserObject->new( {
+                    id       => $in{username},
+                    user_id  => $in{username},
+                    $self->auth_user_field()     => $in{username},
+                    $self->auth_password_field() => $in{password},
+                } );
+                                
                 $self->auth_user_row( $obj );
+
             }
             else {
                 push( @errors, 'Invalid user' );                
@@ -518,8 +612,8 @@ sub checkvals {
         }
     }
     
-	return( @errors );
-} # END login_checkvals
+    return( @errors );
+} # END checkvals
 
 #-------------------------------------------------
 # $self->auth_optional
@@ -610,6 +704,28 @@ sub auth_file {
 } # end auth_file
 
 #-------------------------------------------------
+# $self->auth_group_table
+#-------------------------------------------------
+sub auth_group_table {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_GROUP_TABLE__} = $p if defined $p;
+    return( $$self{__AUTH_GROUP_TABLE__} ); 
+    
+} # end auth_group_table
+
+#-------------------------------------------------
+# $self->auth_group_join_table
+#-------------------------------------------------
+sub auth_group_join_table {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_GROUP_JOIN_TABLE__} = $p if defined $p;
+    return( $$self{__AUTH_GROUP_JOIN_TABLE__} ); 
+    
+} # end auth_group_join_table
+
+#-------------------------------------------------
 # $self->auth_groups
 #-------------------------------------------------
 sub auth_groups {
@@ -675,28 +791,24 @@ sub auth_cookie_domain {
     
 } # end auth_cookie_name
 
-package Gantry::Plugins::AuthCookie::HtpasswdRow;
+package Gantry::Plugins::AuthCookie::AuthUserObject;
 
-sub id {
-    my $self = shift;
-    return $self->{user_id};
+sub new {
+    my( $class, $methods ) = @_;
+
+    my $self = {};
+    foreach my $method ( keys %$methods ) {
+        
+        Sub::Install::reinstall_sub({
+            code => sub { return $methods->{$method} },
+            into => __PACKAGE__,
+            as   => $method
+        }); 
+    }
+
+    bless( $self, $class );        
+    return $self;    
 }
-
-sub username {
-    my $self = shift;
-    return $self->{user_id};
-}
-
-sub password {
-    my $self = shift;
-    return $self->{password};
-}
-
-sub ident {
-    my $self = shift;
-    return $self->{user_id};
-}
-
 
 1;
 
@@ -708,10 +820,9 @@ Gantry::Plugins::AuthCookie - Plugin for cookie based authentication
 
 =head1 SYNOPSIS
 
-In Apache Perl startup or app.cgi or app.server:
+Plugin must be included in the Applications use statment.
 
     <Perl>
-        # ...
         use MyApp qw{
                 -Engine=CGI
                 -TemplateEngine=TT
@@ -719,14 +830,52 @@ In Apache Perl startup or app.cgi or app.server:
                 AuthCookie
         };
     </Perl>
-    
-Inside MyApp.pm:
 
-    use Gantry::Plugins::AuthCookie;
+Bigtop:
 
-    sub namespace {
-        return 'your_module_name';
-        # the string is up to you, but needs to match -PluginNamespace
+    config {
+        engine MP20;
+        template_engine TT;
+        plugins AuthCookie;
+        ...
+
+
+There are various config options.
+
+Apache Conf:
+
+    <Location /controller>
+        PerlSetVar auth_deny yes
+        PerlSetVar auth_require valid-user
+    </Location>
+
+Gantry Conf:
+
+    <GantryLocation /authcookie/sqlite/closed>
+        auth_deny yes
+        auth_require valid-user
+    </GantryLocation>
+
+Controller Config: (putting auth restictions on the method/action)
+
+    sub controller_config {
+        my ( $self ) = @_;
+        {
+            authed_methods => [
+                { action => 'do_delete',  group => '' },
+                { action => 'do_add',     group => '' },
+                { action => 'do_edit',    group => '' },
+            ],
+        }
+    } # END controller_config
+
+Controller Config via Bigtop:
+
+    method controller_config is hashref {
+        authed_methods 
+            do_delete   => ``,
+            do_edit     => ``,
+            do_add      => ``;
     }
 
 =head1 DESCRIPTION
@@ -738,32 +887,87 @@ Note that you must include AuthCookie in the list of imported items
 when you use your base app module (the one whose location is app_rootp).
 Failure to do so will cause errors.
 
-You also need a namespace method in the base module.  The namespace
-is up to you, but don't pick 'Gantry'.  The namespace will be used
-to register callbacks for this plugin.  If you don't set a namespace,
-all apps in the apache instance with your app will have to use the
-AuthCookie plugin, or they will die horrible deaths for lack of accessors,
-while they are being needlessly subjected to auth.
-
 =head1 CONFIGURATION
 
-Authentication can be turned on and off by setting 'auth_deny'. If 'on',
-then validation is turned on and the particular location will require that the 
-user is authed. After the successful login the user row and the user groups 
-( if any ) will be set into the Gantry site object and can be retrieved using
-the $self->auth_user_row and $self->auth_user_groups accessors. 
- 
- auth_deny           'no' / 'yes'              # default 'off'
- auth_table          'user_table'              # default 'user'
- auth_file           '/path/to/htpasswd_file'  # Apache htpasswd file
- auth_user_field     'ident'                   # default 'ident'
- auth_password_field 'password'                # default 'password'
- auth_require        'valid-user' or 'group'   # default 'valid-user'
- auth_groups         'group1,group2'           # allow these groups
- auth_secret         'encryption_key'          # default 'w3s3cR7'
- auth_cookie_name    'my_auth_cookie'          # default 'auth_cookie'
- auth_cookie_domain  'www.example.com'         # default URL full domain
- 
+Authentication can be turned on and off by setting 'auth_deny' 
+or L<auth_optional>. 
+
+    $self->auth_deny( 'yes' );
+
+If 'yes', then validation is turned on and the particular location will 
+require that the user is authed. 
+
+Just like Apache, you must define the type of auth, valid-user or group.
+
+    $self->auth_require( 'valid-user' ); # default
+
+    or
+
+    $self->auth_require( 'group' );
+
+After successful login the user row, groups (if any) will be set into the 
+Gantry self object and can be retrieved using:
+
+    $self->auth_user_row
+    $self->auth_user_groups
+
+For example, to access the username
+
+$self->auth_user_row->username or whatever you have set for your 
+auth_user_field see L<Gantry::Plugins::AuthCookie#CONFIG OPTIONS>
+
+And to access the groups
+
+    my $groups = $self->auth_user_groups();
+    
+    foreach my $group ( keys %{ $groups } ) {
+        print $group;
+    } 
+
+
+AuthCookie assumes that you have the following tables:
+
+    table user (
+        id          int,
+        username    varchar,
+        password    varchar,
+    )
+    
+    table user_group (
+        id      int,
+        ident   int,    
+    )
+    
+    # join table
+    table user_groups (
+        user
+        user_group
+    )
+
+Optionally you can modify some the table expections like so:
+
+    $self->auth_table( 'my_usertable' );
+    $self->auth_user_field( 'myusername' );
+    $self->auth_password_field( 'mypassword' );
+    
+    $self->auth_group_table( 'user_group' );
+    $self->auth_group_join_table( 'user_user_group' );
+
+=head1 CONFIG OPTIONS
+
+    auth_deny           'no' / 'yes'              # default 'off'
+    auth_table          'user_table'              # default 'user'
+    auth_file           '/path/to/htpasswd_file'  # Apache htpasswd file
+    auth_user_field     'ident'                   # default 'ident'
+    auth_password_field 'password'                # default 'password'
+    auth_require        'valid-user' or 'group'   # default 'valid-user'
+    auth_groups         'group1,group2'     # allow these groups
+    auth_secret         'encryption_key'    # default 'w3s3cR7'
+    auth_cookie_name    'my_auth_cookie'    # default 'auth_cookie'
+    auth_cookie_domain  'www.example.com'   # default URL full domain
+    auth_group_table    'user_group'
+    auth_group_join_table 'user_groups'
+
 =head1 METHODS
 
 =over 4
@@ -782,6 +986,18 @@ row.
 This is mixed into the gantry object and can be called to retrieve the
 defined groups for the authed user.
 
+=item auth_execute_login
+
+    $self->auth_execute_login( { user => 'joe', password => 'mypass' } );
+
+This method can be called at anytime to log a user in.
+
+=item auth_execute_logout
+
+    $self->auth_execute_logout();
+
+This method can be called at anytime to log a user out.
+
 =item get_callbacks
 
 For use by Gantry.pm.  Registers the callbacks needed to auth pages
@@ -795,16 +1011,25 @@ during PerlHandler Apache phase or its moral equivalent.
 
 =item auth_deny
 
-accessor for auth_deny. Turns authentication on when set to 'on'.
+accessor for auth_deny. Turns authentication on when set to 'yes'.
 
 =item auth_optional
 
-accessor for auth_optional. User validation is active when set to 'on'.
+accessor for auth_optional. User validation is active when set to 'yes'.
 
 =item auth_table
 
 accessor for auth_table. Tells AuthCookie the name of the user table. 
 default is 'user'. 
+
+=item auth_group_join_table
+
+accessor for the name of the auth group to members joining table. Defaults
+to 'user_groups'.
+
+=item auth_group_table
+
+accessor for the name of the auth group table.  Defaults to 'user_group'.
 
 =item auth_file
 
@@ -814,7 +1039,7 @@ and where the file is located.
 =item auth_user_field
 
 accessor for auth_user_field. Tells AuthCookie the name of the username field
-in the user database table.
+in the user database table.  Defaults to 'ident'.
 
 =item auth_password_field
 

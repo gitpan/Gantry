@@ -1,5 +1,63 @@
 This file documents the revision history for Perl extension Gantry
 
+3.49 Mon Apr 30 16:45:07 CDT 2007
+    - add datetime_now db-agnostic wrapper to Gantry::Utils::DBIxClass
+    - add post_body parsing to Plugins::SOAP::Doc
+    - modify Gantry handler to work with the PageCache plugin
+    - add Gantry::Plugins::PageCache
+    - modify cache plugins
+    - tie Gantry::Conf into Gantry cache. Specifying a cache plugin will
+      enable caching for Gantry::Conf
+    - add engine_cycle method to the Gantry object. 
+    - add javascript helper for YUI popup calendaring
+    - factor out login, logout routines in AuthCookie. AuthCookie now 
+      provides login/logout methods that can be called at anytime from 
+      anywhere in the app. (think registration form)
+    - add add row level error messages to moxie form.tt
+    - modify Gantry handler to store action
+    - add js_root and js_rootp
+	- add search cpan link to pod/doc viewing module
+    - patch uninitialized warning in CGI engine 
+    - replaced dojo with jquery javascript libraries for the Gantry samples. 
+    - patch Gantry::Utils::DBConnHelper::MP20, the server starting test
+      does not exist in mod_perl 2. Test was useless.
+    - fixed file upload bug, the full extension for .tar.gz 
+      was not being matched 
+    - modified mod_perl2 test
+    - fix link in doc
+    - add patch from Stas for fix the permissions problem with Init.pm
+    - fix gantry base_root bug -- base_root is now add just before template
+      object creation.
+    - add JSON to the requires list, JSON is not integrated into the
+      CRUD do main method. 
+    - added row level permissions by logged in user
+    - added consume_post_body and get_post_body to engines, plugins can use
+      this to preempt normal form parsing of the post body
+    - changed soap plugins to use consume_post_body and get_post_body,
+      making them engine agnostic
+
+3.48 Wed Feb 21 13:52:00 CST 2007
+    - add Gantry::Utils::Threeway
+    - add save and add another to CRUD and AutoCRUD.  To get it from bigtop
+      set 'save_and_add_another' to a true value in your form methods
+      'extra_keys'.
+    - fix crud so that if the form field is display then don't validate
+    - add hints to form.tt
+    - Revised tutorial to reflect current preferred practices.  This
+      involved switching to DBIx::Class and discussing tentmaker.
+    - Modify MP13 and MP20 engine to handle multiple entries for form
+      parameters. Form parameters that contain multiple values will be 
+      joined with nulls ( "\0" ). This is exactly how CGI.pm behaves.
+    - changed sample_wrapper stylesheet example to use doc_rootp so it
+      can work with stand alone server.
+    - Added FormMunger util to massage form fields needed by form.tt.
+    - Added no_cancel flag to form.tt, set it if you don't want the
+      Cancel button.  In bigtop, set this as one of your form methods
+      'extra_keys'.
+    - Added onchange to form.tt.  Give it the name of a javascript function
+      to trigger when a select list changes (type must be select).  You
+      can set this in bigtop with the new html_form_onchange statement.
+
 3.47 Mon Jan 22 09:11:06 CST 2007
     - Added Gantry::Plugins::Session
     - Added Ganty SOAP Support

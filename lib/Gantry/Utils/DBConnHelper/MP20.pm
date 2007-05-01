@@ -13,9 +13,7 @@ sub get_dbh {
     my $dbh;
     my $r = 'Apache2::RequestRec';
 
-    if ( not $Apache::ServerStarting ) {
-        $dbh = $r->pnotes( "dbh" );
-    }
+    $dbh = $r->pnotes( "dbh" );
 
     return $dbh;
 }
@@ -25,9 +23,7 @@ sub set_dbh {
     my $dbh   = shift;
     my $r     = 'Apache2::RequestRec';
     
-    if ( not $Apache::ServerStarting ) {
-        $r->pnotes( "dbh", $dbh );
-    }
+    $r->pnotes( "dbh", $dbh );
 }
 
 sub _get_gantry_conf {
@@ -75,9 +71,7 @@ sub get_auth_dbh {
     my $auth_dbh;
     my $r = 'Apache2::RequestRec';
     
-    if ( not $Apache::ServerStarting ) {
-        $auth_dbh = $r->pnotes( "auth_dbh" );
-    }
+    $auth_dbh = $r->pnotes( "auth_dbh" );
 
     return $auth_dbh;
 }
