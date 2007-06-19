@@ -16,6 +16,7 @@ our @EXPORT = qw(
     cache_set
     cache_keys
     cache_init
+    cache_purge
     cache_handle
     cache_inited
     cache_expires
@@ -181,6 +182,13 @@ sub cache_del {
         nstore_fd( \$serialized, \*CACHE ) or die "Can't store $key!\n";
         close( CACHE );
     }    
+}
+
+sub cache_purge {
+    my ($gobj) = @_;
+    
+    return;
+    
 }
 
 1;

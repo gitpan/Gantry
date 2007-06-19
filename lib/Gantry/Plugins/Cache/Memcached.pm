@@ -16,6 +16,7 @@ our @EXPORT = qw(
     cache_clear
     cache_keys
     cache_init
+    cache_purge
     cache_handle
     cache_inited
     cache_expires
@@ -124,6 +125,15 @@ sub cache_del {
 
     $handle->remove($skey);
     
+}
+
+sub cache_purge {
+    my ($gobj) = @_;
+    
+    my $handle = $gobj->cache_handle();
+
+    return;
+
 }
 
 1;

@@ -109,15 +109,15 @@ Here is our module (without its documentation but with commentary
 interspersed):
 
     package Apps::Address;
-
+  
     use strict;
-
+  
     our $VERSION = '0.01';
 
 It begins like any other module...
 
     use Gantry qw{ -TemplateEngine=TT };
-
+  
     our @ISA = ( 'Gantry' );
 
 ...but, it uses Gantry with a template engine (Template Toolkit).
@@ -137,7 +137,7 @@ This is purely for documentation.
     #-----------------------------------------------------------------
     sub site_links { 
         my ( $self ) = @_;
-
+ 
         return [
             { link => $self->app_rootp() . 'address', label => 'Address' },
         ];
@@ -152,7 +152,7 @@ to the default page in the address table's controller.
     #-----------------------------------------------------------------
     sub do_main {
         my ( $self ) = @_;
-
+  
         $self->stash->view->template( 'main.tt' );
         $self->stash->view->title( 'Main Listing' );
     
@@ -162,7 +162,7 @@ to the default page in the address table's controller.
             ],
         } );
     } # END do_main
-
+  
     1;
 
 C<do_main> is one (of two) default methods Gantry dispatches to.  If you
@@ -183,10 +183,10 @@ name might look like this:
 
     sub init {
         my ( $self ) = @_;
-
+ 
         # process SUPER's init code
         $self->SUPER::init( );
-
+ 
         $self->smtp_host( $self->fish_conf( 'smtp_host' ) || '' );
     } # END init
 
@@ -207,17 +207,17 @@ options for the database connections.
 
     package Apps::Address::Model;
     use strict; use warnings;
-
+ 
     use base 'DBIx::Class::Schema';
-
+ 
     __PACKAGE__->load_classes( qw/
             address
     / );
-
+ 
     sub get_db_options {
         return { AutoCommit => 1 };
     }
-
+ 
     1;
 
 See C<DBIx::Class::Schema> for a discussion of C<load_classes> and the
@@ -234,9 +234,9 @@ retrieve, update, and delete) for address book rows.  Again, I'll include
 it a piece at a time with running commentary.
 
     package Apps::Address::Address;
-
+ 
     use strict;
-
+ 
     use base 'Apps::Address';
 
 It begins like any subclass.  Note that it is a subclass of Apps::Address
@@ -245,7 +245,7 @@ which is itself a subclass of Gantry.  The only C<handler> sub is in Gantry.pm
 story about the vulnerable address book with the flowers on the cover).
 
     use Gantry::Plugins::DBIxClassConn qw( get_schema );
-
+ 
     use Apps::Address::Model;
     use Apps::Address::Model::address qw( $ADDRESS );
 
@@ -308,7 +308,7 @@ summary row for each database row like this.  It looks like this:
     #-----------------------------------------------------------------
     sub do_main {
         my ( $self ) = @_;
-
+ 
         $self->stash->view->template( 'results.tt' );
         $self->stash->view->title( 'Address' );
 
@@ -419,7 +419,7 @@ The following code produces this on the screen:
     # $self->form( $row )
     #-----------------------------------------------------------------
     sub form {
-
+ 
         return {
             row    => $row,
             legend => $self->path_info =~ /edit/i ? 'Edit' : 'Add',
@@ -526,11 +526,11 @@ is the own for my address table:
 
     package Apps::Address::Model::address;
     use strict; use warnings;
-
+ 
     use base 'Gantry::Utils::DBIxClass', 'Exporter';
-
+ 
     our $ADDRESS = 'Apps::Address::Model::address';
-
+ 
     our @EXPORT_OK = ( '$ADDRESS' );
 
 Note that we export the alias for controllers to use when referring to
@@ -561,9 +561,9 @@ all simple.
 
     sub foreign_display {
         my $self = shift;
-
+ 
         my $name = $self->name() || '';
-
+ 
         return "$name";
     }
 
@@ -620,76 +620,76 @@ SQL for database creation
 Apps::Address
 
     package Apps::Address;
-
+ 
     use strict;
-
+ 
     our $VERSION = '0.01';
-
+ 
     use Apps::Address::Address;
-
+ 
     use Gantry qw{ -TemplateEngine=TT };
-
+ 
     our @ISA = qw( Gantry );
-
+ 
     #-----------------------------------------------------------------
     # $self->do_main(  )
     #-----------------------------------------------------------------
     sub do_main {
         my ( $self ) = @_;
-
+ 
         $self->stash->view->template( 'main.tt' );
         $self->stash->view->title( 'Main Listing' );
-
+ 
         $self->stash->view->data( {
             pages => [
                 { link => 'address', label => 'Address' },
             ],
         } );
     } # END do_main
-
+ 
     #-----------------------------------------------------------------
     # $self->site_links(  )
     #-----------------------------------------------------------------
     sub site_links {
         my ( $self ) = @_;
-
+ 
         return [
             { link => $self->app_rootp() . 'address', label => 'Address' },
         ];
     } # END site_links
-
+ 
     1;
 
 Apps::Address::Model
 
     package Apps::Address::Model;
     use strict; use warnings;
-
+ 
     use base 'DBIx::Class::Schema';
-
+ 
     __PACKAGE__->load_classes( qw/
         address
     / );
-
+ 
     sub get_db_options {
         return { AutoCommit => 1 };
     }
-
+ 
     1;
 
 Apps::Address::Address
 
     package Apps::Address::Address;
-
+ 
     use strict;
-
+ 
     use base 'Apps::Address';
-
+ 
     use Gantry::Plugins::DBIxClassConn qw( get_schema );
-
+ 
     use Apps::Address::Model;
     use Apps::Address::Model::address qw( $ADDRESS );
-
+ 
     use Gantry::Plugins::AutoCRUD qw(
         do_add
         do_edit
@@ -697,24 +697,24 @@ Apps::Address::Address
         form_name
         write_file
     );
-
+ 
     sub schema_base_class { return 'Apps::Address::Model'; }
-
+ 
     #-----------------------------------------------------------------
     # $self->do_main(  )
     #-----------------------------------------------------------------
     sub do_main {
         my ( $self ) = @_;
-
+ 
         $self->stash->view->template( 'results.tt' );
         $self->stash->view->title( 'Address' );
-
+ 
         my $real_location = $self->location() || '';
         if ( $real_location ) {
             $real_location =~ s{/+$}{};
             $real_location .= '/';
         }
-
+ 
         my $retval = {
             headings       => [
                 'Name',
@@ -727,10 +727,10 @@ Apps::Address::Address
                 },
             ],
         };
-
+ 
         my $schema = $self->get_schema();
         my @rows   = $ADDRESS->get_listing( { schema => $schema } );
-
+ 
         foreach my $row ( @rows ) {
             my $id = $row->id;
             push(
@@ -752,16 +752,16 @@ Apps::Address::Address
                 }
             );
         }
-
+ 
         $self->stash->view->data( $retval );
     } # END do_main
-
+ 
     #-----------------------------------------------------------------
     # $self->form( $row )
     #-----------------------------------------------------------------
     sub form {
         my ( $self, $row ) = @_;
-
+ 
         return {
             row        => $row,
             legend => $self->path_info =~ /edit/i ? 'Edit' : 'Add',
@@ -805,41 +805,41 @@ Apps::Address::Address
             ],
         };
     } # END form
-
+ 
     #-----------------------------------------------------------------
     # get_model_name( )
     #-----------------------------------------------------------------
     sub get_model_name {
         return $ADDRESS;
     }
-
+ 
     #-----------------------------------------------------------------
     # get_orm_helper( )
     #-----------------------------------------------------------------
     sub get_orm_helper {
         return 'Gantry::Plugins::AutoCRUDHelper::DBIxClass';
     }
-
+ 
     #-----------------------------------------------------------------
     # text_descr( )
     #-----------------------------------------------------------------
     sub text_descr     {
         return 'address';
     }
-
+ 
     1;
 
 Apps::Address::Model::address
 
     package Apps::Address::Model::address;
     use strict; use warnings;
-
+ 
     use base 'Gantry::Utils::DBIxClass', 'Exporter';
-
+ 
     our $ADDRESS = 'Apps::Address::Model::address';
-
+ 
     our @EXPORT_OK = ( '$ADDRESS' );
-
+ 
     __PACKAGE__->load_components( qw/ PK::Auto Core / );
     __PACKAGE__->table( 'address' );
     __PACKAGE__->add_columns( qw/
@@ -855,28 +855,28 @@ Apps::Address::Model::address
     / );
     __PACKAGE__->set_primary_key( 'id' );
     __PACKAGE__->base_model( 'Apps::Address::Model' );
-
+ 
     sub get_foreign_display_fields {
         return [ qw( name ) ];
     }
-
+ 
     sub get_foreign_tables {
         return qw(
         );
     }
-
+ 
     sub foreign_display {
         my $self = shift;
-
+ 
         my $name = $self->name() || '';
-
+ 
         return "$name";
     }
-
+ 
     sub table_name {
         return 'address';
     }
-
+ 
     1;
 
 =head1 Deploying the Application
@@ -897,13 +897,13 @@ httpd.conf:
 
     <Perl>
         #!/usr/bin/perl
-
+ 
         use lib '/home/me/Apps-Address/lib';
-
+ 
         use Address;
         use Address::Address;
     </Perl>
-
+ 
     <Location />
         PerlSetVar dbconn dbi:Pg:dbname=address
         PerlSetVar dbuser apache
@@ -911,7 +911,7 @@ httpd.conf:
         PerlSetVar template_wrapper wrapper.tt
         PerlSetVar root /home/me/Apps-Address/html:/home/me/srcgantry/root
     </Location>
-
+ 
     <Location /address>
         SetHandler  perl-script
         PerlHandler Apps::Address::Address
@@ -936,15 +936,15 @@ If you are using CGI you need to make a script instead of adjusting apache
 locations.  Here is ours:
 
     #!/usr/bin/perl
-
+ 
     use CGI::Carp qw( fatalsToBrowser );
-
+ 
     use lib '/home/me/Apps-Address/lib';
-
+ 
     use Apps::Address qw{ -Engine=CGI -TemplateEngine=TT };
-
+ 
     use Gantry::Engine::CGI;
-
+ 
     my $cgi = Gantry::Engine::CGI->new( {
         config => {
             dbconn => 'dbi:Pg:dbname=address',
@@ -958,7 +958,7 @@ locations.  Here is ours:
             '/address' => 'Apps::Address::Address',
         },
     } );
-
+ 
     $cgi->dispatch();
 
 If you are using Gantry::Conf with CGI, use the single config hash key:
@@ -974,14 +974,14 @@ If you want to deploy the app as a stand alone server (most useful
 during testing), change the above cgi script to this:
 
     #!/usr/bin/perl
-
+ 
     use Gantry::Server;
-
+ 
     use lib '/home/me/Apps-Address/lib';
-
+ 
     use Apps::Address qw{ -Engine=CGI -TemplateEngine=TT };
     use Gantry::Engine::CGI;
-
+ 
     my $cgi = Gantry::Engine::CGI->new( {
         config => {
             dbconn => 'dbi:Pg:dbname=address',
@@ -995,10 +995,10 @@ during testing), change the above cgi script to this:
             '/address' => 'Apps::Address::Address',
         },
     } );
-
+ 
     my $port = shift || 8080;
     my $server = Gantry::Server->new( $port );
-
+ 
     $server->set_engine_object( $cgi );
     $server->run();
 
@@ -1078,17 +1078,17 @@ bigtop said this:
     I have generated your 'Apps::Address' application.  I have also
     taken the liberty
     of making an sqlite database for it to use.  To run the application:
-
+ 
         cd Apps-Address
         ./app.server [ port ]
-
+ 
     The app.server runs on port 8080 by default.
-
+ 
     Once the app.server starts, it will print a list of the urls it can serve.
     Point your browser to one of those and enjoy.
-
+ 
     If you prefer to run the app with Postgres or MySQL type one of these:
-
+ 
         bigtop --pg_help
         bigtop --mysql_help
 

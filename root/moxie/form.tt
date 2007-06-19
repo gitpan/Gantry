@@ -41,11 +41,13 @@
 
 [%- END %]
 <div class="form-box actions">
-[% form.submit( 
-    id      => 'submit', 
-    name    => 'submit', 
-    label   => ( view.form.submit_button_label || 'Submit' )
-) -%]
+[%- UNLESS view.form.no_submit %]
+    [% form.submit( 
+        id      => 'submit', 
+        name    => 'submit', 
+        label   => ( view.form.submit_button_label || 'Submit' )
+    ) -%]
+[%- END %]
 
 [%- IF view.form.submit_and_add_another %] 
     [%- form.submit( 
@@ -98,7 +100,7 @@
         [%- form.$type( 
             id => dta.name,
             name => name, 
-            default => ( self.params.$name || row.$name || dta.default_value ),
+            default => (self.params.$name || row.$name || dta.default_value),
             class => dta.class,
             rows => dta.rows,
             cols => dta.cols
@@ -118,7 +120,7 @@
             id => dta.name,
             name => dta.name, 
             class => dta.class,
-            default => ( self.params.$name || row.$name || dta.default_value ),
+            default => (self.params.$name || row.$name || dta.default_value),
             size => dta.display_size,
         ) 
         %]
@@ -170,7 +172,7 @@
             id => dta.name,
             name => dta.name, 
             class => dta.class,
-            default => ( self.params.$name || row.$name || dta.default_value ),
+            default => (self.params.$name || row.$name || dta.default_value),
             size => dta.display_size,
         ) 
         %]

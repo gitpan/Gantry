@@ -27,6 +27,18 @@ sub handler {
     }
 }
 
+sub handle_request_test_xml {
+    my ( $self, $location, $xml ) = @_;
+
+    $engine_object->{__POST_BODY__} = $xml;
+    $ENV{ CONTENT_LENGTH } = 0;
+    $ENV{ REQUEST_METHOD } = 'POST';
+    $ENV{ URI            } = $location;
+    $ENV{ PATH_INFO      } = $location;
+
+    return $self->_test_helper();
+}
+
 sub handle_request_test {
     my ( $self, $request ) = @_;
 
@@ -40,6 +52,12 @@ sub handle_request_test {
     $ENV{CONTENT_LENGTH}    = 0;
     $ENV{QUERY_STRING}      = $args if $args;
     $ENV{SCRIPT_NAME}       = "";
+
+    return $self->_test_helper();
+}
+
+sub _test_helper {
+    my $self = @_;
 
     # divert STDOUT to another handle that stores the returned data
     my $out_handle      = gensym;
@@ -228,6 +246,12 @@ This method functions as a little web server processing http requests
 This method pretends to be a web server, but only handles a single request
 before returning.  This is useful for testing your Gantry app without
 having to use sockets.
+
+=item handle_request_test_xml
+
+This method is like C<handle_request_test>, but for SOAP packets.  Call
+it with the location you want to hit and the XML packet to PUT there.
+Returns whatever the server returns.
 
 =item net_server
 

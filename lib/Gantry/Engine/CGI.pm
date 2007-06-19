@@ -99,6 +99,9 @@ sub new {
         }
     );
 
+    $CGI::Simple::DISABLE_UPLOADS = $config->{disable_uploads} || 0;
+    $CGI::Simple::POST_MAX        = $config->{post_max} ||'20000000000';
+    
     return $self;
     
 } # end new
@@ -153,7 +156,8 @@ sub consume_post_body {
 sub get_post_body {
     my $self = shift;
 
-    return $self->{__POST_BODY__};
+    return $self->{__POST_BODY__} || $self->{ cgi_obj }->{__POST_BODY__};
+    # the value is in the cgi_obj during testing
 }
 
 #--------------------------------------------------
@@ -235,10 +239,18 @@ sub file_upload {
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
 
-    print $self->cgi->header(
-        -type => 'text/html',
-        -status => ( $self->status() ? $self->status() : '400 Bad Request' ),
-    );
+    eval {
+        print $self->cgi->header(
+            -type => 'text/html',
+            -status => ( $self->status()
+                     ? $self->status()
+                     : '400 Bad Request' ),
+        );
+    };
+    if ( $@ ) {
+        die "Error encountered in cast_custom_error: $@\n"
+            .   "I was trying to say $error_page\n";
+    }
 
     $self->print_output( $error_page );
 
@@ -360,10 +372,6 @@ sub engine_init {
     my $cgi_obj = shift;
 
     #$cgi_obj->{params} = parse_env();
-    $CGI::Simple::DISABLE_UPLOADS = 
-        $self->fish_config( 'disable_uploads' ) || 0;
-
-    $CGI::Simple::POST_MAX = $self->fish_config( 'post_max' )  ||'20000000000';
 
     my $c;
     if ( $self->get_post_body() ) {
@@ -377,10 +385,19 @@ sub engine_init {
         $c = CGI::Simple->new();
     }
 
+    $self->cgi( $c );
+
+    # check for CGI::Simple errors
+    if ( $c->{'.cgi_error'} ) {
+        my $error = $c->{'.cgi_error'};
+        my ( $status ) = ( $error =~ s/^(\d+)\s+// );
+        $self->status( $status || 400 );
+        die( "$error\n" );
+    }
+    
     $cgi_obj->{params} = $c->Vars;
     $self->cgi_obj( $cgi_obj );
 
-    $self->cgi( $c );
 
 } # END engine_init
 
@@ -455,6 +472,28 @@ sub fish_config {
     return $$conf{ $param } if ( defined $conf and defined $$conf{ $param } );
 
     # otherwise, look in the cgi engine object
+    # ... starting at the location levels
+    if ( $self->{ cgi_obj }{ config }{ GantryLocation } ) {
+        my $glocs = $self->{ cgi_obj }{ config }{ GantryLocation };
+        my $loc   = $self->location;
+        my @path  = split( '/', $loc );
+
+        while( @path ) {
+
+            my $path = join( '/', @path );
+
+            if ( defined $glocs->{ $path }
+                    and
+                 defined $glocs->{ $path }{ $param }
+            ) {
+                return $glocs->{ $path }{ $param };
+            }
+
+            pop @path;
+        }
+    }
+
+    # ... then defaulting to the top level
     return $self->{cgi_obj}{config}{ $param };
 
 }

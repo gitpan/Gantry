@@ -79,6 +79,10 @@ L<How can I use DBIx::Class with Gantry?>
 
 =item *
 
+L<How can I use captchas to cut down spam on my site?>
+
+=item *
+
 L<How can I use Gantry's native models?>
 
 =back
@@ -112,6 +116,10 @@ L<How do I use Gantry::Conf under mod_perl?>
 =item *
 
 L<How do I use Gantry::Conf under CGI/FastCGI?>
+
+=item *
+
+L<How do I use Gantry::Conf outside of web servers?>
 
 =back
 
@@ -673,6 +681,16 @@ Use C<$schema> according to the docs in DBIx::Class.
 
 Bigtop can generate all of this for you.
 
+=head1 How can I use captchas to cut down spam on my site?
+
+Gantry has a utility which implements captchas.  It even has a feature
+for disabled users.  The user sees an image or its alt tag, then
+picks a description of it from a pull down menu.  During form submission,
+the selected description is compared with encrypted text originally
+delivered with the form.
+
+To learn to use Gantry's captchas, see L<Gantry::Util::Captcha>.
+
 =head1 How can I use Gantry's native models?
 
 Perhaps a better answer a question: 'Why would you want to?'  If you have
@@ -699,7 +717,7 @@ root Location block for the app:
      PerlSetVar dbuser unknown
      PerlSetVar dbpass none_of_your_business
      PerlSetVar root   /home/you/templates:/home/gantry/root
-
+ 
      SetHandler  perl-script
      PerlHandler Apps::Malcolm
  </Location>
@@ -715,12 +733,12 @@ Modify your httpd.conf to include a Location for each controller in your app:
      SetHandler  perl-script
      PerlHandler App::Base::Module::Sub
  </Location>
-
+ 
  <Location /sub2>
      SetHandler  perl-script
      PerlHandler App::Base::Module::SubOther
  </Location>
-
+ 
  <Location /sub/system>
      SetHandler  perl-script
      PerlHandler App::Base::Module::Sub::System
@@ -751,9 +769,9 @@ Create an executable file in a cgi-bin directory like this one:
 
  #!/usr/bin/perl
  use strict;
-
+ 
  use App::Base::Module qw{ -Engine=CGI -TemplateEngine=TT };
-
+ 
  my $cgi = Gantry::Engine::CGI->new(
      {
          locations => {
@@ -789,7 +807,7 @@ Wrap the dispatch statement like this:
      $cgi->dispatch();
  }
 
-=head2 What is L<Gantry::Conf>?
+=head2 What is Gantry::Conf?
 
 L<Gantry::Conf> provides a complete configuration scheme for both web
 and traditional programs.  It allows you to share configuration between
@@ -801,7 +819,86 @@ servers (by allowing for http or https access to a single conf file).
 See Gantry::Conf::Tutorial for how to set up your conf files among other
 details.
 
-=head2 How do I use L<Gantry::Conf> under mod_perl?
+=head2 How should I configure an app?
+
+You should should use Gantry::Conf to configure your apps.  On each
+system where you work, be it dev, qual, or prod, you should have a
+single directory where all the conf files live.  We usually call it
+/etc/gantry.d, and I'll refer to it by that name below, but you could
+choose any directory that makes sense to you.
+
+Once you create /etc/gantry.d to hold the conf files or symbolic links
+to them, put this single line in your master conf file:
+
+    include /etc/gantry.d/*.conf
+
+We call our single master conf file /etc/gantry.conf.  Pick a file name
+that makes sense to you, use that name consistently across your systems.
+
+Finally, place one conf file for each app in the /etc/gantry.d directory.
+Alternatively, especially on dev systems, place a symbolic link in
+/etc/gantry.d which refers to the Gantry::Conf file bigtop regenerates
+for your application.  Bigtop makes a conf file (if you request one)
+in the docs subdirectory of the build directory.
+
+To manually build a Gantry::Conf file, use a text editor to make something
+likes this:
+
+    <instance YourAppName>
+        dbconn dbi:Pg:dbname=yourdb
+        dbuser somebody
+    </instance>
+
+The format must be intelligible to C<Conf::General> unless you tell
+Gantry::Conf to do something different.  See L<Gantry::Conf> for other
+ways to supply conf information.
+
+How you inform Gantry of your instance name varies by deployment approach.
+See the next three questions.
+
+Many apps need to be configured in different ways for different uses.
+For example, an app might need to contact one database server during
+development, but contact a different one in production.  You might even
+have two instances of the same app presented to two different groups of
+production users.  Gantry::Conf handles this with instances.
+
+You could just add another instance to the Gantry::Conf file for your
+app.  But, you could also use Bigtop to help you.  In Bigtop's app
+section, you may have as many config blocks as you like.  You want one
+with no name, list it first.  This will have the common conf information
+that all the instances will share.  Then make additional config blocks
+with names to hold the variations:
+
+    config {
+        dbuser standard_user => no_accessor;
+        template_wrapper site_wrapper.tt => no_accessor;
+        people_per_page 25;
+    }
+    config dev {
+        dbconn dbi:SQLite:dbname=app.db => no_accessor;
+        people_per_page 4;
+    }
+    config prod {
+        dbconn dbi:Pg:dbname=appdb;host=proddb.example.com => no_accessor;
+    }
+
+This will result in a single Gantry::Conf file with multiple instances.
+Each instance will have all the conf variables from the base config block
+(the one with no name) and the ones from the named conf block.  If
+both blocks have the same variable, the value from the named block overrides
+the one from the base block.  There will be an instance for the base block,
+which will be named for the app.  The other instance names will have the
+base instance name as a prefix with _name as a suffix.  If the app with
+the above configs were called C<HeavyLifter>, the instances would be
+C<heavylifter>, C<heavylifter_dev>, and C<heavylifter_prod>.
+
+There are many other ways to use C<Gantry::Conf>, see its POD or
+read C<Gantry::Conf::Tutorial> for more information.
+
+In each deployment, specify the proper instance in the appropriate manner
+as described in next three questions.
+
+=head2 How do I use Gantry::Conf under mod_perl?
 
 To make L<Gantry::Conf> work, you must tell it which instance you need to
 configure.  In mod_perl do this by setting this variable at the root
@@ -817,8 +914,8 @@ configuration, set one additional variable:
 =head2 How do I use Gantry::Conf under CGI/FastCGI?
 
 To make Gantry::Conf work, you must tell it which instance you need to
-configure.  In CGI and FastCGI do this by setting this by setting this
-key in the config hash passed to the Gantry::Engine::CGI constructor:
+configure.  In CGI and FastCGI do this by setting this key in the config
+hash passed to the Gantry::Engine::CGI constructor:
 
  GantryConfInstance => 'your_instance_name'
 
@@ -826,6 +923,25 @@ If you are not using the default /etc/gantry.conf for Gantry::Conf's
 configuration, set one additional variable:
 
  GantryConfFile => '/full/path/to/your/conf.file'
+
+=head2 How do I use Gantry::Conf outside of web servers?
+
+Suppose you have a cron job or script.  To pull Gantry::Conf info for
+an instance into it, do something like this:
+
+    use Gantry::Conf;
+
+    my $instance = 'instance_name'; # could be a command line arg
+
+    my $conf     = Gantry::Conf->retrieve(
+        {
+            instance    => $instance,
+            config_file => '/etc/mygantry.conf',
+        }
+    );
+
+This delivers a hash reference of conf information.  If your master conf
+file is the default, /etc/gantry.conf, you may omit the C<config_file> key.
 
 =head1 Appearance
 
@@ -933,11 +1049,11 @@ for your app (or to the location at which auth should begin):
  <Location /myloc>
    AuthType Basic
    AuthName "Your Auth Realm Name"
-
+  
    PerlSetVar auth_dbconn  "dbi:Pg:dbname=your_auth_db"
    PerlSetVar auth_dbuser  apache
    PerlSetVar auth_dbpass  super_secret
-
+  
    PerlAuthenHandler Gantry::Control::C::Access
    PerlAuthenHandler Gantry::Control::C::AuthenRegular
    PerlAuthzHandler  Gantry::Control::C::AuthzRegular
@@ -991,7 +1107,7 @@ If you use any ORM which uses the DBConn scheme (see Gantry::Docs::DBConn),
 your script should use the provided helper:
 
  use Gantry::Utils::Helper::Script;
-
+ 
  Gantry::Utils::Helper::Script->set_conn_info(
      {
          dbconn => 'dbi:Pg:dbname=yourdb;host=127.0.0.1',

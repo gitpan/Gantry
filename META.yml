@@ -1,6 +1,6 @@
 ---
 name: Gantry
-version: 3.49
+version: 3.50
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
@@ -32,7 +32,7 @@ build_requires:
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.49
+    version: 3.50
   Gantry::Build:
     file: lib/Gantry/Build.pm
   Gantry::Conf:

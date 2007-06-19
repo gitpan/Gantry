@@ -103,6 +103,12 @@ sub initialize {
         );
     };
 
+    eval {
+        $gobj->auth_logout_url(
+            $gobj->fish_config( 'auth_logout_url' )
+        );
+    };
+
     # initialize these in the Gantry object
     $gobj->auth_user_row( {} );
     $gobj->auth_user_groups( {} );
@@ -156,7 +162,9 @@ sub auth_check {
             my $goto = '';
             $goto    = "?url=$uri" if $uri;
 
-            $gobj->relocate( $gobj->location . "/login${goto}" );
+            $loc =~ s!^/$!!; # fix for root page login redirection
+            
+            $gobj->relocate( $loc . "/login${goto}" );
         }
 
     }
@@ -480,7 +488,6 @@ sub decrypt_cookie {
             'key'         => $self->auth_secret(),
             'cipher'     => 'Blowfish',
             'padding'    => 'null',
-            'heading' => 'none',
         } );
     };
     if ( $@ ) {
@@ -587,19 +594,23 @@ sub checkvals {
 
             }
             else {
-                push( @errors, 'Invalid user' );                
+                push( @errors, 'Login Failure' );                
             }            
         }
         else {
             eval {
+                my $password_field = $self->auth_password_field();
+                
                 my $sch = $self->get_schema();
-                my @rows = $sch->resultset( $self->auth_table() )->search( {
+                my $row = $sch->resultset( $self->auth_table() )->search( {
                     $self->auth_user_field()  => $in{username},
-                    $self->auth_password_field()  => $in{password},
-                } );
+                } )->next;
 
-                if ( @rows ) {
-                    $self->auth_user_row( $rows[0] );
+                if ( $row && $row->$password_field eq $in{password} ) {
+                    $self->auth_user_row( $row );
+                }
+                elsif ( $row ) {
+                    push( @errors, "Invalid password" );
                 }
                 else {
                     push( @errors, 'Invalid user' );

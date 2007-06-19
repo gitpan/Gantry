@@ -392,6 +392,10 @@ Location(s) to cache
 
 Action(s) to cache
 
+=item gantry_pagecache_crud
+
+Boolean accessor for whether to attempt caching of CRUD behaviors.
+
 =item gantry_pagecache_mime_type
 
 MIME type(s) to cache

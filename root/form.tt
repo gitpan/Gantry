@@ -206,7 +206,8 @@ Parameters:
 			[%- END %]
 			
 			<tr class="results-row">
-				[%- IF view.form.results.missing( "${field.name}" ) %]
+				[%- IF view.form.results.missing( "${field.name}" )
+                        OR view.form.results.invalid( "${field.name}" ) %]
 					[% style_str = ' style="color: red"' %]
                 [%- ELSE %]
                     [% style_str = '' %]
@@ -216,7 +217,7 @@ Parameters:
 				<td class="shd" valign="top"[% style_str %] style="width: [%-
 					field.label_width || '30%' %]">		
 					[%- field.label %]
-                    [%- IF field.content %][% field.content %][% END %]
+                    [%- IF field.content %] [% field.content %][% END %]
 					[%- UNLESS field.optional 
                             or field.type == 'checkbox'
                             or field.type == 'display' -%]*[% END %]
@@ -244,15 +245,7 @@ Parameters:
                        
 						[%- FOR option IN field.options -%]
                           [%- IF view.form.row.defined %]
-							[%- IF field.is == 'boolean' -%]
-								[% IF view.form.row.${field.name} %]
-									[% row_value = 't' %]
-								[% ELSE %]
-									[% row_value = 'f' %]
-								[% END %]
-							[%- ELSE -%]
-								[% row_value = view.form.row.${field.name} %]
-							[%- END -%]
+						      [% row_value = view.form.row.${field.name} %]
                           [%- END -%]
 
 							[%- IF ( option.value == self.params.${field.name} 

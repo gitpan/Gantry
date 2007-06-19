@@ -58,10 +58,9 @@
 		[% FOREACH row IN view.data.rows %]
 		<tr class="results-row">
 			[% FOREACH elem IN row.data %]
-				<td class="dta">[% elem %]</td>							
-			
+				<td class="dta" [% row.td_style %]>[% elem %]</td>
 				[% IF loop.last %]
-					<td class="rdta">
+					<td class="rdta" [% row.td_style %]>
 					[% FOREACH option IN row.options %]
                         [% "[" IF loop.first %]
 						<a href="[% option.link %]">[% option.text %]</a>

@@ -187,6 +187,7 @@ t/auth/04_run.t
 t/conf/01use.t
 t/conf/02flat.t
 t/conf/03httpt
+t/conf/04cgi.t
 t/conf/flat/badgantry.conf
 t/conf/flat/badgantry2.conf
 t/conf/flat/config_in_main_gantry.conf

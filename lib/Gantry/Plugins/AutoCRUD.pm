@@ -65,7 +65,7 @@ sub do_add {
 
     $self->{__PID__} = $pid;
     $self->stash->view->template( $self->form_name( 'add' ) );
-    $self->stash->view->title( 'Add ' . $self->text_descr() );
+    $self->stash->view->title( 'Add ' . $self->text_descr( 'add' ) );
 
     my $params  = $self->get_param_hash();
 
@@ -173,7 +173,6 @@ sub do_edit {
     
     $self->{__PID__} = $pid;
     $self->stash->view->template( $self->form_name( 'edit' ) );
-    $self->stash->view->title( 'Edit ' . $self->text_descr() );
 
     my %params = $self->get_param_hash();
 
@@ -186,6 +185,8 @@ sub do_edit {
 
     # Load data from database
     my $row = $orm_helper->retrieve( $self, $id );
+
+    $self->stash->view->title( 'Edit ' . $self->text_descr( 'edit', $row ) );
 
     my $show_form = 0;
 
@@ -337,7 +338,7 @@ sub do_delete {
     }
     else {
         $self->stash->view->form->message (
-            'Delete ' . $self->text_descr() . '?'
+            'Delete ' . $self->text_descr( 'delete', $row ) . '?'
         );
     }
 }

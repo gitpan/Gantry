@@ -12,12 +12,18 @@ our @EXPORT = qw(
 );
 
 sub write_file {
-    my( $self, $field, $archive, $extra_dir ) = @_;
+    my( $self, $field, $archive, $extra_dir, $forced_file_name ) = @_;
     
     my $upload = $self->file_upload( $field );
 
     my $id = $upload->{unique_key};
-    $upload->{ident} = $id  . $upload->{suffix}; 
+
+    if ( $forced_file_name ) {
+        $upload->{ident} = $forced_file_name . $upload->{suffix};
+    }
+    else {
+        $upload->{ident} = $id  . $upload->{suffix};    
+    }
     
     my $file = File::Spec->catfile( $archive, $extra_dir, $upload->{ident} );
 
@@ -374,7 +380,6 @@ disk. This is to be called in the edit_post_action or add_post_action callback.
         $row->update( $u );
     }   
  }
- 
 
 =head3 recommend database fields
 
@@ -388,7 +393,7 @@ disk. This is to be called in the edit_post_action or add_post_action callback.
 =head3 returns
 
 will produce a hash ref
- 
+
  {
     '<file field>'  => '/home/archive/11677952634.59186549016706.jpg',
     '<file field>_ident'  => '11677952634.59186549016706.jpg',

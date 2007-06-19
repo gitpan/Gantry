@@ -36,7 +36,7 @@ sub initialize {
     my ($gobj) = @_;
 
     $gobj->cache_init() if (! $gobj->cache_inited());
-
+    $gobj->cache_purge();
 }
 
 1;

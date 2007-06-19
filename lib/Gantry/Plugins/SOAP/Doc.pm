@@ -37,6 +37,20 @@ sub get_callbacks {
 }
 
 #-----------------------------------------------------------
+# $class->new( \%attrs )
+#-----------------------------------------------------------
+sub new {
+    my $class = shift;
+    my $attrs = shift;
+
+    my $self  = {
+        __SOAP_NAMESPACE__ => $attrs->{ target_namespace } || '',
+    };
+
+    return bless $self, $class;
+}
+
+#-----------------------------------------------------------
 # $self->soap_serialize_xml()
 #-----------------------------------------------------------
 sub soap_serialize_xml {
@@ -56,10 +70,12 @@ sub soap_serialize_xml {
     }
 
 
-    foreach my $q_param ( split( '&', $ENV{QUERY_STRING} ) ) {
-        my( $k, $v ) = split( '=', $q_param );
-    
-        $params{$k} = $v if defined $v; 
+    if ( $ENV{QUERY_STRING} ) {
+        foreach my $q_param ( split( '&', $ENV{QUERY_STRING} ) ) {
+            my( $k, $v ) = split( '=', $q_param );
+        
+            $params{$k} = $v if defined $v; 
+        }
     }
     
     $self->params( \%params ); 
@@ -130,9 +146,13 @@ sub soap_out {
         ns       => $ns
     } );
 
-    $self->template_wrapper( 0 );
-    $self->template_disable( 1 );
-    $self->content_type( 'text/xml' );
+    eval {
+        $self->template_wrapper( 0 );
+        $self->template_disable( 1 );
+        $self->content_type( 'text/xml' );
+    };
+    # errors come from calling Gantry methods on instances of this class
+    # used by client scripts
 
     my $prefix_ns = '';
     if ( $ns_style eq 'prefix' ) {
@@ -192,7 +212,7 @@ sub build_args { # recursive
     foreach my $arg ( @{ $request_args } ) {
         my ( $key, $values ) = %{ $arg };
         
-        if ( $values ) {
+        if ( defined $values ) {
             my $start_tag    = "$indent<$ns_prefix$key$internal_ns>";
             my $child_output = build_args( {
                 data     => $values,
@@ -339,6 +359,13 @@ C<http://example.com/ns>.
 =head1 METHODS
 
 =over 4
+
+=item new
+
+For use by non-web scripts.  Call this with a hash of attributes.  Currently
+only the C<target_namespace> key is used.  It sets the namespace.
+Once you get your object, you can call C<soap_out> on it as you would
+in a Gantry conroller.
 
 =item get_callbacks
 

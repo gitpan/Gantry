@@ -149,7 +149,7 @@ sub add {
     if ( $self->validator ) {
         $results = $self->validator->(
             {
-                your_self => $your_self,
+                self      => $your_self,
                 params    => $params,
                 form      => $form,
                 profile   => form_profile( $form->{fields} ),
@@ -264,7 +264,7 @@ sub edit {
     if ( $self->validator ) {
         $results = $self->validator->(
             {
-                your_self => $your_self,
+                self      => $your_self,
                 params    => \%params,
                 form      => $form,
                 profile   => form_profile( $form->{ fields } ),
@@ -457,7 +457,7 @@ Gantry::Plugins::CRUD - helper for somewhat interesting CRUD work
         form            => \&user_form,
         validator       => \&user_form_validator,
         redirect        => \&redirect_function,
-        template        => 'your.tt',  # defulats to form.tt
+        template        => 'your.tt',  # defaults to form.tt
         text_descr      => 'database row description',
         use_clean_dates => 1,
         turn_off_clean_params => 1,
@@ -589,17 +589,17 @@ Optional.
 
 By default, form parameters are validated with Data::FormValidator.  Supply
 a validator callback to do your own thing.  Your validator will be called
-with:
+with a hash reference, which will include the following named arguments:
 
-    your self object
-    a hash ref of form paramters
-    $form
-    the form_profile of $form
-    'add' or 'edit'
+    self   : your $self,
+    params : $params, a hash ref of form paramters
+    form   : $form,
+    profile: the form_profile of $form
+    action : 'add' or 'edit'
 
 Where C<$form> is whatever your form callback returned, usually that is a
 hash reference for use by form.tt.  It describes the form and its fields.
-See the form paramter to new directly above.
+See the form parameter to new directly above.
 
 The last parameter is the name of the method from this module making the
 callback.  It can only be 'add' or 'edit.'
@@ -651,9 +651,12 @@ on a per action basis end your action callback with:
 
     $your_self->location( 'http://location.of/your/choice' );
 
-Your redirect is called with your self object and the data you passed to
-the add, edit, or delete method of this package.  This allows you complete
-control, even on cancellation.
+Your redirect is called with:
+
+    your self object
+    the data you passed to the add, edit, or delete
+    the action: 'submit', 'submit_add_another' or 'cancel'
+    the user request: 'add', 'edit' or 'delete'
 
 =item template (optional, defaults to form.tt)
 

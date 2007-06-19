@@ -92,10 +92,23 @@ sub auth_db_Main {
 sub get_listing {
     my ( $class, $params ) = @_;
 
-    my $order_fields = $params->{order_by}
-                    || join ', ', @{ $class->get_foreign_display_fields };
+    my $f_display_fields = [];
+    eval {
+        $f_display_fields = $class->get_foreign_display_fields;
+    };
+    
+    if ( $params->{order_by} ) {
+        return $class->retrieve_all( order_by => $params->{order_by} );
+    }
+    elsif ( $f_display_fields ) {
+        return $class->retrieve_all( 
+            order_by => join( ', ', @{ $f_display_fields } ) 
+        );
+    }
+    else {
+        return $class->retrieve_all( );
+    }
 
-    return ( $class->retrieve_all( order_by => $order_fields ) );
 }
 
 #-------------------------------------------------
@@ -120,12 +133,21 @@ sub get_form_selections {
     my %retval;
 
     # foreach foreign key get a selection list
+    FOREIGN_TABLE:
     foreach my $foreign_table ( $class->get_foreign_tables() ) {
 
         my $short_table_name = $foreign_table;
         $short_table_name    =~ s/.*:://;
 
-        my $foreigners       = $foreign_table->get_foreign_display_fields();
+        my $foreigners;
+
+        eval {
+            $foreigners = $foreign_table->get_foreign_display_fields();
+        };
+        if ( $@ ) {
+            warn $@;
+            next FOREIGN_TABLE;
+        }
 
         my $order_by         = join ', ', @{ $foreigners };
 

@@ -29,7 +29,7 @@ sub get_callbacks {
             if ( $namespace eq 'Gantry' );
 
     return (
-        { phase => 'init', callback => \&initialize }
+        { phase => 'post_init', callback => \&initialize }
     );
 }
 
@@ -42,7 +42,7 @@ sub initialize {
     my $cache;
     my $cookie;
     my $session;
-    my $app_rootp = $gobj->location() || '';
+    my $app_rootp = $gobj->protocol . $gobj->base_server . '/';
     my $regex     = qr/^${app_rootp}\/(cookiecheck).*/;
 
     return if ($gobj->uri =~ /^$regex/);
@@ -70,7 +70,7 @@ sub initialize {
                            path => '/'
                           });
 
-        $gobj->relocate($gobj->location() . '/cookiecheck');
+        $gobj->relocate($app_rootp . '/cookiecheck');
 
     }
 
@@ -169,7 +169,6 @@ sub encrypt_cookie {
     my $secret = $gobj->fish_config('session_secret') || 'w3s3cR7';
     my $c = Crypt::CBC->new(-key     => $secret,
                             -cipher  => 'Blowfish',
-                            -header  => 'none',
                             -padding => 'null');
 
     my $md5 = md5_hex($session);

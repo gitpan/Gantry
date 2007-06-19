@@ -85,7 +85,7 @@ A typical example:
         if ( not $params->{ password } ) {
             $missing{ password }++;
         }
-        if ( $params->{ password } =~ /$params->{ user_name } ) {
+        if ( $params->{ password } =~ /$params->{ user_name }/ ) {
             push @errors, 'Password cannot contain user name';
         }
         # ... other similar tests

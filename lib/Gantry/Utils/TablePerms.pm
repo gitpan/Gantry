@@ -31,7 +31,12 @@ sub new {
         my $other_bit = substr $permissions->{ bits }, $offset + 8, 1;
 
         my $user_row    = $gantry_site->auth_user_row;
-        $logged_in_user = $user_row->id;
+        eval {
+            $logged_in_user = $user_row->id;
+        };
+        if ( $@ ) {
+            $logged_in_user = 0;
+        }
 
         my $member_of = $gantry_site->auth_user_groups;
         if ( $permissions->{ group }

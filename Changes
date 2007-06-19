@@ -1,5 +1,20 @@
 This file documents the revision history for Perl extension Gantry
 
+3.50 Tue Jun 19 14:04:10 CDT 2007
+    - fixes to Gantry::Plugins::Session (Kevin Esteb)
+    - add cache_purge option to Caching pluings (Kevin Esteb)
+    - fix Gantry::Utils::DBIxClass util. Calling mk_classdata instead of 
+      mk_classaccessor.
+    - pass orm rom to AutoCRUD callbacks to text_descr.
+      can used to produce a better description on the edit or delete page. 
+    - add ability to override the file name when using the write_file method
+      in Gantry::Utils::CRUDHelp
+    - AuthCookie bug, fix root page login redirection
+    - modify AuthCookie login failure error message
+    - fix post_max in the CGI engine
+    - add Gantry::Utils::Captcha
+    - add Gantry::Utils::Crypt
+    
 3.49 Mon Apr 30 16:45:07 CDT 2007
     - add datetime_now db-agnostic wrapper to Gantry::Utils::DBIxClass
     - add post_body parsing to Plugins::SOAP::Doc

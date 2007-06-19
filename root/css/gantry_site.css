@@ -40,6 +40,8 @@ a {  color: #3A566B;  text-decoration: none;}
 a:hover {  text-decoration: underline;}
 em {  color: #3A566B;}
 
+.currency { text-align: right; }
+
 /* Logo-------------------------------------------------------------------------------- */
 #header h1 {  position: absolute;  margin: 0;  top: 69px;  left: 0;  width: 17em;  height: 7.2em;  overflow: hidden;  clip: rect(0 17em 7.2em 0);}
 #header h1 a {  display: block;  padding-top: 17em; /* background: transparent url(../images/merchspot.gif) top left no-repeat; */ }

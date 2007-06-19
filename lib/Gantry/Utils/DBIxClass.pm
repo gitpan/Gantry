@@ -3,7 +3,7 @@ use strict; use warnings;
 
 use base 'DBIx::Class';
 
-__PACKAGE__->mk_classaccessor( 'base_model' );
+__PACKAGE__->mk_classdata( 'base_model' );
 
 use overload
     '""'        => sub { shift->stringify_self },
@@ -12,10 +12,16 @@ use overload
 sub get_listing {
     my ( $class, $params ) = @_;
 
-    my $order_fields = $params->{ order_by }
-                 || join ', ', @{ $class->get_foreign_display_fields };
+    my $order_fields = $params->{ order_by };
 
-    my $attrs = { order_by => $order_fields };
+    if ( not defined $order_fields ) {
+        eval {
+            $order_fields = join ', ', @{ $class->get_foreign_display_fields };
+        };
+        # can't call method means no suggested order
+    }
+
+    my $attrs = { order_by => $order_fields } if defined $order_fields;
 
     $attrs->{ rows } = $params->{ rows } if ( defined $params->{ rows } );
     $attrs->{ page } = $params->{ page } if ( defined $params->{ page } );
@@ -30,9 +36,15 @@ sub get_form_selections {
 
     my %retval;
 
+    FOREIGN_TABLE:
     foreach my $foreign_table ( $class->get_foreign_tables() ) {
         my $short_table_name = $foreign_table->table_name;
-        my $foreigners       = $foreign_table->get_foreign_display_fields();
+        my $foreigners;
+        eval {
+            $foreigners       = $foreign_table->get_foreign_display_fields();
+        };
+        next FOREIGN_TABLE if $@;
+
         my $order_by         = join ', ', @{ $foreigners };
 
         my $value_method     = 'id';
@@ -49,9 +61,15 @@ sub get_form_selections {
         push( @items, { value => '', label => '- Select -' } );
 
         foreach my $item ( @foreign_display_rows ) {
+            my $label;
+            eval {
+                $label = $item->foreign_display();
+            };
+            next ITEM if $@;
+
             push @items, {
                 value => $item->$value_method,
-                label => $item->foreign_display(),
+                label => $label,
             }
         }
 

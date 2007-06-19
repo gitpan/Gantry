@@ -55,7 +55,8 @@ function livesearch ( url ) {
             }
         }
         
-        row += '[ ' + links.join( ' | ' ) + ' ]';
+        var edit_links = links.join( ' | ' );
+        row += edit_links ? '[ ' + edit_links + ' ]' : '';
         row += "</td>";
         
         $( 'table#results' ).prepend(
