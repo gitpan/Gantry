@@ -83,10 +83,13 @@ sub db_connect {
 
     croak 'No Database Type defined' if ( length( $db_type ) < 1 );
 
-    my $dsn = "dbi:$db_type:dbname=$db"; 
-
+    my $dsn = "dbi:$db_type"; 
+    
+    $dsn .= ":dbname=$db" if $db;
     $dsn .= ( $server eq '' ) ? '' : ";host=$server";
 
+    warn( $dsn );
+    
     my $dbh = DBI->connect( $dsn, "$user", "$pass", 
                             {   RaiseError  =>  0,
                                 PrintError  =>  1,

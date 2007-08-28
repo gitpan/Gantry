@@ -230,6 +230,12 @@ specific to the underling cache handler.
 
  $handle = $self->cache_handle();
 
+=item cache_purge
+
+Equivalent to
+
+ $self->cache_handle()->purge();
+
 =item cache_get
 
 This method returns the data associated with the current namespace/key 

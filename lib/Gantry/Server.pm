@@ -50,7 +50,7 @@ sub handle_request_test {
     $ENV{PATH_INFO}         = $uri || $request;
     $ENV{REQUEST_METHOD}    = $method;
     $ENV{CONTENT_LENGTH}    = 0;
-    $ENV{QUERY_STRING}      = $args if $args;
+    $ENV{QUERY_STRING}      = ( defined $args ? $args : '' );
     $ENV{SCRIPT_NAME}       = "";
 
     return $self->_test_helper();

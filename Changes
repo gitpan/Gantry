@@ -1,5 +1,12 @@
 This file documents the revision history for Perl extension Gantry
-
+3.51 Tue Aug 28 11:42:48 CDT 2007
+    - fix bug in Gantry::Server::handle_request_test 
+    - fix some warning bugs in form.tt
+    - modify AuthCookie plugin to support testing with a logged in user
+    - add test method to gantry
+    - add multiselect option to Gantry::Utils::Threeway 
+    - add serialize_params base method.
+    
 3.50 Tue Jun 19 14:04:10 CDT 2007
     - fixes to Gantry::Plugins::Session (Kevin Esteb)
     - add cache_purge option to Caching pluings (Kevin Esteb)

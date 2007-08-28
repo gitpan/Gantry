@@ -1,9 +1,9 @@
-
 [%- USE form = HTML.SuperForm( self.params ) %]
 
 [%- form.start_form( 
     action => ( view.form.action || self.uri ),
     enctype => view.form.enctype,
+    class   => ( view.form.class || 'form-box' ),
     method  => ( view.data.method || 'post' )
 ) %]
 
@@ -16,6 +16,11 @@
 
     <div class="form-box">
         <h5 class="heading">[% view.form.legend %]</h5>
+        
+        <p class="form-description">
+            [% view.title %]
+        </p>
+        
         [%- FOREACH field_data IN view.form.fields %]
             [%- PROCESS field 
                 dta    = field_data
@@ -45,6 +50,7 @@
     [% form.submit( 
         id      => 'submit', 
         name    => 'submit', 
+        default => ( view.form.submit_button_label || 'Submit' ),
         label   => ( view.form.submit_button_label || 'Submit' )
     ) -%]
 [%- END %]
@@ -52,6 +58,8 @@
 [%- IF view.form.submit_and_add_another %] 
     [%- form.submit( 
         name => 'submit_add_another', 
+        default => ( view.form.submit_and_add_another_label 
+            || 'Submit &amp; Add Another' ),
         label => ( view.form.submit_and_add_another_label 
             || 'Submit &amp; Add Another' ) 
     ) %]
@@ -60,6 +68,7 @@
     [%- form.submit( 
         id => 'cancel', 
         name => 'cancel', 
+        default => ( view.form.cancel_button_label || 'Cancel' ) 
         label => ( view.form.cancel_button_label || 'Cancel' ) 
     ) -%]
 [%- END %]
@@ -89,7 +98,7 @@
     [%- ELSIF type == 'display' %]
         <fieldset class="form-data">
         <label>[% dta.label %]</label>
-        [%- row.$name %]
+        [%- row.$name || dta.default_value %]
         </fieldset>
 
     [%- ELSIF type == 'textarea' %]
@@ -125,7 +134,7 @@
         ) 
         %]
 
-    [%- ELSIF type == 'select' %]
+    [%- ELSIF type == 'select' || type == 'multiple_select' %]
         [%- values = []; labels = {}; %]
         
         [%- FOREACH i IN dta.options %]
@@ -140,14 +149,19 @@
         <label class="[% required ? 'required' : '' %]" 
             for="[% dta.name %]">[% dta.label %]</label>
         
-        [%- form.$type( 
+        [% param_values = self.params.$name.split('\0') %]
+        
+        [%- form.select( 
             id => dta.name,
             name => name, 
             class => dta.class,
-            default => ( self.params.$name || row.$name _ ''  ),
+            default => (
+                param_values || row.$name _ '' || dta.default_value 
+            ),
             size => dta.display_size,
             values => values,
-            labels => labels
+            labels => labels,
+            multiple => ( type == 'multiple_select' ? 1 : 0 )
         ) 
         %]
         

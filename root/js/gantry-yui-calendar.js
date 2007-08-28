@@ -73,11 +73,20 @@ YAHOO.namespace("gantry.calendar");
 YAHOO.namespace("gantry.calendar.helper");
 
 YAHOO.gantry.calendar.helper.show = function ( e, obj ) {
+    
+    var tg;    
+    if ( e.target ) {        
+        tg = e.target;    
+    }    
+    else {        
+        tg = e.srcElement;    
+    }
+    
     YAHOO.gantry.calendar.helper.updateCal( 
-        YAHOO.gantry.calendar[e.target.id] 
+        YAHOO.gantry.calendar[tg.id] 
     );
     
-    YAHOO.gantry.calendar[e.target.id].show();
+    YAHOO.gantry.calendar[tg.id].show();
 }
 
 YAHOO.gantry.calendar.helper.createHelperNodes = function ( obj ) {

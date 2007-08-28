@@ -1,3 +1,17 @@
+function ajax_action ( url, cb_output ) {
+
+    var html = $.ajax({
+        url: url,
+        async: false,
+        success: function(msg){
+            if ( cb_output ) {
+                $( cb_output ).innerHTML = msg;
+            }
+        }
+    }).responseText;
+
+}
+
 function livesearch ( url ) {
     
     if ( ! url ) {

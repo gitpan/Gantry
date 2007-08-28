@@ -32,9 +32,13 @@ sub process {
 
     my $gself = $self->{options}{self};
 
+    my $template        = $self->{options}{template} || 'threeway.tt';
     my $join_table      = $self->{options}{join_table};
+    my $form_action     = $self->{options}{action} || $gself->uri;
+    my $type            = $self->{options}{type} || 'checkbox';
     my $primary_table   = $self->{options}{primary_table};
     my $secondary_table = $self->{options}{secondary_table};
+    my $redirect_loc    = $self->{options}{redirect_loc} || $gself->location;
     my $order_by        = $self->{options}{order_by} || 'id';
     my $legend          = $self->{options}{legend} || "Add ${secondary_table}s";
 
@@ -54,7 +58,7 @@ sub process {
     if ( $gself->is_post() ) {
 
         if ( $param{cancel} ) {
-            $gself->relocate( $gself->location );
+            $gself->relocate( $redirect_loc );
             return;            
         }
         
@@ -66,23 +70,40 @@ sub process {
         while ( my $r = $available->next ) {
             ++$available{$r->id . ''};
         }
-                
-        foreach my $k ( keys %param ) {
-            next if $k !~ /^subscribe/;
 
-            my @val = split( ':', $k );
-            
+        my $values_ref;
+        if ( $type eq 'checkbox' ) {
+            foreach my $k ( keys %param ) {
+                next if $k !~ /^subscribe/;
+                
+                my @val = split( ':', $k );
+                push( @{ $values_ref }, $val[1] );
+            }
+        }
+        # multiselect
+        else {
+
+            if ( $gself->engine =~ /CGI/ ) {
+                $values_ref = $gself->cgi->{subscribe};
+            }
+            else {
+                $values_ref = $self->params( 'subscribe' );
+            }            
+        }
+
+        foreach my $val ( @{ $values_ref } ) {
+        
             $sch->resultset( $join_table )->update_or_create(
                 { 
                     $primary_table   => $self->{options}{primary_id}, 
-                    $secondary_table => $val[1] }
+                    $secondary_table => $val }
             );
-            
+        
             # delete from available hash
-            delete( $selected{$val[1]} );
-    
-        }
+            delete( $selected{$val} );
 
+        }            
+        
         my @remove;
         foreach my $k ( keys %selected ) {
             push( @remove, $selected{$k} );
@@ -94,7 +115,11 @@ sub process {
             )->delete;
         }
         
-        $gself->relocate( $gself->location );
+        $gself->relocate( 
+            ref( $redirect_loc ) eq 'CODE' 
+                ? $redirect_loc->( $gself ) : $redirect_loc 
+        );
+        
         return;
 
     }   
@@ -103,9 +128,13 @@ sub process {
         order_by => $order_by,
     } );
      
-    $gself->stash->view->template( 'threeway.tt' );
-    $gself->stash->view->form( { legend => $legend } );
-    $gself->stash->view->data( { 
+    $gself->stash->view->template( $template );
+    $gself->stash->view->form( { 
+        legend => $legend,
+        action => $form_action
+    } );
+    $gself->stash->view->data( {
+        type      => $type, 
         available => $available, 
         selected => \%selected 
     } );
@@ -165,6 +194,7 @@ Optional parameters
 
     legend        # form legend
     order_by      # sort list by this field
+    redirect_loc  # redirect location for on submit or cancel
         
 =item process()
 

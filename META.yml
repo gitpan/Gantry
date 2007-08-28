@@ -1,6 +1,6 @@
 ---
 name: Gantry
-version: 3.50
+version: 3.51
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
@@ -32,7 +32,7 @@ build_requires:
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.50
+    version: 3.51
   Gantry::Build:
     file: lib/Gantry/Build.pm
   Gantry::Conf:
@@ -113,8 +113,6 @@ provides:
     file: lib/Gantry/Engine/MP20.pm
   Gantry::Init:
     file: lib/Gantry/Init.pm
-  Gantry::Plugin::Validate:
-    file: lib/Gantry/Plugins/Validate.pm
   Gantry::Plugins::AjaxCRUD:
     file: lib/Gantry/Plugins/AjaxCRUD.pm
   Gantry::Plugins::AjaxFORM:
@@ -153,6 +151,8 @@ provides:
     file: lib/Gantry/Plugins/Session.pm
   Gantry::Plugins::Static:
     file: lib/Gantry/Plugins/Static.pm
+  Gantry::Plugins::Validate:
+    file: lib/Gantry/Plugins/Validate.pm
   Gantry::Server:
     file: lib/Gantry/Server.pm
   Gantry::Server::Tier:
@@ -177,6 +177,8 @@ provides:
     file: lib/Gantry/Utils/CDBI.pm
   Gantry::Utils::CRUDHelp:
     file: lib/Gantry/Utils/CRUDHelp.pm
+  Gantry::Utils::Crypt:
+    file: lib/Gantry/Utils/Crypt.pm
   Gantry::Utils::DB:
     file: lib/Gantry/Utils/DB.pm
   Gantry::Utils::DBConnHelper:

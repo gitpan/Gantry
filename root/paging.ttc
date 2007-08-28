@@ -1,8 +1,12 @@
 [% IF ( view.data.page.last_page || 0 ) > 1 %]
 
+[% serialized_params = self.serialize_params( [ 'page' ] ); %]
+[% serialized_params = serialized_params ? '&' _ serialized_params : '' %]
+
 <p class="pager_next" style="float: right; padding-left: 10px">
     [% IF view.data.page.next_page %]
-    <a href="[% site.uri %]?page=[% view.data.page.next_page %]">
+    <a href="[% site.uri %]?page=[% view.data.page.next_page %][%-
+    serialized_params %]">
     Next >>
     </a>
     [% END %]
@@ -33,19 +37,22 @@
 <p  class="pager_pages" style="float: right; padding-left: 10px">
 
 [% IF fp_shortened %]
-    <a style="padding-right: 10px;" href="[% site.uri %]?page=1">1</a>
+    <a style="padding-right: 10px;" href="[% site.uri %]?page=1[%-
+    serialized_params %]">1</a>
 [% END %]
 
 [% FOREACH page = [ fp .. lp ] %]
     [% IF page == cp %]
         <span class="current_page">[% page %]</span>
     [% ELSE %]
-        <a href="[% site.uri %]?page=[% page %]">[% page %]</a>
+        <a href="[% site.uri %]?page=[% page %][% serialized_params %]">
+        [% page %]</a>
     [% END %]
 [% END %]
 
 [% IF lp_shortened %]
-    <a style="padding-left: 10px;" href="[% site.uri %]?page=[% view.data.page.last_page %]">
+    <a style="padding-left: 10px;" href="[% site.uri %]?page=[%
+    view.data.page.last_page %][% serialized_params %]">
         [% view.data.page.last_page %]
     </a>
 [% END %]
@@ -53,7 +60,8 @@
 
 <p class="pager_previous" style="float: right; padding-left: 10px">
     [% IF view.data.page.previous_page %]
-    <a href="[% site.uri %]?page=[% view.data.page.previous_page %]">
+    <a href="[% site.uri %]?page=[% view.data.page.previous_page %][%-
+        serialized_params %]">
     << Previous
     </a>
     [% END %]

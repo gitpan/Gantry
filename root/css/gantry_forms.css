@@ -9,10 +9,10 @@ dl.classlist { text-align: left; }
 #preview_button { position: relative; top: -60px; left: 130px; }
 
 /* FORMS */
-.form-box { background: #fff; padding: 0 2px 0 2px;}
-.form-box .heading { background: #AFAFAF; margin: 0 -2px 2px -2px; font-size: 1.3em; padding: 0 0 0 2px; }
+div.form-box { background: #FFF; padding: 0 2px 0 2px; width: 100%; }
+div.form-box h5.heading { width: 100%; margin: 0 -2px 2px -2px; background: #AFAFAF; font-size: 1.3em; padding: 0 0 0 2px; }
 
-fieldset.form-data { min-height: 20px; clear: both; display: block; background: none; border: none; margin: 0 0 0 0; padding: 3px 0 0 0; }
+fieldset.form-data { min-height: 20px; clear: both; display: block; border: none; margin: 0 0 0 0; padding: 3px 0 0 0; }
 fieldset.alt { background: #ecf6fc; }
 fieldset.form-data label { display: block; width: 200px; float: left; }
 fieldset.form-data input { width: 200px; float: left; }
@@ -41,7 +41,7 @@ legend { padding: 0 10px 0 10px; border: 1px solid #c7c7c7; background: #fff; }
 .results-box table tr.alt td { background: #ecf6fc; }
 
 table tr.alt td { background: #ecf6fc; }
-table tr td.shd {  font-size: 10px; }
+table tr td.shd {  font-size: 10px; background: lightGrey; font-weight: bold; white-space: nowrap; width: 10%;}
 table tr td.dta {  font-size: 10px; }
 dl.checklist { display: block; font-size: 10px; padding: 2px; }
 dl. checklist dd { float: left; width: 130px; overflow: hidden; white-space: nowrap; padding: 0 2px 0 2px; }

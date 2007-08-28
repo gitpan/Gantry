@@ -6,10 +6,12 @@ Gantry::Docs::QuickStart - Getting your first Gantry app up and running
 
 The easiest way to build a Gantry app with with bigtop:
 
-    bigtop -n AppName list of tables
+    bigtop -n AppName 'book(title,pages:int4)<->author(name)'
 
-Choose a suitable name and list the tables you've already thought of.
-When you think of more later, they will be easy to add.
+Choose a suitable application name and list the tables you've already
+thought of, including their columns.  When you think of more tables
+and columns later, they will be easy to add.  To learn more about
+this kickstart syntax see L<Bigtop::ScriptHelp::Style::Kickstart>.
 
 If you have sqlite in your path, bigtop will build a database for you.
 Then all you need to do is change to the directory it made for your app
@@ -31,9 +33,9 @@ Postgres that looks like this:
 For MySQL, try this instead:
 
     cd AppName
-    msyqladmin create app.db -u root -p
-    mysql -u root -p app.db < docs/schema.mysql
-    ./app.server -d=mysql --u=regular_user -p='secret'
+    msyqladmin create app_db -u root -p
+    mysql -u root -p app_db < docs/schema.mysql
+    ./app.server -d=mysql --u=regular_user -p='secret' -n=app_db
 
 Then the app is running, you can view it by pointing your browser
 to any of the URLs app.server printed on startup.
@@ -90,6 +92,9 @@ is enough for our small demo:
     $server->set_engine_object( $cgi );
     $server->run();
 
+If you used Bigtop, as in the first section of this document, it made
+C<app.server> which is similar to this one.
+
 =head1 CGI Deployment
 
 To deploy using CGI, create the following script in a servable
@@ -111,6 +116,37 @@ cgi-bin directory (remember to make sure it is executable):
     $cgi->dispatch();
 
 Then point your browser to the script.
+
+If you used Bigtop to generate the application, as shown in the first
+section above, it made C<app.cgi> for you.  You can deploy to CGI by
+copying that file into your web server's C<cgi-bin> directory, if you also:
+
+=over 4
+
+=item install the app
+
+The HiRob.pm module must be installed somewhere in the C<@INC> path,
+or you must add a C<use lib> statement in your CGI script which includes
+the directry where the module lives.
+
+=item set permissions correctly
+
+First, the web server must be able to read the build directory and its
+sub directories.  (If you have an sqlite database, you must make
+both the database and the build directory writable by the web server.)
+
+=item beware of selinux
+
+Tools like selinux exist to keep people from accessing things.  As such,
+they will probably block users from seeing things in your build directory
+via a web server.  Either disable it, or move things to appropriate
+places it allows the web server to access.
+
+=back
+
+See "What is Gantry::Conf" and "How do I use Gantry::Conf under CGI/FastCGI"
+in L<Gantry::Docs::FAQ> for information on switching the CGI script to
+a different database.
 
 =head1 mod_perl Deployment
 
@@ -176,24 +212,24 @@ move on in the following sequence of documents:
 
 =item 1.
 
-Gantry::Docs::Tutorial
+L<Gantry::Docs::Tutorial>
 
 =item 2.
 
-Bigtop::Docs::Tutorial
+L<Bigtop::Docs::Tutorial>
 
 =back
 
-After those, you probably want either Gantry::Docs::FAQ or
-Bigtop::Docs::Cookbook.
+After those, you probably want L<Gantry::Docs::FAQ>,
+L<Gantry::Docs::Cookbook>, or L<Bigtop::Docs::Cookbook>.
 
 =head1 Author
 
-Phil Crow <philcrow2000@yahoo.com>
+Phil Crow E<lt>crow.phil@gmail.comE<gt>
 
 =head1 Copyright and License
 
-Copyright (c) 2006, Phil Crow.
+Copyright (c) 2006-7, Phil Crow.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.6 or,

@@ -7,8 +7,9 @@
     <h3>[% view.data.overheading %]</h3>
 [% END %]
 
+[%- IF self.fish_config( 'show_dev_navigation' ) %]
 <dl class="dev_nav">
-    [%- IF self.fish_config( 'show_dev_navigation' ) %]
+   
     <dd>
         <select id="linkMenu" 
             onchange="window.location = this.options[this.selectedIndex].value">
@@ -27,8 +28,8 @@
         <input type="button" name="search" value="search"
             onclick="javascript: livesearch();">
     </dd>
-    [%- END %]
 </dl>
+[%- END %]
 
 <div class="results-box">       
 	<table id="results" class="results">
@@ -51,7 +52,7 @@
 		</tr>	  	
 		
 		[% FOREACH row IN view.data.rows %]
-		<tr class="results-row">
+		<tr class="results-row [% row.class %]">
 			[% FOREACH elem IN row.data %]
 				<td class="dta">[% elem %]</td>							
 			

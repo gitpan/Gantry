@@ -280,6 +280,11 @@ specific to the underling cache handler.
 
  $handle = $self->cache_handle();
 
+=item cache_purge
+
+Useless here.  This method is for other cache plugins which support
+a purge method.
+
 =item cache_get
 
 This method returns the data associated with the current namespace/key 

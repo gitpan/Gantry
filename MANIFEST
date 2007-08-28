@@ -108,6 +108,7 @@ lib/Gantry/Utils/SQL.pm
 lib/Gantry/Utils/TablePerms.pm
 lib/Gantry/Utils/Threeway.pm
 lib/Gantry/Utils/Validate.pm
+lib/Gantry/Utils/Crypt.pm
 lib/Template/Plugin/GantryAuthCookie.pm
 Makefile.PL
 MANIFEST			This list of files

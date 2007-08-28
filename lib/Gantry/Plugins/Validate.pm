@@ -1,4 +1,4 @@
-package Gantry::Plugin::Validate;
+package Gantry::Plugins::Validate;
 
 use strict;
 use Date::Calc qw( check_date );

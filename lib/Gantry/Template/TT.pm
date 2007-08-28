@@ -4,6 +4,7 @@ require Exporter;
 use Gantry::Init;
 use Template;
 use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
+use strict;
 
 ############################################################
 # Variables                                                #
@@ -18,7 +19,10 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 
 @EXPORT_OK  = qw( );
 
-my %tt;
+my $tt;
+my @tt_include_paths;
+my @tt_wrapper;
+my @tt_default_template;
 
 ############################################################
 # Functions                                                #
@@ -50,7 +54,7 @@ sub do_error {
 #-------------------------------------------------
 sub do_process {
     my( $self ) = @_;
-    
+     
     # Check template disabled flag
     if ( $self->template_disable ) {
         return( $self->stash->controller->data );
@@ -58,17 +62,12 @@ sub do_process {
     
     # Process through template tookit
     else {
-        if ( not defined $tt{ $self->uri } ) {
-            my $tmpl_install_dir = '';
-            eval {
-                $tmpl_install_dir = Gantry::Init->base_root();
-            };
-            
-            $tt{ $self->uri } = Template->new({
-                WRAPPER         => $self->template_wrapper,
-                INCLUDE_PATH    => ( $self->root . ":$tmpl_install_dir" ),         
-                DEFAULT         => $self->template_default,
-            });
+        if ( not defined $tt ) {
+            $tt = Template->new(
+                WRAPPER         => \@tt_wrapper,
+                INCLUDE_PATH    => \@tt_include_paths,
+                DEFAULT         => \@tt_default_template,
+            ) or die "$Template::ERROR";
         }
         
         # Use the template defined in controller use template from PerlSetVar
@@ -81,11 +80,32 @@ sub do_process {
             . ( $self->stash->controller->data || '' )
         ) if ! $self->stash->view->template();
 
+        my $tmpl_install_dir = '';
+        eval {
+            $tmpl_install_dir = Gantry::Init->base_root();
+        };
+
+        @tt_include_paths = ( split( ':', $self->root), $tmpl_install_dir ); 
+        
+        if ( $self->template_wrapper ) {
+           @tt_wrapper = ( $self->template_wrapper );
+        }
+        else {
+           pop( @tt_wrapper );
+        }
+        
+        @tt_default_template = ( $self->template_default || undef );
+         
         my $page = '';
-        $tt{ $self->uri }->process( $self->stash->view->template, 
-            { self => $self, site => $self, view => $self->stash->view }, 
-            \$page 
-        ) || die( "Template Error: " . $tt{ $self->uri }->error ); 
+        $tt->process( 
+            $self->stash->view->template, 
+            { 
+                self => $self, 
+                site => $self, 
+                view => $self->stash->view, 
+            }, 
+            \$page,
+        ) || die( "Template Error: " . $tt->error ); 
         
         return( $page );
     }

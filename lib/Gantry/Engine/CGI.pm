@@ -394,10 +394,26 @@ sub engine_init {
         $self->status( $status || 400 );
         die( "$error\n" );
     }
-    
-    $cgi_obj->{params} = $c->Vars;
-    $self->cgi_obj( $cgi_obj );
 
+    # fix up params so the multiselects are arraays
+    my $params = {};    
+    foreach my $field ( $c->param ) {
+        
+        my @values = $c->param( $field );
+        if ( scalar @values > 1 ) {
+            $params->{$field} = [ @values ];
+        }
+        else {
+            $params->{$field} = $c->param( $field );
+        }
+        
+    }
+
+    # add in the fieldnames
+    $params->{'.fieldnames'} = [ $c->param ];
+    
+    $cgi_obj->{params} = $params;
+    $self->cgi_obj( $cgi_obj );
 
 } # END engine_init
 
@@ -828,9 +844,6 @@ sub set_no_cache {
 #-------------------------------------------------
 sub set_req_params {
     my $self = shift;
-    
-    #my %params = $self->cgi->Vars;
-    #my %params = %CGI::Deurl::query;
 
     $self->params( $self->cgi_obj->{params} );
 

@@ -45,6 +45,7 @@ sub new {
 
     my $self  = {
         __SOAP_NAMESPACE__ => $attrs->{ target_namespace } || '',
+        %{ $attrs }
     };
 
     return bless $self, $class;
@@ -278,6 +279,31 @@ sub do_wsdl {
     return $wsdl;
 } # END do_wsdl
 
+#-----------------------------------------------------------------
+# $self->send_xml
+#-----------------------------------------------------------------
+sub send_xml {
+    my $self        = shift;
+    my $request_xml = shift;
+
+    require LWP::UserAgent;
+
+    my $user_agent = LWP::UserAgent->new();
+    $user_agent->agent( 'Sunflower/1.0' );
+
+    my $request = HTTP::Request->new(
+        POST => $self->{ post_to_url }
+    );
+
+    $request->content_type( 'text/xml; charset=utf-8' );
+    $request->content_length( length $request_xml );
+    $request->header( 'Host' => $self->{ host } ) if $self->{ host };
+    $request->header( 'SoapAction' => $self->{ action_url } );
+    $request->content( $request_xml );
+
+    return $user_agent->request( $request );
+}
+
 1;
 
 =head1 NAME
@@ -474,6 +500,20 @@ This method uses the C<wsdldoc.tt> in your template path to return
 a WSDL file to your client.  The view.data passed to that template
 comes directly from a call to C<get_soap_ops>, which you must implement
 (even it it returns nothing).
+
+=item send_xml
+
+For clients.  Sends the xml to the SOAP server.  You must have called
+new with C<action_url> and C<post_to_url> for this method to work.  In
+particular, servers which use this as a plugin cannot normally call
+this method.  First, they must call new to make an object of this
+class.
+
+Parameters: an object of this class, the xml to send (get it from calling
+C<soap_out>).
+
+Returns: response from remote server (actually whatever request on the
+LWP user agent retruns, try calling content on that object)
 
 =back
 

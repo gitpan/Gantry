@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.50';
+our $VERSION = '3.51';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $CONF;
 our %plugin_callbacks;
@@ -981,6 +981,17 @@ sub user {
 } # end user
 
 #-------------------------------------------------
+# $self->test( value )
+#-------------------------------------------------
+sub test {
+    my ( $self, $p ) = @_;
+
+    $self->{__TEST__} = $p if ( defined $p );
+    return( $self->{__TEST__} );
+        
+} # end test
+
+#-------------------------------------------------
 # $self->get_auth_model_name(  )
 #-------------------------------------------------
 sub get_auth_model_name {
@@ -1206,6 +1217,32 @@ sub trim {
 
     my $new_sp = " " x int( length($spaces) / 4 );
     return( "\n$new_sp" );
+}
+
+#-------------------------------------------------
+# $self->serialize_params( [ keys to exclude ], <separator> )
+#-------------------------------------------------
+sub serialize_params {
+    my( $self, $exclude_ref, $separator ) = @_;
+    
+    $exclude_ref ||= [];
+    $separator   ||= '&';
+    my $exclude_hash = {};
+    
+    foreach ( @{ $exclude_ref } ) {
+        ++$exclude_hash->{$_};
+    }
+    
+    my @page_params;
+    foreach my $p ( keys %{ $self->params } ) {
+        next if $p =~ /^\./;
+        next if exists $exclude_hash->{$p};
+
+        push( @page_params, sprintf( "%s=%s", $p, $self->params->{$p} ) );
+    }
+
+    return join( $separator, @page_params );
+    
 }
 
 #-------------------------------------------------
@@ -1745,6 +1782,12 @@ Allows you to set the auth model name, but for this to work correctly, you
 must override get_auth_model_name.  Otherwise your get request will always
 give the default value.
 
+=item test
+
+ $self->test( 1 );
+
+enable testing mode
+
 =item user_id
 
  $user_id = $self->user_id( model => '', user_name => '' );
@@ -1835,6 +1878,14 @@ Always returns the params (from forms and the query string) as a hash
 
 Set/get for the request parameters. Returns a reference to a hash of
 key value pairs.
+
+=item serialize_params
+
+ $self->serialize_params( [ array_ref of keys to exclude ], <separator> );
+ $self->serialize_params( [ 'page' ], '&' );
+
+Returns a serialized string of request parameters. The default separator is
+'&' 
 
 =item protocol
 

@@ -91,6 +91,12 @@ sub initialize {
     $gobj->auth_groups( $gobj->fish_config( 'auth_groups' ) || '' );
     $gobj->auth_secret( $gobj->fish_config( 'auth_secret' ) || 'w3s3cR7' );
 
+    if ( $gobj->fish_config( 'test_username' ) 
+        || $gobj->fish_config( 'test_user_id' ) ) {
+        
+        $gobj->test( 1 );
+    }
+    
     eval {
         $gobj->auth_cookie_name(
             $gobj->fish_config( 'auth_cookie_name' ) || 'auth_cookie'
@@ -120,6 +126,19 @@ sub initialize {
 #-----------------------------------------------------------
 sub auth_check {
     my $gobj = shift;
+    
+    if ( $gobj->test() ) {
+         my $obj  = Gantry::Plugins::AuthCookie::AuthUserObject->new( {
+             id       => $gobj->fish_config( 'test_user_id' ),
+             user_id  => $gobj->fish_config( 'test_user_id' ),
+             $gobj->auth_user_field() => $gobj->fish_config( 'test_username' ),
+         } );
+                
+        $gobj->auth_user_row( $obj );
+        $gobj->user( $gobj->fish_config( 'test_username' ) );
+        
+        return;
+    }
     
     # check for controller config, look for auth stuff and process
     if ( my $config_ref = $gobj->can( 'controller_config' ) ) {
