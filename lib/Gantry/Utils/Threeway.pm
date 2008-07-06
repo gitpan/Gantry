@@ -87,7 +87,9 @@ sub process {
                 $values_ref = $gself->cgi->{subscribe};
             }
             else {
-                $values_ref = $self->params( 'subscribe' );
+                $values_ref = ref( $gself->params->{'subscribe'} ) eq 'ARRAY'
+                    ? $gself->params->{'subscribe'} 
+                    : [ $gself->params->{'subscribe'} ];
             }            
         }
 

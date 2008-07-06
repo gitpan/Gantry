@@ -2,20 +2,24 @@ package Gantry::Plugins::Session;
 use strict; use warnings;
 
 use Gantry;
-use Crypt::CBC;
-use MIME::Base64;
-use Digest::MD5 qw( md5_hex );
-
+use Gantry::Utils::Crypt;
+  
 use base 'Exporter';
 our @EXPORT = qw( 
     session_id
+    session_init
+    session_lock
     session_store
     session_remove
+    session_inited
+    session_update
+    session_unlock
     session_retrieve
     do_cookiecheck
 );
 
 my %registered_callbacks;
+my $lock =  '_LOCK_';
 
 #-----------------------------------------------------------
 # $class->get_callbacks( $namespace )
@@ -27,9 +31,8 @@ sub get_callbacks {
 
     warn "Your app needs a 'namespace' method which doesn't return 'Gantry'"
             if ( $namespace eq 'Gantry' );
-
     return (
-        { phase => 'post_init', callback => \&initialize }
+        { phase => 'pre_init', callback => \&initialize }
     );
 }
 
@@ -39,38 +42,48 @@ sub get_callbacks {
 sub initialize {
     my ($gobj) = @_;
 
+	$gobj->session_init();
+
+}
+
+sub session_init {
+    my ($gobj) = @_;
+
     my $cache;
     my $cookie;
     my $session;
-    my $app_rootp = $gobj->protocol . $gobj->base_server . '/';
-    my $regex     = qr/^${app_rootp}\/(cookiecheck).*/;
+    my $app_rootp = $gobj->app_rootp || "";
+	my $cookiecheck = $app_rootp . '/cookiecheck';
+    my $regex = qr/^${app_rootp}\/(cookiecheck).*/;
+    my $secret = $gobj->fish_config('session_secret') || 'w3s3cR7';
+    my $crypt = Gantry::Utils::Crypt->new({'secret' => $secret});
+
 
     return if ($gobj->uri =~ /^$regex/);
 
     # check to see if a previous session is active
 
     if (defined($session = $gobj->get_cookies('_session_id_'))) {
-
+		
         # OK, store the session id
 
         $gobj->session_id($session);
-
-        # load the session cache
-
-        $gobj->cache_init() if (! $gobj->cache_inited());
 
     } else {
 
         # set a cookie and see if it works
 
-        $session = md5_hex((md5_hex(time . {} . rand() . $$)));
-        $cookie = encrypt_cookie($gobj, $session);
-        $gobj->set_cookie({name => '_session_id_',
-                           value => $cookie,
-                           path => '/'
-                          });
+        $cookie = $crypt->encrypt(time, {}, rand(), $$);
 
-        $gobj->relocate($app_rootp . '/cookiecheck');
+        $gobj->set_cookie(
+            {
+                name => '_session_id_',
+                value => $cookie,
+                path => '/'
+            }
+        );
+
+        $gobj->relocate($cookiecheck);
 
     }
 
@@ -80,6 +93,8 @@ sub do_cookiecheck {
     my $gobj = shift;
 
     my $session;
+    my $app_rootp = $gobj->app_rootp || "/";
+
 
     # if cookies are enabled they should be returned on the redirect
 
@@ -87,7 +102,9 @@ sub do_cookiecheck {
 
         # Ok, redirect them back to the applicaion
 
-        $gobj->relocate($gobj->location());
+		$gobj->session_inited(1);
+        $gobj->session_store($lock, '0');
+        $gobj->relocate($app_rootp);
 
     } else {
 
@@ -100,7 +117,7 @@ sub do_cookiecheck {
         $gobj->template_wrapper($session_wrapper);
         $gobj->stash->view->title($session_title);
         $gobj->stash->view->template($session_template);
-        
+
     }
 
 }
@@ -144,6 +161,20 @@ sub session_remove {
 
     $gobj->cache_namespace($session);
     $gobj->cache_del($key);
+
+}
+
+#-----------------------------------------------------------
+# session_update
+#-----------------------------------------------------------
+sub session_update {
+    my ($gobj, $key, $value) = (shift, shift, shift);
+
+    my $session = $gobj->session_id();
+
+    $gobj->cache_namespace($session);
+    $gobj->cache_del($key);
+    $gobj->cache_set($key, $value);
     
 }
 
@@ -159,25 +190,60 @@ sub session_id {
 }
 
 #-----------------------------------------------------------
-# encrypt_cookie - private method
+# session_inited
 #-----------------------------------------------------------
-sub encrypt_cookie {
-    my ($gobj, $session) = @_;
+sub session_inited {
+    my ($gobj, $p) = @_;
 
-    local $^W = 0;     # turn off warnings
+    $$gobj{__SESSION_INITED__} = $p if defined $p;
+    return($$gobj{__SESSION_INITED__});
 
-    my $secret = $gobj->fish_config('session_secret') || 'w3s3cR7';
-    my $c = Crypt::CBC->new(-key     => $secret,
-                            -cipher  => 'Blowfish',
-                            -padding => 'null');
+}
 
-    my $md5 = md5_hex($session);
-    my $encd = $c->encrypt("$session:$md5");
-    my $c_text = MIME::Base64::encode($encd, '');
+#-----------------------------------------------------------
+# session_lock
+#-----------------------------------------------------------
+sub session_lock {
+    my ($gobj, $attempts) = (shift, shift);
 
-    $c->finish();
+    my $value;
+    my $stat = 0;
+    my $session = $gobj->session_id();
 
-    return($c_text);
+    $attempts = 30 if (!defined($attempts));
+    $gobj->cache_namespace($session);
+
+    for (my $x = 0; $x < $attempts; $x++) {
+
+        $value = $gobj->cache_get($lock);
+        if ($value eq '1') {
+
+            sleep(1);
+
+        } else {
+
+            $gobj->cache_set($lock, '1');
+            $stat = 1;
+            last;
+
+        }
+
+    }
+
+    return $stat;
+
+}
+
+#-----------------------------------------------------------
+# session_unlock
+#-----------------------------------------------------------
+sub session_unlock {
+    my ($gobj) = (shift);
+
+    my $session = $gobj->session_id();
+
+    $gobj->cache_namespace($session);
+    $gobj->cache_set($lock, '0');
 
 }
 
@@ -218,6 +284,8 @@ Note that you must include Session in the list of imported items when you use
 your base app module (the one whose location is app_rootp). Failure to do so 
 will cause errors.
 
+Session is dependent on Gantry::Plugins::Cache for handling the session cache.
+
 =head1 CONFIGURATION
 
 The following items can be set by configuration:
@@ -255,28 +323,49 @@ key/value pairs may be stored per session.
 
 This method will retireve the stored value for a given key.
 
- $data = $session_retrieve('key');
+ $data = $self->session_retrieve('key');
 
 =item session_remove
 
 This method will remove the stored value for a given key.
 
- $session_remove('key');
+ $self->session_remove('key');
+
+=item session_update
+
+This method will update the value for the given key.
+
+ $self->session_update('key', 'value');
+
+=item session_lock
+ 
+This method along with session_unlock() provide a simple locking mechanism
+to help serialize access to the session store. You may supply an otional 
+parameter to control the number of attempts when aquiring the lock. The 
+default is 30 attempts. It will return true if successfull.
+
+ if ($self->session_lock()) {
+
+    ...
+
+    $self->session_unlock();
+
+ }
+
+=item session_unlock
+ 
+This method will unlock the session store.
+ 
+=back
+
+=head1 PRIVATE METHODS
+
+=over 4
 
 =item get_callbacks
 
 For use by Gantry.pm. Registers the callbacks needed for session management
 during the PerlHandler Apache phase or its moral equivalent.
-
-=back
-
-=head1 PRIVATE SUBROUTINES
-
-=over 4
-
-=item encrypt_cookie
-
-Encryption routine for cookie.
 
 =item initialize
 
@@ -291,6 +380,8 @@ are not, then a page will be displayed prompting them to turn 'cookies' on.
 
 =head1 SEE ALSO
 
+    Gantry
+    Gantry::Plugins::Cache
     Gantry
 
 =head1 AUTHOR

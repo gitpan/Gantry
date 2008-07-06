@@ -1,4 +1,30 @@
 This file documents the revision history for Perl extension Gantry
+
+[next release]
+    - 
+
+3.53 Sun Jul  6 11:50:58 PDT 2008
+    - modify Gantry::Server and Gantry::Engine::CGI to work with the
+      new state machines.
+    - add Gantry::State::Simple state machine 
+    - replace unchecked evals around plugin callback execution (so that errors
+      aren't thrown away) with a conditional to see if the arrayref is even
+      defined.
+    - moved engine_init() and post_engine_init plugin callback execution out
+      of init() and into handler() above the init() call so that $r or CGI
+      is available to any pre_init callback methods, and so that any errors
+      that occur within those callbacks are caught correctly with
+      cast_custom_error().
+
+3.52
+    - add relocate_permanently() to support 301 redirects (Stas Bekman)
+    - patch Gantry.pm - add a simple sort to the plugin calls
+    - add patches for Cache plugins
+    - add Gantry::Utils::CRON
+    - add setter/getter for Gantry::Utils::Crypt errors
+    - explicitly call the MP20 engine import for the Auth modules
+    - add handle_request_test_post for testing
+
 3.51 Tue Aug 28 11:42:48 CDT 2007
     - fix bug in Gantry::Server::handle_request_test 
     - fix some warning bugs in form.tt

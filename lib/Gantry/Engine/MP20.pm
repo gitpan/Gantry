@@ -127,7 +127,7 @@ sub cast_custom_error {
     my $status = ( $self->status() ? $self->status() 
         : $self->status_const( 'BAD_REQUEST' ) );
     
-    $self->r->log_error( 'custom ' . $die_msg );
+    $self->r->log_error( $die_msg ) if defined $die_msg;
     
     $self->r->custom_response( $status, $error_page );
     
@@ -146,8 +146,8 @@ sub apache_param_hash {
     foreach my $p ( @param_names ) {
         my @values = $req->param( $p );
         
-        $hash->{$p} = join( "\0", @values );
-
+        $hash->{$p} = ( scalar @values == 1 ) 
+            ? shift @values : [ @values ];
     }   
      
     return( $hash );
@@ -384,15 +384,19 @@ sub get_config {
     # are we using gantry cache ?
     if ( $gantry_cache ) {
 
+        $self->cache_namespace('gantry');
+
         # blow the gantry conf cache when server starts
         if ( $self->engine_cycle() == 1 ) {
             
-            foreach my $key ( @{ $self->cache_keys() } ) {
-                my @a = split( ':', $key );                
-                if ( $a[0] eq 'gantryconf' ) {
-                    $self->cache_del( $key );
+            eval {
+                foreach my $key ( @{ $self->cache_keys() } ) {
+                    my @a = split( ':', $key );                
+                    if ( $a[0] eq 'gantryconf' ) {
+                        $self->cache_del( $key );
+                    }
                 }
-            }
+            };
         }
                 
         # build cache key
@@ -611,6 +615,8 @@ sub status_const {
     return Apache2::Const::DECLINED         if $status eq 'DECLINED';
     return Apache2::Const::OK               if $status eq 'OK';
     return Apache2::Const::REDIRECT         if $status eq 'REDIRECT';
+    return Apache2::Const::HTTP_MOVED_PERMANENTLY
+                                            if $status eq 'MOVED_PERMANENTLY';
     return Apache2::Const::FORBIDDEN        if $status eq 'FORBIDDEN';
     return Apache2::Const::SERVER_ERROR     if $status eq 'SERVER_ERROR';
     

@@ -45,7 +45,7 @@ my $build = $subclass->new(
     license            => 'perl',
     module_name        => 'Gantry',
     requires           => {
-        'perl'                      => '5.8',
+        'perl'                      => '5.8.0',
         'CGI::Simple'               => 0,
         'Date::Calc'                => 0,
         'Data::FormValidator'       => 0,
@@ -62,6 +62,7 @@ my $build = $subclass->new(
         'Sub::Install'              => 0,
         'HTML::SuperForm'           => 0,
         'Template::Plugin::HTML::SuperForm' => 0,
+        'Mail::RFC822::Address'     => 0,
     },
     build_requires      => {
         'Test::More'          => 0,
@@ -91,19 +92,22 @@ eval {
     $default_template_path = Gantry::Init->base_root();
 };
 
-print "\n\nGantry comes with a set of default templates that\n"
-    . "need to be written to disk. A typical location for these\n"
-    . "templates is your web server document root.\n\n";
+my $template_path = $ENV{'GANTRY_TEMPLATE_PATH'};
+if (! $template_path) {
+    print "\n\nGantry comes with a set of default templates that\n"
+        . "need to be written to disk. A typical location for these\n"
+        . "templates is your web server document root.\n\n";
 
-my $template_path = $build->prompt(
-    "Path for Gantry templates",
-    $default_template_path,
-);
+    $template_path = $build->prompt(
+        "Path for Gantry templates",
+        $default_template_path,
+    );
+}
 
 $build->notes( install_web_directory => $template_path );
 
 if ( not -d $template_path ) {
-    my $make_path = $build->y_n(
+    my $make_path = $ENV{'GANTRY_TEMPLATE_PATH'} || $build->y_n(
         "$template_path does not exist, should I make it?",
         'y'
     );
@@ -143,8 +147,11 @@ sub _custom_code {
         my $self = shift;
         
         my $p = $self->{properties};        
+
+        my $install_base = $self->install_destination('lib') 
+            || $p->{install_sets}{site}{lib};
         
-        my $initf = "$p->{install_sets}{site}{lib}/$p->{dist_name}/Init.pm";
+        my $initf = "$install_base/$p->{dist_name}/Init.pm";
                 
         $self->SUPER::ACTION_install();
 

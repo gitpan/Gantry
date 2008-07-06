@@ -79,6 +79,9 @@ lib/Gantry/Plugins/SOAP/RPC.pm
 lib/Gantry/Plugins/Static.pm
 lib/Gantry/Plugins/Validate.pm
 lib/Gantry/Server.pm
+lib/Gantry/State/Default.pm
+lib/Gantry/State/Simple.pm
+lib/Gantry/State/Constants.pm
 lib/Gantry/Stash.pm
 lib/Gantry/Stash/Controller.pm
 lib/Gantry/Stash/View.pm
@@ -105,6 +108,7 @@ lib/Gantry/Utils/ModelHelper.pm
 lib/Gantry/Utils/PerlbalFixup.pm
 lib/Gantry/Utils/PODViewer.pm
 lib/Gantry/Utils/SQL.pm
+lib/Gantry/Utils/CRON.pm
 lib/Gantry/Utils/TablePerms.pm
 lib/Gantry/Utils/Threeway.pm
 lib/Gantry/Utils/Validate.pm

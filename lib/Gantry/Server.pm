@@ -39,6 +39,23 @@ sub handle_request_test_xml {
     return $self->_test_helper();
 }
 
+sub handle_request_test_post {
+    my ( $self, $request ) = @_;
+
+    my $method = 'POST'; # always GET for tests
+    $request =~ s/^(POST|GET)\://;
+    
+    my( $uri, $args ) = split( /\?/, $request );
+    
+    $ENV{PATH_INFO}         = $uri || $request;
+    $ENV{REQUEST_METHOD}    = $method;
+    $ENV{CONTENT_LENGTH}    = 0;
+    $ENV{QUERY_STRING}      = ( defined $args ? $args : '' );
+    $ENV{SCRIPT_NAME}       = "";
+
+    return $self->_test_helper();
+}
+
 sub handle_request_test {
     my ( $self, $request ) = @_;
 
@@ -65,22 +82,15 @@ sub _test_helper {
     my $original_handle = select $out_handle;
 
     # dispatch to the gantry engine
-    my $success_line;
+    my $status;
     eval {
-        $success_line = $engine_object->dispatch();
+        $status = $engine_object->dispatch();
     };
     if ( $@ ) {
         return( '401', ( "($@)" . ( $out->get_output() ) ) );
     }
 
-    # return the result
-    my $success_code = 200;
-    if ( defined $success_line ) {
-        $success_line =~ /(\d+ .*)/;
-        $success_code = $1;
-    }
-
-    return( $success_code, $out->get_output() );
+    return( $status, $out->get_output() );
     
 }
 
@@ -106,9 +116,9 @@ sub handle_request {
     my $original_handle = select $out_handle;
 
     # dispatch to the gantry engine
-    my $success_line;
+    my $status;
     eval {
-        $success_line = $engine_object->dispatch();
+        $status = $engine_object->dispatch();
     };
     if ( $@ ) {
         select $original_handle;
@@ -123,17 +133,10 @@ $@
 EO_FAILURE_RESPONSE
         return;
     }
-
-    # return the result
-    my $success_code = 200;
-    if ( defined $success_line ) {
-        $success_line =~ /(\d+ .*)/;
-        $success_code = $1;
-    }
-
+    
     select $original_handle;
 
-    print "HTTP/1.0 $success_code\n" . $out->get_output();
+    print "HTTP/1.0 $status\n" . $out->get_output();
 
 }
 
@@ -246,6 +249,11 @@ This method functions as a little web server processing http requests
 This method pretends to be a web server, but only handles a single request
 before returning.  This is useful for testing your Gantry app without
 having to use sockets.
+
+=item handle_request_test_post
+
+This is the same as handle_request_test, but it treats the request as a POST.
+This is mainly used for form testing.
 
 =item handle_request_test_xml
 

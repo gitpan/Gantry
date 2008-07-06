@@ -2,6 +2,19 @@ package Gantry::Control::C::AuthzBase;
 
 use strict;
 
+use constant MP2 => (
+    exists $ENV{MOD_PERL_API_VERSION} and
+    $ENV{MOD_PERL_API_VERSION} >= 2 
+);
+
+# must explicitly import for mod_perl2
+BEGIN {
+    if (MP2) {
+        require Gantry::Engine::MP20;
+        Gantry::Engine::MP20->import();
+    }
+}
+
 ######################################################################
 # Main Execution Begins Here                                         #
 ######################################################################

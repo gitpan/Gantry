@@ -35,8 +35,8 @@ sub get_callbacks {
 sub initialize {
     my ($gobj) = @_;
 
-    $gobj->cache_init() if (! $gobj->cache_inited());
-    $gobj->cache_purge();
+    $gobj->cache_init();
+
 }
 
 1;

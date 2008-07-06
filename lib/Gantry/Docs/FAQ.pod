@@ -197,7 +197,7 @@ Method 3: Check out Gantry from version control and then install
 
  > mkdir gantry
  > cd gantry
- > svn checkout http://svn.usegantry.org/repo/gantry/trunk/ .
+ > svn checkout http://gantry.googlecode.com/svn/trunk/ gantry
  > perl Build.PL
  > ./Build test
  > ./Build install

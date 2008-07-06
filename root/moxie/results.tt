@@ -1,7 +1,6 @@
 [%- title = view.title %]
 
-[% colspan = ( view.data.headings.size || 0 ) 
-     + ( view.data.header_options.size || 0 ) %]
+[% colspan = ( view.data.headings.size || 0 ) + 1 %]
 
 [% IF view.data.overheading %]
     <h3>[% view.data.overheading %]</h3>
@@ -20,9 +19,18 @@
             [%- END %]
         </select>    
     </dd>
-    [%- END %]
     
     [%- IF view.data.livesearch %]
+    <dd>
+        <input type="text"   name="livesearch" id="livesearch" value="" />
+        <input type="button" name="search" value="search"
+            onclick="javascript: livesearch();">
+    </dd>
+    [%- END %]
+    
+</dl>
+[%- ELSIF view.data.livesearch %]
+<dl class="search-box">
     <dd>
         <input type="text"   name="livesearch" id="livesearch" value="" />
         <input type="button" name="search" value="search"
@@ -54,7 +62,16 @@
 		[% FOREACH row IN view.data.rows %]
 		<tr class="results-row [% row.class %]">
 			[% FOREACH elem IN row.data %]
-				<td class="dta">[% elem %]</td>							
+			    [%
+			        elem_class  = 'dta';
+			        elem_text   = elem;
+			        
+			        IF elem.class;
+			            elem_class  = elem.class;
+			            elem_text   = elem.text;
+			        END;
+			    %]
+				<td class="[% elem_class %]">[% elem_text %]</td>							
 			
 				[% IF loop.last %]
 					<td class="rdta">

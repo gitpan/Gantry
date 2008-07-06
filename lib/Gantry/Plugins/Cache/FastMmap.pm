@@ -41,7 +41,7 @@ sub cache_init {
 
     }; if ($@) {
 
-        die('Unable to use - Gantry::Cache::FastMmap');
+        die('Unable to use - Gantry::Cache::FastMmap ' . $@ );
 
     }
 

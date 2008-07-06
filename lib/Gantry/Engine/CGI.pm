@@ -238,13 +238,13 @@ sub file_upload {
 #-------------------------------------------------
 sub cast_custom_error {
     my( $self, $error_page, $die_msg ) = @_;
-
+    
+    my $status = $self->status() ? $self->status() : '400 Bad Request';
+    
     eval {
         print $self->cgi->header(
             -type => 'text/html',
-            -status => ( $self->status()
-                     ? $self->status()
-                     : '400 Bad Request' ),
+            -status => $status,
         );
     };
     if ( $@ ) {
@@ -253,6 +253,8 @@ sub cast_custom_error {
     }
 
     $self->print_output( $error_page );
+
+    return $status;
 
 }
 
@@ -346,6 +348,9 @@ sub declined_response {
                 . "</span>"
            )
     );
+    
+    return '404 Not Found';
+    
 } # END declined_response
 
 #-------------------------------------------------
@@ -382,7 +387,12 @@ sub engine_init {
         $c = CGI::Simple->new( $params );
     }
     else {
-        $c = CGI::Simple->new();
+        if ( length( $ENV{ QUERY_STRING} || '' ) > 0 ) {
+            $c = CGI::Simple->new( $ENV{ QUERY_STRING } );
+        }
+        else {
+            $c = CGI::Simple->new();            
+        }
     }
 
     $self->cgi( $c );
@@ -549,15 +559,19 @@ sub get_config {
     # are we using gantry cache ?
     if ( $gantry_cache ) {
 
+        $self->cache_namespace('gantry');
+        
         # blow the gantry conf cache when server starts
         if ( $self->engine_cycle() == 1 ) {
             
-            foreach my $key ( @{ $self->cache_keys() } ) {
-                my @a = split( ':', $key );                
-                if ( $a[0] eq 'gantryconf' ) {
-                    $self->cache_del( $key );
+            eval {
+                foreach my $key ( @{ $self->cache_keys() } ) {
+                    my @a = split( ':', $key );                
+                    if ( $a[0] eq 'gantryconf' ) {
+                        $self->cache_del( $key );
+                    }
                 }
-            }
+            };
         }
                 
         # build cache key
@@ -703,7 +717,8 @@ sub redirect_response {
     $p->{uri} = $self->response_headers->{location};
 
     print $self->cgi->redirect( $p );
-
+    
+    return 302;
 } # END redirect_response
 
 #-------------------------------------------------
@@ -755,6 +770,7 @@ sub status_const {
 
     return '404'         if uc $status eq 'DECLINED';
     return '200'         if uc $status eq 'OK';
+    return '301'         if uc $status eq 'MOVED_PERMANENTLY';
     return '302'         if uc $status eq 'REDIRECT';
     return '403'         if uc $status eq 'FORBIDDEN';
     return '401'         if uc $status eq 'AUTH_REQUIRED';
@@ -854,6 +870,7 @@ sub set_req_params {
 #-------------------------------------------------
 sub success_code {
 
+    return '200';
 # This is for mod_perl engines.  They need to tell apache that
 # things went well.
 

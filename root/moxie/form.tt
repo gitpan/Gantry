@@ -98,7 +98,8 @@
     [%- ELSIF type == 'display' %]
         <fieldset class="form-data">
         <label>[% dta.label %]</label>
-        [%- row.$name || dta.default_value %]
+        [%- name_display = name _ '_display' %]
+        [%- row.$name_display || row.$name || dta.default_value %]
         </fieldset>
 
     [%- ELSIF type == 'textarea' %]
@@ -145,19 +146,27 @@
             %]
         [%- END %]
 
+        
         <fieldset class="form-data [% missing ? 'missing' : '' %]">
         <label class="[% required ? 'required' : '' %]" 
             for="[% dta.name %]">[% dta.label %]</label>
         
         [% param_values = self.params.$name.split('\0') %]
-        
+                
+        [% val = '' %]
+        [% IF param_values.count > 0 %]
+            [% val = param_values %]
+        [% ELSIF row.$name.defined %]
+            [% val = row.$name  %]
+        [% ELSE %]
+            [% val = dta.default_value %]
+        [% END %]
+                
         [%- form.select( 
             id => dta.name,
             name => name, 
             class => dta.class,
-            default => (
-                param_values || row.$name _ '' || dta.default_value 
-            ),
+            default => val,
             size => dta.display_size,
             values => values,
             labels => labels,
@@ -181,12 +190,21 @@
         <fieldset class="form-data [% missing ? 'missing' : '' %]">
         <label class="[% required ? 'required' : '' %]" 
          for="[% dta.name %]">[% dta.label %]</label>
-    
+        
+         [% val = '' %]
+         [% IF $self.params.$name.defined %]
+             [% val = $self.params.$name %]
+         [% ELSIF row.$name.defined %]
+             [% val = row.$name %]
+         [% ELSE %]
+             [% val = dta.default_value %]
+         [% END %]
+        
         [%- form.$type( 
             id => dta.name,
             name => dta.name, 
             class => dta.class,
-            default => (self.params.$name || row.$name || dta.default_value),
+            default => val,
             size => dta.display_size,
         ) 
         %]

@@ -23,12 +23,19 @@ our @EXPORT = qw(
     auth_optional
     auth_table
     auth_file
+    auth_ldap
+    auth_ldap_hostname
+    auth_ldap_binddn
+    auth_ldap_userdn
+    auth_ldap_groupdn
+    auth_ldap_filter
     auth_secret
     auth_user_field
     auth_password_field
     auth_group_table
     auth_group_join_table
     auth_logout_url
+    auth_login_url
     auth_cookie_name
     auth_cookie_domain
     auth_execute_login
@@ -68,7 +75,17 @@ sub initialize {
     $gobj->auth_deny( $gobj->fish_config( 'auth_deny' ) || 'no' );
     $gobj->auth_table( $gobj->fish_config( 'auth_table' ) || 'user' );
     $gobj->auth_file( $gobj->fish_config( 'auth_file' ) || '' );
-  
+    $gobj->auth_ldap( $gobj->fish_config( 'auth_ldap' ) || '' );
+    $gobj->auth_ldap_hostname( 
+        $gobj->fish_config( 'auth_ldap_hostname' ) || '' 
+    );
+    $gobj->auth_ldap_binddn( $gobj->fish_config( 'auth_ldap_binddn' ) || '' );
+    $gobj->auth_ldap_userdn( $gobj->fish_config( 'auth_ldap_userdn' ) || '' );
+    $gobj->auth_ldap_groupdn( $gobj->fish_config( 'auth_ldap_groupdn' ) || '' );
+    $gobj->auth_ldap_filter( 
+        $gobj->fish_config( 'auth_ldap_filter' ) || 'uid' 
+    );
+
     $gobj->auth_group_table(
         $gobj->fish_config( 'auth_group_table' ) || 'user_group'
     );
@@ -112,6 +129,12 @@ sub initialize {
     eval {
         $gobj->auth_logout_url(
             $gobj->fish_config( 'auth_logout_url' )
+        );
+    };
+
+    eval {
+        $gobj->auth_login_url(
+            $gobj->fish_config( 'auth_login_url' )
         );
     };
 
@@ -246,6 +269,93 @@ sub validate_user {
             return 0;             
         }
     }
+    # Look up via LDAP.
+    elsif( $gobj->auth_ldap() 
+        && $gobj->auth_ldap_hostname 
+        && $gobj->auth_ldap_binddn 
+        && $gobj->auth_ldap_filter ) {
+            
+        require Net::LDAP;
+        require Net::LDAP::Util;
+        Net::LDAP::Util->import( qw( ldap_error_desc ldap_error_text ) );
+
+        my $ldap = Net::LDAP->new( $gobj->auth_ldap_hostname() ) or die "$@";
+
+        # Attempt to bind to a directory with dn and password
+        # We do this rather than directly comparing password hashes,
+        # thus remaining compatible with more exotic ldap implementations.
+        my $mesg = $ldap->bind( 
+            ( $gobj->auth_ldap_filter() 
+                . "=$username, " 
+                . $gobj->auth_ldap_binddn()
+            ),
+            password => $password
+        );
+
+        unless( $mesg->code ) { 
+            my $profile_mesg = $ldap->search( # perform a search
+                base   => $gobj->auth_ldap_binddn(),
+                filter => $gobj->auth_ldap_filter() . "=$username",
+            );
+                      
+            my $uidNumber;
+
+            unless( $profile_mesg->code ) {
+                # With any luck there will always be only one match...it is 
+                # poor LDAP implementation of your filter
+                # if you get more than one for this.
+                # if not, the last matching data will overwrite.  
+                   while( my $entry = $profile_mesg->shift_entry ) {
+                    $uidNumber = $entry->get_value( 'uidNumber' );                            
+                }
+            }
+
+            # Create a valid AuthUserObject
+            my $obj  = Gantry::Plugins::AuthCookie::AuthUserObject->new( {
+                id       => $username,
+                user_id  => $username,
+                $gobj->auth_user_field() => $username,
+            } );
+                
+            # Auth the object.                                
+            $gobj->auth_user_row( $obj );
+            
+   			# Put the user information into the gantry object.
+   			# Set __USER__ to uidNumber if at all possible.  This way we know 
+            # for fact that we have a unique UID.  It would be poor form to 
+            # have multiple identical usernames, but it is still possible.  
+            # UID's simply cannot repeat.  This way we can
+            # filter for uidNumber in outside routines to get full user 
+            # information.  If it's not available (ie, perhaps it's an 
+            # organizationalPerson?), just sub in the username as per usual.
+            $gobj->user( $uidNumber || $username );
+            
+        }
+            
+        else{
+            return 0;
+        }
+		if( $gobj->auth_ldap_groupdn ){
+           	# Similarly to the DBIC function below, we'll attempt to look
+            # up group information as well, based on what we are provided
+            # in auth_ldap_groupdn.  Match all groups that our user exists
+            # as a member of.
+            my $group_mesg = $ldap->search( # perform a search
+                base   => $gobj->auth_ldap_groupdn(),
+                filter => "memberUid=$username",
+            );
+
+			my @groups;
+        	unless( $group_mesg->code ){
+				# Shift out each group entry, and enter it's cn
+				# into the user_groups hash as a key with a value of 1.
+           		while( my $entry = $group_mesg->shift_entry ){
+					++$user_groups->{ $entry->get_value( 'cn' ) };           			
+           		}
+        	}
+        }
+
+    }
     # look up via DBIC
     else {
         my $sch       = $gobj->get_schema();
@@ -276,7 +386,7 @@ sub validate_user {
             push( @sql,
                 "select g.ident from $user_table u, $grp_join_table m,",
                 "$grp_table g",
-                "where m.user = u.id and m.$grp_table = g.id",
+                "where m.$user_table = u.id and m.$grp_table = g.id",
                 'and u.id = ', $user_row->id
             );
 
@@ -436,9 +546,9 @@ sub do_login {
             $self->relocate( $page );
         }
 
-        # else them to the application root
+        # else send them to the application root
         else {
-            $self->relocate( $self->location );
+            $self->relocate( $self->auth_login_url );
         }
 
         return();
@@ -562,7 +672,7 @@ sub encrypt_cookie {
     my $md5 = md5_hex( $username . $pass );
     
     my $encd     = $c->encrypt("$username:;:$pass:;:$md5");
-    my $c_text     = MIME::Base64::encode( $encd, '');
+    my $c_text   = MIME::Base64::encode( $encd, '');
 
     $c->finish();
  
@@ -615,6 +725,90 @@ sub checkvals {
             else {
                 push( @errors, 'Login Failure' );                
             }            
+        }
+        elsif( $self->auth_ldap() 
+            && $self->auth_ldap_hostname 
+            && $self->auth_ldap_binddn 
+            && $self->auth_ldap_filter ) {
+            
+            require Net::LDAP;
+            require Net::LDAP::Util;
+            Net::LDAP::Util->import( qw( ldap_error_desc ldap_error_text ) );
+
+            my $ldap = Net::LDAP->new( 
+                $self->auth_ldap_hostname() 
+            ) or die "$@";
+
+            # Attempt to bind to a directory with dn and password
+            # We do this rather than directly comparing password hashes,
+            # thus remaining compatible with more exotic ldap implementations.
+            my $mesg = $ldap->bind( 
+                ( $self->auth_ldap_filter()
+                    . "=$in{'username'}, "
+                    . $self->auth_ldap_binddn()
+                ),
+                password => $in{'password'}
+            );
+
+            unless( $mesg->code ) { 
+                my $profile_mesg = $ldap->search( # perform a search
+                    base   => $self->auth_ldap_binddn(),
+                    filter => $self->auth_ldap_filter() . "=$in{'username'}",
+                );
+                      
+                my $uidNumber;
+
+                unless( $profile_mesg->code ) {
+                    # With any luck there will always be only one match...it 
+                    # is poor LDAP
+                    # bind_dn/filter if you get more than one for this.
+                    # if not, the last matching data will overwrite.  
+                    while( my $entry = $profile_mesg->shift_entry ) {
+                        $uidNumber = $entry->get_value( 'uidNumber' );                            
+                    }
+                }
+
+                # Create a valid AuthUserObject
+                my $obj  = Gantry::Plugins::AuthCookie::AuthUserObject->new( {
+                    id       => $in{username},
+                    user_id  => $in{username},
+                    $self->auth_user_field()     => $in{username},
+                    $self->auth_password_field() => $in{password},
+                } );
+                
+                # Auth the object.                                
+                $self->auth_user_row( $obj );
+                
+            }
+            
+            # If the user is in debug mode, and auth fails, give them a verbose 
+            # explanation of what went wrong.  In production, this would look 
+            # very unprofessional. :\
+            # If there is a known logging mechanism, this needs to log the 
+            # failure, and what username was attempting it (and probably 
+            # what IP address).
+            else{
+                if( $self->auth_ldap() eq 'debug' ){
+                    push( @errors, 
+                        "hostname: " . $self->auth_ldap_hostname() 
+                    );
+
+                    push( @errors, 
+                        "bind dn: "
+                        . $self->auth_ldap_filter()
+                        . "=$in{'username'}, "
+                        . $self->auth_ldap_binddn()
+                    );
+                    push( @errors, 
+                        ldap_error_desc( $mesg->code ) 
+                        . ": " 
+                        . ldap_error_text( $mesg->code ) 
+                    );
+                }
+                else{
+                    push( @errors, 'Login Failure' );
+                }
+            }
         }
         else {
             eval {
@@ -733,6 +927,67 @@ sub auth_file {
     
 } # end auth_file
 
+
+#-------------------------------------------------
+# $self->auth_ldap
+#-------------------------------------------------
+sub auth_ldap {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LDAP__} = $p if defined $p;
+    return( $$self{__AUTH_LDAP__} ); 
+} # end auth_ldap
+
+#-------------------------------------------------
+# $self->auth_ldap_hostname
+#-------------------------------------------------
+sub auth_ldap_hostname {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LDAP_HOSTNAME__} = $p if defined $p;
+    return( $$self{__AUTH_LDAP_HOSTNAME__} ); 
+} # end auth_ldap_hostname
+
+#-------------------------------------------------
+# $self->auth_ldap_binddn
+#-------------------------------------------------
+sub auth_ldap_binddn {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LDAP_BINDDN__} = $p if defined $p;
+    return( $$self{__AUTH_LDAP_BINDDN__} ); 
+} # end auth_ldap_binddn
+
+#-------------------------------------------------
+# $self->auth_ldap_userdn
+#-------------------------------------------------
+sub auth_ldap_userdn {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LDAP_USERDN__} = $p if defined $p;
+    return( $$self{__AUTH_LDAP_USERDN__} ); 
+} # end auth_ldap_userdn
+
+#-------------------------------------------------
+# $self->auth_ldap_groupdn
+#-------------------------------------------------
+sub auth_ldap_groupdn {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LDAP_GROUPDN__} = $p if defined $p;
+    return( $$self{__AUTH_LDAP_GROUPDN__} ); 
+} # end auth_ldap_groupdn
+
+#-------------------------------------------------
+# $self->auth_ldap_filter
+#-------------------------------------------------
+sub auth_ldap_filter {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LDAP_FILTER__} = $p if defined $p;
+    return( $$self{__AUTH_LDAP_FILTER__} ); 
+} # end auth_ldap_filter
+
 #-------------------------------------------------
 # $self->auth_group_table
 #-------------------------------------------------
@@ -787,6 +1042,17 @@ sub auth_user_groups {
     return( $$self{__AUTH_USER_GROUPS__} ); 
     
 } # end auth_user_groups
+
+#-------------------------------------------------
+# $self->auth_login_url
+#-------------------------------------------------
+sub auth_login_url {
+    my ( $self, $p ) = ( shift, shift );
+
+    $$self{__AUTH_LOGIN_URL__} = $p if defined $p;
+    return( $$self{__AUTH_LOGIN_URL__} || $self->location ); 
+    
+} # end auth_login_url
 
 #-------------------------------------------------
 # $self->auth_logout_url
@@ -1098,6 +1364,11 @@ default the default value.
 accessor for auth_logout_url.  auth_logout_url is a full URL where the
 user will go when they log out.  Logging out happens when the do_login
 method is called with a query_string parameter logout=1.
+
+=item auth_login_url
+
+accessor for auth_login_url.  auth_login_url is a full/relative URL where the
+user will go after they login.  
 
 =item auth_cookie_name
 

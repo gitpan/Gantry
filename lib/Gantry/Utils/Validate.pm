@@ -1,6 +1,7 @@
 package Gantry::Utils::Validate;
 use strict;
 use Date::Calc qw( check_date );
+use Mail::RFC822::Address ();
 
 ############################################################
 # Functions                                                #
@@ -39,13 +40,11 @@ sub is_date {
 sub is_email {
     my( $self, $email ) = ( shift, shift );
 
-    return( 0 ) if ( ! defined $email );
+    if ( Mail::RFC822::Address::valid( $email ) ) {
+        return 1;
+    }
 
-    return( 0 ) if ( $email !~ /\@/ );
-    
-    return( 0 ) if ( $email !~ /\./ );
-
-    return( 1 );
+    return 0;
 } # END is_email
 
 #-------------------------------------------------

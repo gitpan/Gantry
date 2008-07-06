@@ -10,11 +10,12 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.51';
+our $VERSION = '3.53';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
+our $DEFAULT_STATE_MACHINE = 'Gantry::State::Default';
 our $CONF;
-our %plugin_callbacks;
 our $engine_cycle = 0;
+my %plugin_callbacks;
 
 ############################################################
 # Functions                                                #
@@ -28,6 +29,8 @@ sub handler : method {
     my $r_or_cgi    = shift;
     my $self        = bless( {}, $class );
 
+    my $status;
+
     # Create the stash object
     $self->make_stash();
     $self->_increment_engine_cycle();
@@ -36,131 +39,14 @@ sub handler : method {
     if ( ! $self->can( 'engine' ) ) {
         die( 'No engine specified, engine required' );
     }
+
+    # initialize the engine
+    $self->engine_init( $r_or_cgi );
+
+    # handle the request
+    $status = $self->state_run($r_or_cgi, \%plugin_callbacks);
     
-    my $namespace = $class->namespace;
-    my( @p, $p1 );
-    
-    eval {                              
-        
-        # Do the plugin callbacks for the 'pre_init' phase 
-        foreach my $callback (
-                @{ $plugin_callbacks{ $namespace }{ pre_init } }
-        ) {
-            $callback->( $self, $r_or_cgi );
-        } 
-
-        $self->init( $r_or_cgi );
-    
-        @p  = $self->cleanroot( $self->dispatch_location() );
-        $p1 = ( shift( @p ) || 'main' );
-
-        # set the action         
-        $self->action( 'do_'. $p1 );
-
-        # Do the plugin callbacks for the 'post_init' phase 
-        foreach my $cb ( @{ $plugin_callbacks{$namespace}{post_init} } ) {
-            $cb->( $self );
-        } 
-    };
-
-    # Call do_error and Return 
-    if( $@ ) {
-        my $e = $@;
-        return( $self->cast_custom_error( $self->custom_error( $e ), $e ) );
-    }
-    
-    # check for response page -- used primarily for caching
-    if ( $self->gantry_response_page() ) {
-        $self->set_content_type();
-        $self->set_no_cache();       
-        $self->send_http_header();
-        $self->print_output( $self->gantry_response_page() );
-        return( $self->success_code() );            
-    }
-    
-    eval {    
-
-        # Do action if valid
-        if ( $self->can( $self->action() ) ) {  
-            $self->do_action( $self->action(), @p );
-            $self->cleanup( );  # Cleanup.
-        }
-        
-        # Try default action
-        elsif ( $self->can( 'do_default' ) ) {
-            $self->do_action( 'do_default', $p1, @p );
-            $self->cleanup( );
-        }
-        
-        # Else return declined
-        else {
-            $self->declined( 1 );
-        }
-        
-        $self->declined( 1 ) if ( $self->is_status_declined( ) );
-
-    };
-
-    # Return REDIRECT
-    return $self->redirect_response() if ( $self->redirect );
-    
-    # Return DECLINED
-    return $self->declined_response( $self->action() ) if ( $self->declined );
-        
-    # Call do_error and Return 
-    if( $@ ) {
-        my $e = $@;
-
-        return( $self->cast_custom_error( $self->custom_error( $e ), $e ) );
-    }
-
-    # set http headers
-    $self->set_content_type();
-    $self->set_no_cache();
-
-    # Call do_process, defined within the template plugin
-    eval {
-
-        # Do the plugin callbacks for the 'pre_template_process' phase 
-        foreach my $cb ( @{ $plugin_callbacks{$namespace}{pre_process} } ) {
-            $cb->( $self );
-        } 
-
-        $self->gantry_response_page( $self->do_process() || '' );
-
-        # Do the plugin callbacks for the 'pre_template_process' phase 
-        foreach my $cb ( @{ $plugin_callbacks{$namespace}{post_process} } ) {
-            $cb->( $self );
-        } 
-
-        my $status = $self->status() ? $self->status() : 200;
-
-        if ( $status < 400 ) {
-            
-            $self->send_http_header();
-            $self->print_output( $self->gantry_response_page() );
-        
-        }
-        else {
-            $self->cast_custom_error( $self->gantry_response_page() ) 
-                if $self->gantry_response_page();
-        }
-    };
-
-    if( $@ ) {
-        my $e = $@;
-        
-        $self->do_error( $e );
-        return( $self->cast_custom_error( $self->custom_error( $e ), $e ) );
-    }
-    
-    # Return status code unless Engine is CGI
-    if ( $self->engine eq 'Gantry::Engine::CGI' ) {
-        return();        
-    }
-    else {
-        return( $self->status() ? $self->status() : $self->success_code );
-    }
+    return $status;
     
 } # end handler
 
@@ -267,21 +153,6 @@ sub smtp_host {
     return( $$self{__SMTP_HOST__} );
 
 } # end smtp_host
-
-#-------------------------------------------------
-# $self->relocate( $location )
-#-------------------------------------------------
-sub relocate {
-    my ( $self, $location ) = ( shift, shift );
-
-    $location = $self->location if ( ! defined $location );
-    $self->redirect( 1 ); # Tag it for the handler to handle nice.
-    $self->header_out( 'location', $location );    
-    $self->status( $self->status_const( 'REDIRECT' ) );
-    
-    return( $self->status_const( 'REDIRECT' ) );
-    
-} # end relocate 
 
 #-------------------------------------------------
 # $self->get_cookies
@@ -413,7 +284,7 @@ sub cleanroot {
 sub import {
     my ( $class, @options ) = @_;
 
-    my( $engine, $tplugin, $plugin, $conf_instance, $conf_file );
+    my( $engine, $tplugin, $plugin, $splugin, $conf_instance, $conf_file );
 
     my $plugin_namespace = 'Gantry';
     
@@ -447,13 +318,26 @@ sub import {
             if ($@) { die qq/Could not load plugin "$tplugin", "$@"/ }
         }
 
+		# Load the desired State Machine
+		elsif ( /^-StateMachine=(\S+)/ ) {
+            $splugin = "Gantry::State::$1";
+            my $sfile   = File::Spec->catfile( 
+                'Gantry', 'State', "${1}.pm" 
+            );
+            eval {
+                require $sfile;
+                $splugin->import();
+            };
+            if ($@) { die qq/Could not load state machine "$splugin", "$@"/ }
+		}
+
         elsif ( /^-PluginNamespace=(\S+)/ ) {
             $plugin_namespace = $1;
         }
     
         else {
             $plugin         = "Gantry::Plugins::$_";
-
+			
             my @name_pieces = split /::/, $_;
             my $last_piece  = pop @name_pieces;
 
@@ -510,6 +394,22 @@ sub import {
         
     }   
 
+	# Load the default state machine if one hasn't been defined
+    if ( ! $splugin && ! $class->can( 'state_run' ) ) {
+
+        my( $sengine ) = ( $DEFAULT_STATE_MACHINE =~ m!::(\w+)$! );
+        my $def_sengine_file = File::Spec->catfile( 
+            'Gantry', 'State', "${sengine}.pm" 
+        );
+
+        eval {
+            require $def_sengine_file;
+            import $DEFAULT_STATE_MACHINE;
+        };
+        if ($@) { die qq/Could not load Default state machine, "$@"/ }
+        
+    }   
+
 }
 
 #-------------------------------------------------
@@ -537,27 +437,22 @@ sub namespace {
 sub init {
     my ( $self, $r_or_cgi ) = @_; 
 
-    $self->engine_init( $r_or_cgi );
-
-    # Do the plugin callbacks for the 'init' phase 
-    foreach my $callback (
-        @{ $plugin_callbacks{$self->namespace}{ post_engine_init } }
-    ) {
-        $callback->( $self );
-    }    
-
     $self->uri( $self->fish_uri() );
     $self->location( $self->fish_location() );
     $self->path_info( $self->fish_path_info() );
     $self->method( $self->fish_method() );
-    
-    # Do the plugin callbacks for the 'init' phase 
-    foreach my $callback (
+    $self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
+    $self->status( "" ); 
+
+    if (defined $plugin_callbacks{ $self->namespace }{ init }) {
+        # Do the plugin callbacks for the 'init' phase
+        foreach my $callback (sort
                 @{ $plugin_callbacks{ $self->namespace }{ init } }
-    ) {
-        $callback->( $self );
+        ) {
+            $callback->( $self );
+        }
     }
-    
+
     # set post_max - used for apache request object
     $self->post_max( $self->fish_config( 'post_max' ) || '20000000' );
 
@@ -596,8 +491,6 @@ sub init {
     # set no cache
     $self->no_cache( $self->fish_config( 'no_cache' ) );
     
-    $self->status( "" ); # to avoid uninitialized value warning
-
     # set page title
     $self->page_title( $self->fish_config( 'page_title' ) || $self->uri );
     
@@ -607,9 +500,6 @@ sub init {
     
     # set request body paramater variables
     $self->set_req_params();
-
-    # set protocol
-    $self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
 
     # database and auth database variables are handled in each engine's
     # Gantry::Utils::DBConnHelper::* sublcass.
@@ -1439,7 +1329,18 @@ Set and unset the declined flag
  $self->relocate( location );
 
 This method can be called from any controller will relocated 
-the user to the given location
+the user to the given location.
+
+This method has been moved to Gantry::State::Default.
+
+=item relocate_permanently
+
+ $self->relocate_permanently( location );
+
+This method can be called from any controller will relocated the user
+to the given location using HTTP_MOVED_PERMANENTLY 301.
+
+This method has been moved to Gantry::State::Default.
 
 =item redirect 
 

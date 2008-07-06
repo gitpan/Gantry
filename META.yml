@@ -1,13 +1,11 @@
 ---
 name: Gantry
-version: 3.51
+version: 3.53
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
-abstract: 'Web application framework for mod_perl, cgi, etc.'
+abstract: Web application framework for mod_perl, cgi, etc.
 license: perl
-resources:
-  license: http://dev.perl.org/licenses/
 requires:
   CGI::Simple: 0
   Config::General: 2.31
@@ -21,18 +19,23 @@ requires:
   HTTP::Server::Simple::CGI: 0
   Hash::Merge: 0
   JSON: 0
+  Mail::RFC822::Address: 0
   Sub::Install: 0
   Template: 2.0
   Template::Plugin::HTML::SuperForm: 0
   URI: 0
-  perl: 5.8
+  perl: 5.8.0
 build_requires:
   Test::Exception: 0
   Test::More: 0
+generated_by: Module::Build version 0.2806
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.51
+    version: 3.53
   Gantry::Build:
     file: lib/Gantry/Build.pm
   Gantry::Conf:
@@ -165,6 +168,12 @@ provides:
     file: lib/Gantry/Stash/View.pm
   Gantry::Stash::View::Form:
     file: lib/Gantry/Stash/View/Form.pm
+  Gantry::State::Constants:
+    file: lib/Gantry/State/Constants.pm
+  Gantry::State::Default:
+    file: lib/Gantry/State/Default.pm
+  Gantry::State::Simple:
+    file: lib/Gantry/State/Simple.pm
   Gantry::Template::Default:
     file: lib/Gantry/Template/Default.pm
   Gantry::Template::Framing:
@@ -175,6 +184,8 @@ provides:
     file: lib/Gantry/Utils/AuthCDBI.pm
   Gantry::Utils::CDBI:
     file: lib/Gantry/Utils/CDBI.pm
+  Gantry::Utils::CRON:
+    file: lib/Gantry/Utils/CRON.pm
   Gantry::Utils::CRUDHelp:
     file: lib/Gantry/Utils/CRUDHelp.pm
   Gantry::Utils::Crypt:
@@ -229,7 +240,5 @@ provides:
     file: lib/Gantry/Stash.pm
   view:
     file: lib/Gantry/Stash/View.pm
-generated_by: Module::Build version 0.2805
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+resources:
+  license: http://dev.perl.org/licenses/

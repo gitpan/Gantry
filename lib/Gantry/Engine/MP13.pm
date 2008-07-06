@@ -4,8 +4,8 @@ require Exporter;
 use strict;
 use Carp qw( croak );
 
-use Apache::Constants qw( DECLINED OK REDIRECT AUTH_REQUIRED 
-                            SERVER_ERROR FORBIDDEN BAD_REQUEST );
+use Apache::Constants qw( DECLINED OK REDIRECT HTTP_MOVED_PERMANENTLY
+                          AUTH_REQUIRED SERVER_ERROR FORBIDDEN BAD_REQUEST );
 use Apache::Request;
 use File::Basename;
 use Gantry::Conf;
@@ -122,7 +122,7 @@ sub cast_custom_error {
     my $status = ( $self->status() ? $self->status() 
         : $self->status_const( 'BAD_REQUEST' ) );
     
-    $self->r->log_error( 'custom ' . $die_msg );
+    $self->r->log_error( $die_msg ) if defined $die_msg;
     
     $self->r->custom_response( $status, $error_page );
     
@@ -141,7 +141,8 @@ sub apache_param_hash {
     foreach my $p ( @param_names ) {
         my @values = $req->param( $p );
         
-        $hash->{$p} = join( "\0", @values );
+        $hash->{$p} = ( scalar @values == 1 ) 
+            ? shift @values : [ @values ];
 
     }   
      
@@ -376,15 +377,19 @@ sub get_config {
     # are we using gantry cache ?
     if ( $gantry_cache ) {
 
+        $self->cache_namespace('gantry');
+
         # blow the gantry conf cache when server starts
         if ( $self->engine_cycle() == 1 ) {
             
-            foreach my $key ( @{ $self->cache_keys() } ) {
-                my @a = split( ':', $key );                
-                if ( $a[0] eq 'gantryconf' ) {
-                    $self->cache_del( $key );
+            eval {
+                foreach my $key ( @{ $self->cache_keys() } ) {
+                    my @a = split( ':', $key );                
+                    if ( $a[0] eq 'gantryconf' ) {
+                        $self->cache_del( $key );
+                    }
                 }
-            }
+            };
         }
                 
         # build cache key
@@ -604,6 +609,8 @@ sub status_const {
     return DECLINED         if $status eq 'DECLINED';
     return OK               if $status eq 'OK';
     return REDIRECT         if $status eq 'REDIRECT'; 
+    return HTTP_MOVED_PERMANENTLY
+                            if $status eq 'MOVED_PERMANENTLY';
     return FORBIDDEN        if $status eq 'FORBIDDEN'; 
     return AUTH_REQUIRED    if $status eq 'AUTH_REQUIRED';
     return AUTH_REQUIRED    if $status eq 'HTTP_UNAUTHORIZED';

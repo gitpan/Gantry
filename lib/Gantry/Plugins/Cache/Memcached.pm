@@ -29,19 +29,19 @@ sub cache_init {
     my $cache;
     my $rehash = $gobj->fish_config('cache_rehash') || 'no';
     my $expire_time = $gobj->fish_config('cache_expires') || '3600';
-    my $servers = $gobj->fish_config('cache_servers') || '127.0.0.1:11212';
+    my $servers = $gobj->fish_config('cache_servers') || '127.0.0.1:11211';
     my $compress = $gobj->fish_config('cache_compress_threshold') || '1000';
 
     eval {
 
         $cache = Cache::Memcached->new({servers => [$servers]});
-        $cache->set_compression_threshold($compress);
+        $cache->set_compress_threshold($compress);
         $cache->enable_compress(1);
-        $cache->no_rehash() if ($rehash =~ /no/i);
+        $cache->set_norehash() if ($rehash =~ /no/i);
 
     }; if ($@) {
 
-        die('Unable to use - Gantry::Cache::Memcached');
+        die("Unable to use - Gantry::Cache::Memcached; $@");
 
     }
 

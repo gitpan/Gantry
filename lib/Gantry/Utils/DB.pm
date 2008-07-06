@@ -176,28 +176,43 @@ sub db_nextvals {
 # db_query( $dbh, $description, @query )
 #-------------------------------------------------
 sub db_query {
-    my ( $handle, $description, @query ) = @_;
-
+    my ( $handle, $description ) = ( shift, shift );
+    my ( $query, $params );
+    my ( $sql, $sth );
+    
     if ( ! defined ( $handle ) ) {
         croak "Error $description: db_query not given a connection: $!\n";
     }
+    
+    # Determine which version of the function is being called.
+    if ( ref( $_[0] ) eq 'ARRAY' ) {
+        ( $query, $params ) = @_;
 
-    if ( length ( @query ) == 0 ) {
+        $sql = join ( "\n", @$query );
+    }
+    else {
+        # Warn users not to call db_query this way.
+        warn(
+            'db_query called without bound parameters is unsafe. ' .
+            'Please update your code to use bound parameters.'
+        );
+
+        $sql = join ( "\n", @_ );
+    }
+    
+    if ( length ( $sql ) == 0 ) {
         $handle->rollback if ( $handle->{AutoCommit} == 0 );
         croak "Error $description: db_query not given any SQL: $!\n";
     }
 
-    my $sql = join ( "\n", @query );
-
-    my $sth = $handle->prepare( $sql );
-    
-    $sth->execute or do 
+    $sth = $handle->prepare( $sql );
+    $sth->execute( @$params ) or do 
         {
             $handle->rollback if ( $handle->{AutoCommit} == 0 );
             croak "SQL Query Error ( $description ): $sql\n";
         };
-
-    return( $sth );
+    
+    return $sth;
 } # END db_query 
 
 #-------------------------------------------------
@@ -281,7 +296,9 @@ Gantry::Utils::DB - Database wrapper functions, specfic to PostgreSQL
     $hash_reference = db_nextvals( $handle );
 
   db_query
-    $sth = db_query( $dbh, $description, @sql_query );
+    $sth = db_query_bp( $dbh, $description, \@sql_query, \@params );
+    $sth = db_query( $dbh, $description, @sql_query );*
+    * Not safe and should not be used.
 
   db_rollback
     db_rollback( $dbh );
@@ -345,14 +362,19 @@ This function takes a sql statement handle, C<$sth>, and returns the next
 row from the statement as a hash reference with the column names as 
 the keys and the values set from the row in the query.
 
+=item $sth = db_query( $dbh, $description, \@sql_query, \@params )
+
+This function takes a database handle, C<$dbh>, a description of the 
+call, C<$description>, a sql query, C<\@sql_query>, and a list of parameters,
+C<\@params> to bind. The query is then run against the database specified
+in C<$dbh> using the specified bound parameters C<\@params>. The function
+will return a statment handle, C<$sth>, or if there is an error while
+executing the sql query it will C<croak()>.
+
 =item $sth = db_query( $dbh, $description, @sql_query )
 
-This function takes a database handler, C<$dbh>, a description of the 
-call, C<$description>, and a sql query, C<@sql_query>. The sql query can 
-be either an array or a string, it will be joined with spaces if it is
-an array. The query is then run against the database specified in C<$dbh>. 
-The function will return a statment handler, C<$sth>, or if there is an 
-error while executing the sql query it will C<croak()>.
+Calling db_query in this way is unsafe. It is vulnerable to sql injection
+attacks. Please use the alternate calling method listed above instead.
 
 =item db_rollback( $dbh )
 

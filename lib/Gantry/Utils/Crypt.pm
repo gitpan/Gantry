@@ -32,8 +32,9 @@ sub decrypt {
     my ( $self, $encrypted ) = @_;
 
     $encrypted ||= '';
+    $self->set_error( undef );
     
-    local $^W = 0; # Crappy perl module dosen't run without warnings.
+    local $^W = 0;
     
     my $c;
     eval {
@@ -44,8 +45,13 @@ sub decrypt {
         } );
     };
     if ( $@ ) {
-        die "Error building CBC object are your Crypt::CBC and"
-            .   " Crypt::Blowfish up to date?  Actual error: $@";
+        my $error = (
+            "Error building CBC object are your Crypt::CBC and"
+            . " Crypt::Blowfish up to date?  Actual error: $@"
+        );
+        
+        $self->set_error( $error );   
+        die $error;
     }
 
     my $p_text = $c->decrypt( MIME::Base64::decode( $encrypted ) );
@@ -65,7 +71,7 @@ sub decrypt {
         } 
     }
     else {
-        warn( 'bad encryption' );
+        $self->set_error( 'bad encryption' );
     }
 
 } # END decrypt_cookie
@@ -77,7 +83,8 @@ sub encrypt {
     my ( $self, @to_encrypt ) = @_;
 
     local $^W = 0;    
-
+    $self->set_error( undef );
+    
     my $c;
     eval {
         $c = new Crypt::CBC( {    
@@ -87,8 +94,13 @@ sub encrypt {
         } );
     };
     if ( $@ ) {
-        die "Error building CBC object are your Crypt::CBC and"
-            .   " Crypt::Blowfish up to date?  Actual error: $@";
+        my $error = (
+            "Error building CBC object are your Crypt::CBC and"
+            . " Crypt::Blowfish up to date?  Actual error: $@"
+        );
+
+        $self->set_error( $error );
+        die $error;
     }
 
     my $md5 = md5_hex( join( '', @to_encrypt ) );
@@ -103,6 +115,24 @@ sub encrypt {
     return( $c_text );
     
 } # END encrypt
+
+#-------------------------------------------------
+# set_error()
+#-------------------------------------------------
+sub set_error {
+    my $self = shift;
+    $self->{__error__} = shift;
+
+    return $self->{__error__};
+}
+
+#-------------------------------------------------
+# get_error()
+#-------------------------------------------------
+sub get_error {
+    my $self = shift;
+    return $self->{__error__};
+}
 
 # EOF
 1;
@@ -119,7 +149,7 @@ Gantry::Utils::Crypt - an easy way to crypt and decrypt
     
     my $crypt_obj = Gantry::Utils::Crypt->new ( 
         { secret => 'my_secret_encryption_string' }
-    )
+    );
 
     my $encrypted_string = $crypt->encrypt( 'red', 'blue', 'green' );
     my @decrypted_values = $crypt->decrypt( $encrypted_string );
