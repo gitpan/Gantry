@@ -27,6 +27,7 @@ use vars qw( @ISA @EXPORT );
 @ISA        = qw( Exporter );
 @EXPORT     = qw( 
     apache_param_hash
+    apache_uf_param_hash
     apache_request
     base_server
     cast_custom_error
@@ -140,19 +141,49 @@ sub cast_custom_error {
 sub apache_param_hash {
     my( $self, $req ) = @_;
 
+    # If the application has specified that they want the unfiltered params
+    # by default, then make it happen.
+    if ($self->fish_config( 'unfiltered_params' ) && $self->fish_config( 'unfiltered_params' ) =~ /(1|on)/i) {
+        return $self->apache_uf_param_hash( $req );
+    }
+
     my $hash = {};
-    
     my @param_names = $req->param;
+
     foreach my $p ( @param_names ) {
         my @values = $req->param( $p );
-        
-        $hash->{$p} = ( scalar @values == 1 ) 
-            ? shift @values : [ @values ];
-    }   
-     
+
+        # Replace angle brackets and quotes with named-entity equivalents.
+        $_ =~ s/</&lt;/g foreach @values;
+        $_ =~ s/>/&gt;/g foreach @values;
+        $_ =~ s/"/&#34;/g foreach @values;
+        $_ =~ s/'/&#39;/g foreach @values;
+
+        $hash->{$p} = ( scalar @values == 1 ) ? shift @values : [ @values ];
+    }
+
     return( $hash );
-    
+
 } # end: apache_param_hash
+
+#-------------------------------------------------
+# $self->apache_uf_param_hash( $req )
+#-------------------------------------------------
+sub apache_uf_param_hash {
+    my( $self, $req ) = @_;
+
+    my $hash = {};
+    my @param_names = $req->param;
+
+    foreach my $p ( @param_names ) {
+        my @values = $req->param( $p );
+
+        $hash->{$p} = ( scalar @values == 1 ) ? shift @values : [ @values ];
+    }
+
+    return( $hash );
+
+} # end: apache_uf_param_hash
 
 #-------------------------------------------------
 # $self->apache_request( )
@@ -601,6 +632,7 @@ sub set_req_params {
 
     $self->ap_req( $self->apache_request( $self->r ) );
     $self->params( $self->apache_param_hash( $self->ap_req ) );
+    $self->uf_params( $self->apache_uf_param_hash( $self->ap_req ) );
 } # END set_req_params
 
 #-------------------------------------------------
@@ -668,6 +700,10 @@ bindings.
 =item $self->apache_param_hash
 
 Return a hash reference to the apache request body parameters.
+
+=item $self->apache_uf_param_hash
+
+Return a hash reference to the apache request body parameters unfiltered.
 
 =item $self->apache_request
 

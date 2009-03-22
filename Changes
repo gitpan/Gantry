@@ -1,7 +1,59 @@
 This file documents the revision history for Perl extension Gantry
 
-[next release]
-    - 
+3.54 Sun Mar 22 11:48:54 PDT 2009
+    - build CPAN dist
+    - All request parameter values will be filtered by default from now on.
+      This is done to prevent XSS vulnerabilities.
+      The filtering is pretty simple, as it is just translating angle brackets,
+      < and >, and quotes, " and ', into their named-entity equivalents &lt;\
+      and &gt;. If for some an application requires that all request parameter
+      values be unfiltered (which is not safe, and opens the application up to
+      XSS vulnerabilities), then they can specify a config option named
+      'unfiltered_params'. This value can be set to either '1' or 'on'.  Also,
+      if access to a request parameter is needed unfiltered, then the
+      uf_params() method may be used.
+    - Explicitly close auth database handle in Authorization and Authentication
+      handlers on failure so that connections aren't left hanging around when
+      Apache::DBI isn't being used.
+    - Explicitly close database handles in Gantry cleanup() method so that
+      connections aren't left hanging around when Apache::DBI isn't being used.
+    - Change use of DBI->connect_cached() in Gantry::Utils::ModelHelper to
+      DBI->connect() to prevent "idle in transaction" cases when Apache::DBI
+      isn't being used and auto commit is turned off. What ends up happening is
+      when a rollback or commit isn't explicitly issued, the transaction is
+      left open on the database server in a "idle in transaction" state, even
+      though the request has finished being processed.
+    - Enhance results.tt
+    - Add no_options configuration item to suppress header and row options.
+    - Add options for adding a pre header row.
+    - Allow more customizing via classes.
+    - Add ability to specifiy a plugin directory.
+    - Documentation cleanup.
+    - Allow a custom template to be specified for CRUD delete action.
+    - Allow foreign_display_rows to be constrained.
+    - Don't read all rows into memory before processing.
+    - Fix bug in is_date. check_date is not a class method.
+    - Fix a bug with cgi engine. Post params were not being included as part of
+      the cgi object because $self->get_post_body() gets the post body from the
+      cgi object, which hadn't been created yet.
+    - Fixed a bug with form.tt where input_value wasn't being reset.
+    - Changed form.tt to not output a value attribute when the field has no value.
+    - Changed FormMunger to throw an error when an invalid form field is
+      specified. This prevents the form from getting corrupted.
+    - Add option to allow form validation errors to be grouped together by the
+      field. This allows for more versbose error reporting.
+    - Skip form validation for non post requests. The results were being
+      discarded anyways.
+    - Add *.* to list of web_dirs so that files in the top level directory are
+      also installed.
+    - Fix bug in MP13.pm where adding headers would overwrite the previous header
+      instead of appending.
+    - update mod_perl2 test -- skip tests if Apache2::Request does not exist
+    - Updated the documentation, add an external exception handler. Works
+      correctly with the standalone server.
+    - Added some experimental code to throw exceptions and catching them in
+      a state machine. This would allow redirects and such to become exceptions,
+      which could then be handled locally or within the handler.
 
 3.53 Sun Jul  6 11:50:58 PDT 2008
     - modify Gantry::Server and Gantry::Engine::CGI to work with the

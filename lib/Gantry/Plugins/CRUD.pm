@@ -140,33 +140,36 @@ sub add {
 
     # Check form data
     my $show_form = 0;
-
-    $show_form = 1 if ( not $your_self->is_post );
-    $show_form = 1 if ( keys %{ $params } == 0 );
-
     my $results;
 
-    if ( $self->validator ) {
-        $results = $self->validator->(
-            {
-                self      => $your_self,
-                params    => $params,
-                form      => $form,
-                profile   => form_profile( $form->{fields} ),
-                action    => 'add',
-            }
-        );
+    if ( $your_self->is_post ) {
+        $show_form = 1 if ( keys %{ $params } == 0 );
+
+        if ( $self->validator ) {
+            $results = $self->validator->(
+                {
+                    self      => $your_self,
+                    params    => $params,
+                    form      => $form,
+                    profile   => form_profile( $form->{fields} ),
+                    action    => 'add',
+                }
+            );
+        }
+        else {
+            $results = Data::FormValidator->check(
+                $params,
+                form_profile( $form->{fields} ),
+            );
+        }
+
+        $show_form = 1 if ( $results->has_invalid );
+        $show_form = 1 if ( $results->has_missing );
+        $show_form = 1 if ( $form->{ error_text } );
     }
     else {
-        $results = Data::FormValidator->check(
-            $params,
-            form_profile( $form->{fields} ),
-        );
+        $show_form = 1;
     }
-
-    $show_form = 1 if ( $results->has_invalid );
-    $show_form = 1 if ( $results->has_missing );
-    $show_form = 1 if ( $form->{ error_text } );
 
     if ( $show_form ) {
         # order is important, first put in the form...
@@ -255,33 +258,37 @@ sub edit {
     croak 'Your form callback gave me nothing' unless defined $form and $form;
 
     my $show_form = 0;
-
-    $show_form = 1 if ( not $your_self->is_post );
-    $show_form = 1 if ( keys %params == 0 );
-
-    # Check form data
     my $results;
-    if ( $self->validator ) {
-        $results = $self->validator->(
-            {
-                self      => $your_self,
-                params    => \%params,
-                form      => $form,
-                profile   => form_profile( $form->{ fields } ),
-                action    => 'edit',
-            }
-        );
+
+    if ( $your_self->is_post ) {
+        $show_form = 1 if ( keys %params == 0 );
+
+        # Check form data
+        if ( $self->validator ) {
+            $results = $self->validator->(
+                {
+                    self      => $your_self,
+                    params    => \%params,
+                    form      => $form,
+                    profile   => form_profile( $form->{ fields } ),
+                    action    => 'edit',
+                }
+            );
+        }
+        else {
+            $results = Data::FormValidator->check(
+                \%params,
+                form_profile( $form->{ fields } ),
+            );
+        }
+
+        $show_form = 1 if ( $results->has_invalid );
+        $show_form = 1 if ( $results->has_missing );
+        $show_form = 1 if ( $form->{ error_text } );
     }
     else {
-        $results = Data::FormValidator->check(
-            \%params,
-            form_profile( $form->{ fields } ),
-        );
+        $show_form = 1;
     }
-
-    $show_form = 1 if ( $results->has_invalid );
-    $show_form = 1 if ( $results->has_missing );
-    $show_form = 1 if ( $form->{ error_text } );
 
     # Form has errors
     if ( $show_form ) {
@@ -348,7 +355,8 @@ sub edit {
 sub delete {
     my ( $self, $your_self, $yes, $data ) = @_;
 
-    $your_self->stash->view->template( 'delete.tt' );
+    $your_self->stash->view->template( 'delete.tt' )
+        unless $your_self->stash->view->template();
     $your_self->stash->view->title( 'Delete' )
             unless $your_self->stash->view->title;
 

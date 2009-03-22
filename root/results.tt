@@ -1,8 +1,15 @@
 [% title = view.title %]
 
 
-[% colspan = ( view.data.headings.size || 0 ) 
-	+ ( view.data.header_options.size || 0 ) %]
+[%
+    colspan = ( view.data.headings.size || 0 );
+    
+    UNLESS view.data.no_options;
+        colspan = colspan + 1;
+    END;
+
+    pho_colspan = colspan;
+%]
 
 <h3>[% view.data.overheading %]</h3>
 
@@ -36,13 +43,36 @@
 [%- END %]
 
 <div class="box">       
-	<table id="results" class="results">
+	<table id="results" class="[% view.data.class || 'results' %]">
+	    [% IF view.data.pre_headings %]
+	        <tr>
+	            [% FOREACH pre_heading IN view.data.pre_headings %]
+    			<td class="[% pre_heading.class || 'hdr' %]" [% IF pre_heading.colspan; 'colspan="' _ pre_heading.colspan _ '"'; pho_colspan = pho_colspan - pre_heading.colspan; END %]>[% pre_heading.text || pre_heading %]</td>
+
+    				[% IF loop.last %]
+    					<td class="[% IF pre_heading.class; 'r' _ pre_heading.class; ELSE; 'rhdr'; END %]" colspan="[% pho_colspan %]">
+    					[% FOREACH option IN view.data.pre_header_options %]
+                            [% "[" IF loop.first %]
+                            [% IF option.link %]
+    						<a href="[% option.link %]">[% option.text %]</a>
+    						[% ELSE %]
+    						[% option.text %]
+    						[% END %]
+    						[% "|" IF ! loop.last %]
+                            [% "]" IF loop.last %]
+    					[% END %]
+    					</td>
+    				[% END %]
+
+    			[% END %]
+	        </tr>
+	    [% END %]
 		<tr>
 			[% FOREACH heading IN view.data.headings %]
-			<td class="hdr">[% heading %]</td>
+			<td class="[% heading.class || 'hdr' %]">[% IF heading.text.defined; heading.text; ELSE; heading; END; %]</td>
 			
-				[% IF loop.last %]
-					<td class="rhdr">
+				[% IF loop.last && ! view.data.no_options %]
+					<td class="[% IF heading.class; 'r' _ heading.class; ELSE; 'rhdr'; END %]">
 					[% FOREACH option IN view.data.header_options %]
                         [% "[" IF loop.first %]
 						<a href="[% option.link %]">[% option.text %]</a>
@@ -58,9 +88,9 @@
 		[% FOREACH row IN view.data.rows %]
 		<tr class="results-row">
 			[% FOREACH elem IN row.data %]
-				<td class="dta" [% row.td_style %]>[% elem %]</td>
-				[% IF loop.last %]
-					<td class="rdta" [% row.td_style %]>
+				<td class="[% elem.class || 'dta' %]" [% row.td_style %]>[% IF elem.text.defined; elem.text; ELSE; elem; END; %]</td>
+				[% IF loop.last && ! view.data.no_options %]
+					<td class="[% IF elem.class; 'r' _ elem.class; ELSE; 'rdta'; END %]" [% row.td_style %]>
 					[% FOREACH option IN row.options %]
                         [% "[" IF loop.first %]
 						<a href="[% option.link %]">[% option.text %]</a>

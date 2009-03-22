@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.53';
+our $VERSION = '3.54';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $DEFAULT_STATE_MACHINE = 'Gantry::State::Default';
 our $CONF;
@@ -287,6 +287,7 @@ sub import {
     my( $engine, $tplugin, $plugin, $splugin, $conf_instance, $conf_file );
 
     my $plugin_namespace = 'Gantry';
+    my $plugin_dir = 'Gantry::Plugins';
     
     foreach (@options) {
         
@@ -334,24 +335,21 @@ sub import {
         elsif ( /^-PluginNamespace=(\S+)/ ) {
             $plugin_namespace = $1;
         }
+        
+        elsif ( /^-PluginDir=(\S+)/ ) {
+            $plugin_dir = $1;
+        }
     
         else {
-            $plugin         = "Gantry::Plugins::$_";
-			
-            my @name_pieces = split /::/, $_;
-            my $last_piece  = pop @name_pieces;
-
+            my @plugin_path;
             my $plugin_file;
-            if ( @name_pieces ) {
-                $plugin_file = File::Spec->catfile( 
-                    'Gantry', 'Plugins', @name_pieces, "${last_piece}.pm" 
-                );
-            }
-            else {
-                $plugin_file = File::Spec->catfile( 
-                    'Gantry', 'Plugins', "${last_piece}.pm" 
-                );
-            }
+            
+            $plugin         = sprintf('%s::%s', $plugin_dir, $_);
+			@plugin_path    = split /::/, $plugin . '.pm';
+
+			$plugin_file = File::Spec->catfile( 
+                @plugin_path
+            );
 
             eval {
                  require $plugin_file;
@@ -375,6 +373,7 @@ sub import {
                          }, $callback->{ callback };
                 }
             };
+            
             # failure means not having to register callbacks
         }
     }
@@ -981,8 +980,19 @@ sub params {
 
     $self->{__PARAMS__} = $p if ( defined $p );
     return( $self->{__PARAMS__} );
-        
+
 } # end params
+
+#-------------------------------------------------
+# $self->uf_params( value )
+#-------------------------------------------------
+sub uf_params {
+    my ( $self, $p ) = @_;
+
+    $self->{__UF_PARAMS__} = $p if ( defined $p );
+    return( $self->{__UF_PARAMS__} );
+
+} # end uf_params
 
 #-------------------------------------------------
 # $self->get_param_hash()
@@ -1002,6 +1012,25 @@ sub get_param_hash {
     return wantarray ? %param : \%param;
 
 } # end get_param_hash
+
+#-------------------------------------------------
+# $self->get_uf_param_hash()
+#-------------------------------------------------
+sub get_uf_param_hash {
+    my $self  = shift;
+
+    my %param = ();
+
+    eval {
+        %param = %{ $self->uf_params };
+    };
+    if ( $@ ) {
+        die "$@";
+    }
+
+    return wantarray ? %param : \%param;
+
+} # end get_uf_param_hash
 
 #-------------------------------------------------
 # $self->protocol( value )
@@ -1062,6 +1091,30 @@ sub controller_config {
 #-------------------------------------------------
 sub cleanup {
     my ( $self ) = @_;
+
+    # Make sure get_schema() is available first.
+    if ( $self->can( 'get_schema' ) ) {
+        # Get main database schema.
+        my $schema = $self->get_schema();
+
+        # Disconnect from database, if the schema exists.
+        if ($schema) {
+            $schema->storage()->disconnect();
+        }
+    }
+
+    # Create helper to get and set auth schema dbh.
+    my $helper = Gantry::Utils::DBConnHelper->get_subclass();
+    my $auth_schema = $helper->get_auth_dbh();
+
+    # Disconnect from database, if the schema exists.
+    if ($auth_schema) {
+        $auth_schema->disconnect();
+
+        # Undefine the dbh so that it will re-connect automatically
+        # on the next request.
+        $helper->set_auth_dbh( undef );
+    }
 
     # db_disconnect( $$self{dbh} );
 
@@ -1246,6 +1299,62 @@ for a pragmatic, modular approach to URL dispatching.  Supports MVC
 (or VC, MC, C, take your pick) and initiates rapid development. This
 project offers an orgainized coding scheme for web applications.
 
+Gantry can be extended via plugins. The plugins can optionally
+contain callback methods. 
+
+Defined phases where callbacks can be assigned.
+ pre_init       at the beginning, before pretty much everything
+ post_init      just after the main initializtion of the request
+ pre_process    just before the template engine is envoked
+ post_process   right after the template engine has done its thing
+
+ package Gantry::Plugins::SomePlugin;
+
+ sub get_callbacks {
+     my ( $class, $namespace ) = @_;
+
+     return if ( $registered_callbacks{ $namespace }++ );
+
+     return (
+         { phase => 'init',      callback => \&initialize },
+         { phase => 'post_init', callback => \&auth_check },
+     );
+ }
+ 
+ sub initialize {
+     my $gantry_site_object = shift;
+     ...
+ }
+ 
+ sub auth_check {
+     my $gantry_site_object = shift;
+     ...
+ }
+
+ Note that the pre_init callback receives an additional parameter which
+ is either the request object (for mod_perl) or the CGI object.
+
+ If your plugin in registers callbacks, please document this for your users.
+ They should add -PluginNamespace to the full use list, and it must come
+ before the plugins which register callbacks. In addition, you can
+ specify a plugin location with -PluginDir. This allows you to put
+ plugins in directories out outside of the default Gantry::Plugins directory.
+ Example:
+
+     use Some::Gantry::App qw(
+         -Engine=MP20
+         -Template=TT
+         -PluginNamespace=module_name
+         SOAPMP20
+         -PluginDir=MyApp::Plugins
+         MyPlugin
+     );
+
+ Then, they should implement a method called namespace at the top of each
+ heirarchy which needs the plugins:
+
+     sub namespace { return 'module_name'; }
+
 =head1 METHODS
 
 =over 4
@@ -1262,61 +1371,6 @@ parameters that are in the uri past the method name.
 
 The init is called at the begining of each request and sets values such as,
 app_rootp, img_rootp, and other application set vars.
-
-=item register_callback
-
-This will register a callback with the framework and assign it to a particular
-phase of the request cycle. Callbacks are generally in plugins, 
-see Gantry::Plugins::AuthCookie for an example of this. However, callbacks can
-be registered from any module and are not limited to just plugins. 
-
- Defined phases where callbacks can be assigned.
-  pre_init       at the beginning, before pretty much everything
-  post_init      just after the main initializtion of the request
-  pre_process    just before the template engine is envoked
-  post_process   right after the template engine has done its thing
-
- package Gantry::Plugins::SomePlugin;
- 
- BEGIN {
-     Gantry->register_callback( 'post_init', \&initialize );
-     Gantry->register_callback( 'post_init', \&auth_check );
-     Gantry->register_callback( 'post_process', \&munge );    
- }
- 
- sub initialize {
-     my $gantry_site_object = shift;
-     ...
- }
- 
- sub auth_check {
-     my $gantry_site_object = shift;
-     ...
- }
- 
- sub munge {
-     my $gantry_site_object = shift;
-     ...
- }
-
-Note that the pre_init callback receives an additional parameter which
-is either the request object (for mod_perl) or the CGI object.
-
-If your plugin in registers callbacks, please document this for your users.
-They should add -PluginNamespace to the full use list, and it must come
-before the plugins which register callbacks.  Example:
-
-    use Some::Gantry::App qw(
-        -Engine=MP20
-        -Template=TT
-        -PluginNamespace=module_name
-        SOAPMP20
-    );
-
-Then, they should implement method called namespace at the top of each
-heirarchy which needs the plugins:
-
-    sub namespace { return 'module_name'; }
 
 =item declined
 
@@ -1772,6 +1826,11 @@ documentation for intructions on how to use apache requets req.
 Always returns the params (from forms and the query string) as a hash
 (not a hash reference, a real hash).
 
+=item get_uf_param_hash
+
+Always returns the unfiltered params (from forms and the query string) as
+a hash (not a hash reference, a real hash).
+
 =item params
 
  $self->params( $self->ap_req );
@@ -1779,6 +1838,14 @@ Always returns the params (from forms and the query string) as a hash
 
 Set/get for the request parameters. Returns a reference to a hash of
 key value pairs.
+
+=item uf_params
+
+ $self->uf_params( $self->ap_req );
+ $uf_params = $self->uf_params;
+
+Set/get for the unfiltered request parameters. Returns a reference to a hash
+of key value pairs.
 
 =item serialize_params
 

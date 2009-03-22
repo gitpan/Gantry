@@ -1,11 +1,13 @@
 ---
 name: Gantry
-version: 3.53
+version: 3.54
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
-abstract: Web application framework for mod_perl, cgi, etc.
+abstract: 'Web application framework for mod_perl, cgi, etc.'
 license: perl
+resources:
+  license: ~
 requires:
   CGI::Simple: 0
   Config::General: 2.31
@@ -28,14 +30,10 @@ requires:
 build_requires:
   Test::Exception: 0
   Test::More: 0
-generated_by: Module::Build version 0.2806
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.53
+    version: 3.54
   Gantry::Build:
     file: lib/Gantry/Build.pm
   Gantry::Conf:
@@ -114,6 +112,8 @@ provides:
     file: lib/Gantry/Engine/MP13.pm
   Gantry::Engine::MP20:
     file: lib/Gantry/Engine/MP20.pm
+  Gantry::Exception:
+    file: lib/Gantry/Exception.pm
   Gantry::Init:
     file: lib/Gantry/Init.pm
   Gantry::Plugins::AjaxCRUD:
@@ -172,6 +172,8 @@ provides:
     file: lib/Gantry/State/Constants.pm
   Gantry::State::Default:
     file: lib/Gantry/State/Default.pm
+  Gantry::State::Exceptions:
+    file: lib/Gantry/State/Exceptions.pm
   Gantry::State::Simple:
     file: lib/Gantry/State/Simple.pm
   Gantry::Template::Default:
@@ -188,6 +190,8 @@ provides:
     file: lib/Gantry/Utils/CRON.pm
   Gantry::Utils::CRUDHelp:
     file: lib/Gantry/Utils/CRUDHelp.pm
+  Gantry::Utils::Captcha:
+    file: lib/Gantry/Utils/Captcha.pm
   Gantry::Utils::Crypt:
     file: lib/Gantry/Utils/Crypt.pm
   Gantry::Utils::DB:
@@ -240,5 +244,7 @@ provides:
     file: lib/Gantry/Stash.pm
   view:
     file: lib/Gantry/Stash/View.pm
-resources:
-  license: http://dev.perl.org/licenses/
+generated_by: Module::Build version 0.31
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

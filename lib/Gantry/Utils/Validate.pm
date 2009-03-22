@@ -29,7 +29,7 @@ sub is_date {
 
     my ( $month, $day, $year ) = split( '-', $date ); 
         
-    return( 0 ) if ( ! $self->check_date( $year, $month, $day ) );
+    return( 0 ) if ( ! check_date( $year, $month, $day ) );
 
     return( 1 );
 } # END is_date 

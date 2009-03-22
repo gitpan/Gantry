@@ -15,6 +15,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
 @ISA        = qw( Exporter );
 @EXPORT     = qw( 
     apache_param_hash
+    apache_uf_param_hash
     apache_request
     base_server
     cgi_obj
@@ -217,9 +218,9 @@ sub file_upload {
     $filename =~ s/\\/\//g;
     
     my( $name, $path, $suffix ) = fileparse( 
-		$filename, 
-		qr/\.(tar\.gz$|[^.]*)/ 
-	);  
+        $filename, 
+        qr/\.(tar\.gz$|[^.]*)/ 
+    );  
     
     return( {
         unique_key => time . rand( 6 ),
@@ -263,12 +264,22 @@ sub cast_custom_error {
 #-------------------------------------------------
 sub apache_param_hash {
     my( $self ) = @_;
-    
+
     #my %hash_ref = $self->cgi->Vars;
     #return( \%hash_ref );  
     return( $self->cgi_obj->{params} );
-    
+
 } # end: apache_param_hash
+
+#-------------------------------------------------
+# $self->apache_uf_param_hash( $req )
+#-------------------------------------------------
+sub apache_uf_param_hash {
+    my( $self ) = @_;
+
+    return( $self->cgi_obj->{uf_params} );
+
+} # end: apache_uf_param_hash
 
 #-------------------------------------------------
 # $self->apache_request( )
@@ -375,26 +386,9 @@ sub engine {
 sub engine_init {
     my $self    = shift;
     my $cgi_obj = shift;
+    my $c = new CGI::Simple();
 
-    #$cgi_obj->{params} = parse_env();
-
-    my $c;
-    if ( $self->get_post_body() ) {
-        my $params = $ENV{ QUERY_STRING };
-        $params   .= '&' if $params;
-        $params   .= $self->get_post_body;
-
-        $c = CGI::Simple->new( $params );
-    }
-    else {
-        if ( length( $ENV{ QUERY_STRING} || '' ) > 0 ) {
-            $c = CGI::Simple->new( $ENV{ QUERY_STRING } );
-        }
-        else {
-            $c = CGI::Simple->new();            
-        }
-    }
-
+    $c->parse_query_string() if $ENV{ REQUEST_METHOD } eq 'POST';
     $self->cgi( $c );
 
     # check for CGI::Simple errors
@@ -406,23 +400,54 @@ sub engine_init {
     }
 
     # fix up params so the multiselects are arraays
-    my $params = {};    
+    my $params    = {};
+    my $uf_params = {};
+
     foreach my $field ( $c->param ) {
-        
         my @values = $c->param( $field );
+
         if ( scalar @values > 1 ) {
+            $uf_params->{$field} = [ @values ];
+
+            # Replace angle brackets and quotes with named-entity equivalents.
+            $_ =~ s/</&lt;/g foreach @values;
+            $_ =~ s/>/&gt;/g foreach @values;
+            $_ =~ s/"/&#34;/g foreach @values;
+            $_ =~ s/'/&#39;/g foreach @values;
+
             $params->{$field} = [ @values ];
         }
+
         else {
             $params->{$field} = $c->param( $field );
+            $uf_params->{$field} = $params->{$field};
+
+            # Replace angle brackets and quotes with named-entity equivalents.
+            $params->{$field} =~ s/</&lt;/g;
+            $params->{$field} =~ s/>/&gt;/g;
+            $params->{$field} =~ s/"/&#34;/g;
+            $params->{$field} =~ s/'/&#39;/g;
         }
-        
     }
 
     # add in the fieldnames
     $params->{'.fieldnames'} = [ $c->param ];
-    
-    $cgi_obj->{params} = $params;
+    $uf_params->{'.fieldnames'} = [ $c->param ];
+
+    # If the application has specified that it wants the unfiltered params
+    # by default, then make it happen.
+    if ($self->fish_config( 'unfiltered_params' ) && $self->fish_config( 'unfiltered_params' ) =~ /(1|on)/i) {
+        $cgi_obj->{params} = $uf_params;
+    }
+
+    # Else, the application gets the request parameters filtered by default.
+    # NOTE: It's got access to the unfiltered hash, in case it needs a
+    # request/field to have the parameters in such a way.
+    else {
+        $cgi_obj->{params} = $params;
+        $cgi_obj->{uf_params} = $uf_params;
+    }
+
     $self->cgi_obj( $cgi_obj );
 
 } # END engine_init
@@ -862,6 +887,7 @@ sub set_req_params {
     my $self = shift;
 
     $self->params( $self->cgi_obj->{params} );
+    $self->uf_params( $self->cgi_obj->{uf_params} );
 
 } # END set_req_params
 
@@ -1059,6 +1085,10 @@ by reference.
 =item $self->apache_param_hash
 
 Returns the hash reference of form and query string params.
+
+=item $self->apache_uf_param_hash
+
+Returns the hash reference of form and query string params unfiltered.
 
 =item $self->apache_request
 

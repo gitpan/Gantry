@@ -21,8 +21,7 @@ elsif ( ! $has_libapreq ) {
     diag( "information about installing libapreq2" );
     diag( "* this installation is painless and well worth it :-)" );
     
-    plan qw(no_plan);
-    use_ok( 'Apache2::Request' );
+	plan skip_all => "Apache::Request not detected";
     
 }
 else {
@@ -35,6 +34,7 @@ else {
 	$p ||= 'yes';
     if ( $p =~ /^yes/i ) {
         plan qw(no_plan);
+        use_ok( 'Apache2::Request' );
     }
     else {
         plan skip_all => "mod_perl version $mod_perl::VERSION tests";

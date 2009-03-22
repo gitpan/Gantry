@@ -39,7 +39,7 @@ sub db_Main {
 
         $db_options->{AutoCommit} = 0 unless defined $db_options->{AutoCommit};
 
-        $dbh = DBI->connect_cached(
+        $dbh = DBI->connect(
                 $conn_info->{ 'dbconn' },
                 $conn_info->{ 'dbuser' },
                 $conn_info->{ 'dbpass' },
@@ -73,7 +73,7 @@ sub auth_db_Main {
 
         $db_options->{AutoCommit} = 0 unless defined $db_options->{AutoCommit};
         
-        $auth_dbh = DBI->connect_cached(
+        $auth_dbh = DBI->connect(
                 $auth_conn_info->{ 'auth_dbconn' },
                 $auth_conn_info->{ 'auth_dbuser' },
                 $auth_conn_info->{ 'auth_dbpass' },

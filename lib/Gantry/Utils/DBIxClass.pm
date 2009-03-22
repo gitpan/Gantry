@@ -52,15 +52,15 @@ sub get_form_selections {
             $value_method = $foreign_table->get_value_method();
         }
 
-        my @foreign_display_rows =
+        my $foreign_display_rows =
                 $params->{ schema }->resultset( $short_table_name )->search(
-                        undef, { order_by => $order_by }
+                        $params->{constraint}, { order_by => $order_by }
                 );
 
         my @items;
         push( @items, { value => '', label => '- Select -' } );
 
-        foreach my $item ( @foreign_display_rows ) {
+        while ( defined ( my $item = $foreign_display_rows->next() ) ) {
             my $label;
             eval {
                 $label = $item->foreign_display();

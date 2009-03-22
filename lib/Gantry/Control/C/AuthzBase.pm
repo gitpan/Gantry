@@ -32,32 +32,37 @@ sub handler : method {
             }
         }
     } # end if exclude_path
-    
+
     my $user = $r->user;
-    
+
     if ( $user ) {
         my $requires = $r->requires;
         my %groups;
-        
-        return( $self->status_const( 'DECLINED' ) ) unless ( $requires );
-            
+
+        unless ( $requires ) {
+            # Force disconnect from database due to failure.
+            $user_model->disconnect();
+
+            return( $self->status_const( 'DECLINED' ) );
+        }
+
         # get user id
         my @user_row = $user_model->search( user_name => $user ); 
-                
+
         # get groups for user
         my @group_rows = $group_members_model->search( 
             user_id => $user_row[0]->user_id
         );
-        
+
         foreach ( @group_rows ) {
             $groups{$_->group_id->name} = 1;
         }
-        
+
         # Check out what we have to auth against.
         for my $entry ( @$requires ) {
             my ( $req, @rest ) = split( /\s+/, $entry->{requirement} );
             $req = lc( $req );
-    
+
             if ( $req eq 'valid-user' ) {
                 #$r->log_error( "authz: valid-user $user" );
                 return( $self->status_const( 'OK' ) );
@@ -77,13 +82,17 @@ sub handler : method {
             else {
                 $r->log_error( "authz: unknown $req" );
             }
-            
+
         }
     } # end: if user
-            
+
     $r->note_basic_auth_failure;
+
+    # Force disconnect from database due to failure.
+    $user_model->disconnect();
+
     return( $self->status_const( 'HTTP_UNAUTHORIZED' ) );
-    
+
 } # END $self->handler
 
 #-------------------------------------------------

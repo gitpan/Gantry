@@ -153,36 +153,63 @@ Parameters:
         </div>
         <br style="clear:both" />
     [% END %]
-
-    [% IF view.form.results.missing %]
-        <div style="float: left; color: red">
-            <b>Missing:</b>
-            [% missing_names = [] %]
-            [% FOREACH field IN view.form.fields %]
-                [% IF view.form.results.missing( "${field.name}" ) %]
-                [% missing_names.push( field.label ) %]
+    
+    [% IF view.form.results.msgs.group_by_field %]
+        [% IF view.form.results.has_invalid || view.form.results.has_missing %]
+            <div style="float: left;  color: red">
+                [%
+                    CALL view.form.results.msgs(
+                        {
+                            invalid_separator   => ', ',
+                            format              => '%s',
+                        }
+                    );
+                    msgs = view.form.results.msgs;
+                
+                    FOREACH field IN view.form.fields;
+                        field_labels.${field.name} = field.label;
+                    END;
+                %]
+                [% FOREACH field IN view.form.fields %]
+                    [% IF view.form.results.invalid(field.name) || view.form.results.missing(field.name) %]
+                        <b>[% field.label %]:</b> [% msgs.${field.name} %]
+                        <br />
+                    [% END %]
                 [% END %]
-            [% END %]
-            [% missing_names.join( ', ' ) %]
-            <br />
-        </div>
-		<br style="clear:both" />
+         	</div>
+    		<br style="clear:both" />
+    	[% END %]
+    [% ELSE %]
+        [% IF view.form.results.missing %]
+            <div style="float: left; color: red">
+                <b>Missing:</b>
+                [% missing_names = [] %]
+                [% FOREACH field IN view.form.fields %]
+                    [% IF view.form.results.missing( "${field.name}" ) %]
+                    [% missing_names.push( field.label ) %]
+                    [% END %]
+                [% END %]
+                [% missing_names.join( ', ' ) %]
+                <br />
+            </div>
+    		<br style="clear:both" />
+        [% END %]
+
+        [% IF view.form.results.invalid %]
+            <div style="float: left;  color: red">
+                <b>Invalid:</b>
+                [% invalid_names = [] %]
+                [% FOREACH field IN view.form.fields %]
+                    [% IF view.form.results.invalid( "${field.name}" ) %]
+                    [% invalid_names.push( field.label ) %]
+                    [% END %]
+                [% END %]
+                [% invalid_names.join( ', ' ) %]
+                <br />
+         	</div>
+        	<br style="clear:both" />
+        [% END %]
     [% END %]
-
-    [% IF view.form.results.invalid %]
-        <div style="float: left;  color: red">
-            <b>Invalid:</b>
-            [% invalid_names = [] %]
-            [% FOREACH field IN view.form.fields %]
-                [% IF view.form.results.invalid( "${field.name}" ) %]
-                [% invalid_names.push( field.label ) %]
-                [% END %]
-            [% END %]
-            [% invalid_names.join( ', ' ) %]
-            <br />
-     	</div>
-		<br style="clear:both" />
-	[% END %]
 
 	<div id="float_left">
 		<table class="results" 
@@ -191,7 +218,8 @@ Parameters:
 			width="[% view.form.width || '100%' %]"	>
 			
 			[%- FOREACH field IN view.form.fields -%]
-		
+		    [% input_value = ''; %]
+
 			[%- IF field.raw_html %]
 			    [%- field.raw_html %]
 			[%- END %]
@@ -333,14 +361,16 @@ Parameters:
                                input_value = self.params.${field.name};
                            ELSIF view.form.row.${field.name}.defined;
                                input_value = view.form.row.${field.name};
-                           ELSE;
+                           ELSIF field.default_value.defined;
                                input_value = field.default_value;
                            END;
                         -%]
    
 						<input type="[% field.type %]" 
 							size="[% field.display_size || 30 %]"
-							value="[% input_value  %]" 
+							[%- UNLESS input_value.match('^$') -%]
+							value="[% input_value %]"
+							[%- END -%] 
                             class="[% field.class %]"
 							name="[% field.name %]"
 							id="[% field.name %]"

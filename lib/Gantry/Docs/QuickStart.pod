@@ -4,7 +4,7 @@ Gantry::Docs::QuickStart - Getting your first Gantry app up and running
 
 =head1 Off and running
 
-The easiest way to build a Gantry app with with bigtop:
+The easiest way to build a Gantry app is with bigtop:
 
     bigtop -n AppName 'book(title,pages:int4)<->author(name)'
 

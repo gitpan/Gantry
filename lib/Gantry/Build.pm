@@ -37,6 +37,9 @@ sub new {
         push( @web_dirs, ( $k . '/*.*' ) );
     }
 
+    # Add *.* to catch any files in the top level directory.
+    push( @web_dirs, '*.*' );
+
     $p->{ web_files } = \@web_dirs;
 
     # decide where to install web content

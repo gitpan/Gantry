@@ -138,12 +138,16 @@ sub get_field {
 sub drop_field {
     my $self        = shift;
     my $doomed_name = shift;
-
     my $splice_pos  = $self->{ sync }{ $doomed_name }{ order };
+    my $doomed;
 
-    my $doomed      = splice @{ $self->{ form }{ fields } }, $splice_pos, 1;
-
-    $self->{ sync } = $self->_sync();
+    if ( defined $splice_pos ) {
+        $doomed = splice @{ $self->{ form }{ fields } }, $splice_pos, 1;
+        $self->{ sync } = $self->_sync();
+    }
+    else {
+        die "Invalid form field specified.";
+    }
 
     return $doomed;
 } # END of drop_field
@@ -170,24 +174,31 @@ sub add_field_after {
     my $self        = shift;
     my $target_name = shift;
     my $field       = shift;
+    my $splice_pos  = $self->{ sync }{ $target_name }{ order };
 
-    my $splice_pos  = $self->{ sync }{ $target_name }{ order } + 1;
-
-    splice  @{ $self->{ form }{ fields } }, $splice_pos, 0, $field;
-
-    $self->{ sync } = $self->_sync();
+    if ( defined $splice_pos ) {
+        $splice_pos += 1;
+        splice  @{ $self->{ form }{ fields } }, $splice_pos, 0, $field;
+        $self->{ sync } = $self->_sync();
+    }
+    else {
+        die "Invalid form field specified.";
+    }
 } # END of add_field_after
 
 sub add_field_before {
     my $self        = shift;
     my $target_name = shift;
     my $field       = shift;
-
     my $splice_pos  = $self->{ sync }{ $target_name }{ order };
 
-    splice  @{ $self->{ form }{ fields } }, $splice_pos, 0, $field;
-
-    $self->{ sync } = $self->_sync();
+    if ( defined $splice_pos ) {
+        splice  @{ $self->{ form }{ fields } }, $splice_pos, 0, $field;
+        $self->{ sync } = $self->_sync();
+    }
+    else {
+        die "Invalid form field specified.";
+    }
 } # END of add_field_before
 
 1;

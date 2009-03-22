@@ -1,6 +1,6 @@
 [% title = view.title %]
 
-<form method='post' action='[% site.uri %]/yes' name='del_form' />
+<form method='post' action='[% site.uri %]/yes' name='del_form'>
 <div class="box">
   <table>
     <tr>

@@ -30,19 +30,26 @@ sub handler : method {
             }
         }
     }
-    
+
     my ( $ret, $sent_pw ) = $r->get_basic_auth_pw;
 
-    return( $self->status_const( 'DECLINED' ) ) 
-        if ( $ret != $self->status_const( 'OK' ) );
+    if ( $ret != $self->status_const( 'OK' ) ) {
+        # Force disconnect from database due to failure.
+        $user_model->disconnect();
+
+        return( $self->status_const( 'DECLINED' ) );
+    }
 
     my $user = $r->user;
-    
+
     unless ( defined $user && $user ) {
         $r->note_basic_auth_failure;
         $r->log_error(' [login failure: ', $self->remote_ip( $r ), ']',
             " user $user ($sent_pw) not found ", $r->uri );
-            
+
+        # Force disconnect from database due to failure.
+        $user_model->disconnect();
+
         return( $self->status_const( 'HTTP_UNAUTHORIZED' ) );
     }
 
@@ -50,19 +57,26 @@ sub handler : method {
     my @user_row = $user_model->search( 
         user_name => $user,
         active    => 't',
-    ); 
+    );
 
     unless ( @user_row ) {
         $r->note_basic_auth_failure;
+
+        # Force disconnect from database due to failure.
+        $user_model->disconnect();
+
         return( $self->status_const( 'HTTP_UNAUTHORIZED' ) );
     }
-    
+
     # Do error here.
     unless ( defined $user_row[0]->crypt && $user_row[0]->crypt ) {
         $r->note_basic_auth_failure;
         $r->log_error(' [login failure: ', $self->remote_ip( $r ), ']',
             " user $user ($sent_pw) passwd not defined ", $r->uri );
-        
+
+        # Force disconnect from database due to failure.
+        $user_model->disconnect();
+
         return( $self->status_const( 'HTTP_UNAUTHORIZED' ) );
     }
 
@@ -73,6 +87,9 @@ sub handler : method {
         $r->note_basic_auth_failure;
         $r->log_error(' [login failure: ', $self->remote_ip( $r ), ']',
             " user $user ($sent_pw)  passwd mismatch ", $r->uri );
+
+        # Force disconnect from database due to failure.
+        $user_model->disconnect();
 
         return( $self->status_const( 'HTTP_UNAUTHORIZED' ) );
     }
