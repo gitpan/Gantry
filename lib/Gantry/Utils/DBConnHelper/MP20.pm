@@ -28,19 +28,29 @@ sub set_dbh {
 
 sub _get_gantry_conf {
     my $r = shift;
-
+    my $location = $r->location;
     my $instance   = $r->dir_config( 'GantryConfInstance' );
+    my $conf;
 
     return unless defined $instance;
 
     my $gconf_file = $r->dir_config( 'GantryConfFile' );
 
-    return Gantry::Conf->retrieve(
-        {
-            instance    => $instance,
-            config_file => $gconf_file,
-        }
-    );
+    # Check for a cached version first.
+    $conf = $r->pnotes( "conf_${instance}_${location}" );
+    
+    unless ($conf) {
+        $conf = Gantry::Conf->retrieve(
+            {
+                instance    => $instance,
+                config_file => $gconf_file,
+            }
+        );
+        
+        $r->pnotes( "conf_${instance}_${location}", $conf );
+    }
+    
+    return $conf;
 }
 
 sub get_conn_info {
@@ -89,43 +99,24 @@ sub set_auth_dbh {
 sub get_auth_conn_info {
     my $r           = 'Apache2::RequestRec';
     my $gantry_conf = _get_gantry_conf( $r );
-
-    if ( $gantry_conf ) {
-        my $auth_dbconn = $gantry_conf->{ 'auth_dbconn' };
-
-        if ( $auth_dbconn ) {
-            return {
-                auth_dbconn => $auth_dbconn,
-                auth_dbuser => $gantry_conf->{ 'auth_dbuser' },
-                auth_dbpass => $gantry_conf->{ 'auth_dbpass' },
-            };
-        }
-        else {
-            return {
-                auth_dbconn => $gantry_conf->{ 'dbconn' },
-                auth_dbuser => $gantry_conf->{ 'dbuser' },
-                auth_dbpass => $gantry_conf->{ 'dbpass' },
-            };
-        }
-    }
-    else {
-        my $auth_dbconn = $r->dir_config( 'auth_dbconn' );
-
-        if ( $auth_dbconn ) {
-            return {
-                auth_dbconn => $auth_dbconn,
-                auth_dbuser => $r->dir_config( 'auth_dbuser' ),
-                auth_dbpass => $r->dir_config( 'auth_dbpass' ),
-            };
-        }
-        else {
-            return {
-                auth_dbconn => $r->dir_config( 'dbconn' ),
-                auth_dbuser => $r->dir_config( 'dbuser' ),
-                auth_dbpass => $r->dir_config( 'dbpass' ),
-            };
-        }
-    }
+    my $auth_conn;
+    
+    $auth_conn->{ auth_dbconn } =   $gantry_conf->{ 'auth_dbconn' } ||
+                                    $r->dir_config( 'auth_dbconn' ) ||
+                                    $gantry_conf->{ 'dbconn' } ||
+                                    $r->dir_config( 'dbconn' );
+    
+    $auth_conn->{ auth_dbuser } =   $gantry_conf->{ 'auth_dbuser' } ||
+                                    $r->dir_config( 'auth_dbuser' ) ||
+                                    $gantry_conf->{ 'dbuser' } ||
+                                    $r->dir_config( 'dbuser' );
+    
+    $auth_conn->{ auth_dbpass } =   $gantry_conf->{ 'auth_dbpass' } ||
+                                    $r->dir_config( 'auth_dbpass' ) ||
+                                    $gantry_conf->{ 'dbpass' } ||
+                                    $r->dir_config( 'dbpass' );
+    
+    return $auth_conn;
 }
 
 1;

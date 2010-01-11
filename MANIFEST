@@ -74,7 +74,7 @@ lib/Gantry/Plugins/Calendar.pm
 lib/Gantry/Plugins/CRUD.pm
 lib/Gantry/Plugins/DBIxClassConn.pm
 lib/Gantry/Plugins/PageCache.pm
-lib/Gantry/Plugins/Session.pm
+lib/Gantry/Plugins/Shibboleth.pm
 lib/Gantry/Plugins/SOAP/Doc.pm
 lib/Gantry/Plugins/SOAP/RPC.pm
 lib/Gantry/Plugins/Static.pm
@@ -191,7 +191,7 @@ root/pod_wrapper.tt
 root/results.tt
 root/sample_wrapper.tt
 root/search.tt
-root/session.tt
+root/sfbb/form.tt
 root/threeway.tt
 root/wrapper.tt
 root/wsdl.tt

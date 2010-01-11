@@ -39,6 +39,13 @@ sub get_form_selections {
     FOREIGN_TABLE:
     foreach my $foreign_table ( $class->get_foreign_tables() ) {
         my $short_table_name = $foreign_table->table_name;
+
+        # If the 'foreign_tables' parameter is defined, then only get form
+        # selections for the foreign tables defined.
+        if ($params->{'foreign_tables'}) {
+            next FOREIGN_TABLE unless $params->{'foreign_tables'}->{$short_table_name};
+        }
+
         my $foreigners;
         eval {
             $foreigners       = $foreign_table->get_foreign_display_fields();

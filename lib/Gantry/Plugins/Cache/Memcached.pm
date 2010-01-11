@@ -3,7 +3,6 @@ package Gantry::Plugins::Cache::Memcached;
 use strict;
 use warnings;
 
-use Gantry;
 use Cache::Memcached;
 use Gantry::Plugins::Cache;
 
@@ -31,18 +30,31 @@ sub cache_init {
     my $expire_time = $gobj->fish_config('cache_expires') || '3600';
     my $servers = $gobj->fish_config('cache_servers') || '127.0.0.1:11211';
     my $compress = $gobj->fish_config('cache_compress_threshold') || '1000';
+    my $test_sets = $gobj->fish_config('cache_test_sets') || 0;
 
     eval {
-
         $cache = Cache::Memcached->new({servers => [$servers]});
         $cache->set_compress_threshold($compress);
         $cache->enable_compress(1);
         $cache->set_norehash() if ($rehash =~ /no/i);
 
-    }; if ($@) {
+        # If requested, test cache sets to see if they are successful.
+        if ($test_sets) {
+            # Set test.
+            $cache->set('test-ns:test-var', 1, 120);
 
+            # Get test.
+            my $data = $cache->get('test-ns:test-var');
+
+            # Die if set failed.
+            unless ($data) {
+                die "Test cache set failed. Please check cache configuration parameters.\n";
+            }
+        }
+    };
+
+    if ($@) {
         die("Unable to use - Gantry::Cache::Memcached; $@");
-
     }
 
     $gobj->cache_handle($cache);
@@ -95,10 +107,12 @@ sub cache_get {
 }
 
 sub cache_set {
-    my ($gobj, $key, $val) = @_;
+    my ($gobj, $key, $val, $expires) = @_;
+
+    # Use global expires if the $expires parameter was not passed in.
+    $expires ||= $gobj->cache_expires();
 
     my $handle = $gobj->cache_handle();
-    my $expires = $gobj->cache_expires();
     my $namespace = $gobj->cache_namespace();
     my $skey = $namespace . ':' . $key;
 

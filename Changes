@@ -1,5 +1,96 @@
 This file documents the revision history for Perl extension Gantry
 
+3.63 Wed Dec 05 12:46:00 CDT 2009
+    - Fixed perl version in Build.PL to work with newer Module::Build.
+      Thanks to Matt We...lol... sorry... almost made it through without
+      laughing.
+
+3.62 Wed Dec 02 10:36:00 CDT 2009
+    - Added plugin to handle shibboleth authentication.
+
+3.61 Thu Oct 15 14:13:00 CDT 2009
+    - Added an Engine method that returns whether the current request is being
+      served by an SSL-enabled host.
+
+3.60 Wed Oct 14 17:03:00 CDT 2009
+    - Added ability to test cache set methods. This is useful for cases where
+      you need to ensure that cache sets/gets are working correctly. For
+      example, Cache::Memcached does not return any errors if it cannot
+      connect to the specified memcached server(s).
+    - Added aditional parameter, expires, to the cache_set method in the
+      Gantry::Plugins::Cache::Memcached module. Because the underlying
+      memcached module supports setting individual expire times for items
+      in the case, you can now specificy them. If a expire time is not set
+      for the item, then the global cache_expires value is used (this
+      maintains backwards-compatibility).
+
+3.59 Fri July 10 17:45:00 CDT 2009
+    - Added gantry_secret to serve as a default secret key so you don't have
+      to specify different keys for the authcookie, session, cookie check etc.
+    - Modify ap_req / apache_request so that it never recreates the
+      Apache::Request object. libapreq2 does not like it when you do that
+      and specify a max post size. It will throw a conflicting information
+      error.
+    - Removed code that was setting a test cookie. The code has been replaced
+      by a cookie check plugin.
+    - Preserve all parameters when redirecting during login so that the original
+      request can be fulfilled after login. Also encrypt url during redirect
+      to conceal any posted values you don't want appearing in the url.
+    - Added methods to url encode / decode a specified value.
+    - Modify plugin handling. Plugin method can now be imported into the symbol
+      table of the application using the specified plugin namespace. This allows
+      you to use otherwise incompatible plugins within the same server.
+    - Allow import lists to be added to plugins so that the list of symbols
+      imported can be controlled.
+    - Removed sort of plugin callbacks. It was sorting sub references which basically
+      equated to completely random ordering.
+    - Added PRE_ACTION and POST_ACTION states where plugin callbacks can be
+      registered.
+    - Remove unneeded apreq parse call during file uploads.
+    - Update form templates to decode unsafe html characters before sending them
+      through HTML::SuperForm as it takes care of encoding the unsafe characters.
+
+3.58 Thurs July 02 16:33:00 CDT 2009
+    - Fix AuthCookie.pm so that if get_auth_schema hasn't been imported then
+      it falls back to using get_schema.
+
+3.57 Weds July 01 15:33:00 CDT 2009
+    - Call find_redirect after calling form_add/form_edit. This allows the
+      results of form methods to influence the final redirect location if
+      needed.
+
+3.56 Thurs June 25 16:09:00 CDT 2009
+    - Removed Gantry::Plugins::Session since its being maintained
+      externally now.
+    - Also removed session.tt template.
+
+3.55 Tues June 22 15:24:00 CDT 2009
+    - Update AuthCookie to first check for matching user/pass then if
+      that fails check for the user name by itself. This is needed
+      so that encrypted passwords can be used.
+    - Add reload_config option to Gantry::Conf to force config file to
+      reload. Add reload_config option in 02flat.t test to fix test
+      failures do to config file not reloading.
+    - Modified Gantry::Conf to be able to parse its config file on import.
+      Also modified MP20/MP13 db connection helpers to use cached Gantry::Conf.
+      This fixes a performance issue where the entire gantry config could be
+      reloaded up to 6 times per request.
+    - Fixed get_auth_conn_info so that if gantry conf is being used
+      but the auth db info is in the apache conf everything
+      still works.
+    - Fixed bug in Build.pm where files without an extension would not
+      be installed and where directories containing a . would cause
+      the build to die.
+    - Trim leading / trailing whitespace from incoming parameters by default.
+    - Added sfbb/form.tt template.
+    - Modified CRUD.pm plugin to allow a default template to be specified in
+      the config. The config option is default_form_template.
+    - Fixed form.tt so that you can specify your own parameters
+      in an onchange event.
+    - Skip querying of foreign tables unless a foreign key is actually used on
+      the form. This gives a huge speed increase when dealing with foreign
+      tables with many rows.
+
 3.54 Sun Mar 22 11:48:54 PDT 2009
     - build CPAN dist
     - All request parameter values will be filtered by default from now on.

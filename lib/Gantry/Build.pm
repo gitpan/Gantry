@@ -15,15 +15,19 @@ sub new {
     print( '*' x 80, "\n" );
 
     # collect web files 
-    my( %web_dirs, @web_dirs );
+    my( %web_dirs, @web_files );
 
     my $wanted = sub {
         my $dir = $File::Find::dir;
+        my $file = $_;
 
         # XXX unix specific directory work
         $dir =~ s![^/]*/!!;  # remove extraneous leading slashes
 
         return if $dir =~ /\.svn/;
+
+        push( @web_files, "$File::Find::dir/$file" )
+            if -f $file and ( $file !~ /^\.\.?$/o );
 
         ++$web_dirs{ $dir };
     };
@@ -32,15 +36,9 @@ sub new {
 
     foreach my $k ( sort { $a cmp $b } keys %web_dirs ) {
         print "[web dir] $k\n";
-
-        # XXX unix specific dir separator
-        push( @web_dirs, ( $k . '/*.*' ) );
     }
 
-    # Add *.* to catch any files in the top level directory.
-    push( @web_dirs, '*.*' );
-
-    $p->{ web_files } = \@web_dirs;
+    $p->{ web_files } = \@web_files;
 
     # decide where to install web content
     print "\n";
@@ -155,36 +153,17 @@ sub ACTION_install {
 } # end ACTION_install
 
 sub _process_web_files {
-    my $self = shift;
-    my $files = $self->_find_web_files;
+    my $self    = shift;
+    my $p       = $self->{properties};
+    my $files   = $p->{web_files};
+    
     return unless @$files;
 
     my $tmpl_dir = File::Spec->catdir($self->blib, 'web');
     File::Path::mkpath( $tmpl_dir );
 
     foreach my $file (@$files) {
-        my $result = $self->copy_if_modified($file, $tmpl_dir);
-    }
-}
-
-sub _find_web_files {
-    my $self = shift;
-    my $p = $self->{properties};
-    my $b_tmpl_dir = $p->{build_web_directory};
-    $b_tmpl_dir =~ s/\/$//g;
-
-    if (my $files = $p->{web_files}) {
-        if (  UNIVERSAL::isa($files, 'HASH') ) {
-            my @files = [keys %$files];
-            return( \@files );
-        }
-
-        my @files;
-        foreach my $glob ( @$files ) {
-            $glob = "$b_tmpl_dir/$glob";
-            push( @files, glob( $glob ) );
-        }
-        return( \@files );
+        my $result = $self->copy_if_modified("$file", $tmpl_dir);
     }
 }
 

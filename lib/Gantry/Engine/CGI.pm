@@ -44,6 +44,7 @@ use vars qw( @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS );
     header_in
     header_out
     hostname
+    is_connection_secure
     is_status_declined
     port
     print_output
@@ -415,6 +416,10 @@ sub engine_init {
             $_ =~ s/"/&#34;/g foreach @values;
             $_ =~ s/'/&#39;/g foreach @values;
 
+            # Trim leading / trailing whitespace.
+            $_ =~ s/^\s+//o foreach @values;
+            $_ =~ s/\s+$//o foreach @values;
+
             $params->{$field} = [ @values ];
         }
 
@@ -427,6 +432,10 @@ sub engine_init {
             $params->{$field} =~ s/>/&gt;/g;
             $params->{$field} =~ s/"/&#34;/g;
             $params->{$field} =~ s/'/&#39;/g;
+            
+            # Trim leading / trailing whitespace.
+            $params->{$field} =~ s/^\s+//o;
+            $params->{$field} =~ s/\s+$//o;
         }
     }
 
@@ -809,6 +818,15 @@ sub status_const {
 } # end status_const
 
 #-------------------------------------------------
+# $self->is_connection_secure()
+#-------------------------------------------------
+sub is_connection_secure {
+    my $self = shift;
+
+    return $ENV{'SSL_PROTOCOL'} ? 1 : 0;
+} # END is_connection_secure
+
+#-------------------------------------------------
 # $self->is_status_declined( $status )
 #-------------------------------------------------
 sub is_status_declined {
@@ -971,6 +989,26 @@ sub parse_env {
     
     return( $hash );
 }
+
+#-------------------------------------------------
+# $self->url_encode( )
+#-------------------------------------------------
+sub url_encode {
+    my $self = shift;
+    my $value = shift;
+    
+    return CGI::Simple::Util::escape( $value );
+} # END url_encode
+
+#-------------------------------------------------
+# $self->url_decode( )
+#-------------------------------------------------
+sub url_decode {
+    my $self = shift;
+    my $value = shift;
+    
+    return CGI::Simple::Util::unescape( $value );
+} # END url_decode
 
 # EOF
 1;
@@ -1222,6 +1260,10 @@ Change the value of a response header, or create a new one.
 Returns the current host name from the HTTP_SERVER or the HTTP_HOST
 environment variables.  HTTP_SERVER takes precedence.
 
+=item $self->is_connection_secure()
+
+Return whether the current request is being served by an SSL-enabled host.
+
 =item $self->is_status_declined
 
 Returns true if the current status is DECLINED, or false otherwise.
@@ -1297,6 +1339,18 @@ module provide mnemonic names for the status codes.
 
 Does nothing but meet the engine API.  mod_perl engines use it to report
 the numerical success code.
+
+=item url_encode
+
+  url_encode($value)
+
+Accepts a value and returns it url encoded.
+
+=item url_decode
+
+  url_decode($value)
+
+Accepts a value and returns it url decoded.
 
 =item $self->file_upload
 

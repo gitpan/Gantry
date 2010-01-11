@@ -30,7 +30,7 @@ sub write_file {
     my $dir  = File::Spec->catfile( $archive, $extra_dir );
     File::Path::mkpath( $dir );
     
-    open( FH, ">", $file ) or die "Error $!";
+    open( FH, ">", $file ) or die "Error unable to open $file: $!";
     binmode FH;
 
     my( $buffer, $buffer_size ) = ( '', 14096 );

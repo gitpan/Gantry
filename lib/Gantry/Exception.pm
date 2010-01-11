@@ -82,6 +82,26 @@ say you want to generate a 402 exception. You would do the following:
 
 =back
 
+=item Fields()
+
+  Inherited accessor method from Exception::Class.
+  
+=item dump()
+
+  Accessor method for dump attribute.
+
+=item message()
+
+  Accessor method for message attribute.
+  
+=item status()
+
+  Accessor method for status attribute.
+  
+= item status_line()
+
+  Accessor method for status_line attribute.
+
 =item Gantry::Exception::Redirect
 
 You can use this to force a HTTP "Found" (302) to the browser. As an alternative 

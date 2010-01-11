@@ -23,6 +23,9 @@ sub new {
     unless ( defined $callbacks->{template} ) {
         $callbacks->{template} = 'form.tt';
     }
+    else {
+        $callbacks->{ignore_default_template} = 1;
+    }
 
     return bless $callbacks, $class;
 }
@@ -115,7 +118,21 @@ sub validator {
 sub add {
     my ( $self, $your_self, $data ) = @_;
 
-    $your_self->stash->view->template( $self->template );
+    # Use the specified default template in the config if no
+    # template was specified to the crud module and there is a
+    # default defined.
+    if (
+        ( ! $self->{ignore_default_template} ) and
+        ( $your_self->fish_config( 'default_form_template' ) )
+    ) {
+        $your_self->stash->view->template(
+            $your_self->fish_config( 'default_form_template' )
+        );
+    }
+    else {
+        $your_self->stash->view->template( $self->template );
+    }
+
     $your_self->stash->view->title( 'Add ' . $self->text_descr )
             unless $your_self->stash->view->title;
 
@@ -181,32 +198,10 @@ sub add {
         }
     }
     else {
-
         my $redirect;
-        if ( $params->{submit_add_another} ) {
-
-            # move along, we're all done here
-            $redirect = $self->_find_redirect(
-                {
-                    gantry_site => $your_self,
-                    data        => $data,
-                    action      => 'submit_add_another',
-                    user_req    => 'add'
-                }
-            );            
-
-        }
-        else {
-            # move along, we're all done here
-            $redirect = $self->_find_redirect(
-                {
-                    gantry_site => $your_self,
-                    data        => $data,
-                    action      => 'submit',
-                    user_req    => 'add'
-                }
-            );            
-        }
+        my $action =    $params->{submit_add_another}
+                        ? 'submit_add_another'
+                        : 'submit';
         
         # remove submit button entry
         delete $params->{submit};
@@ -222,6 +217,16 @@ sub add {
         }
 
         $self->add_action->( $your_self, $params, $data );
+        
+        # Find redirect.
+        $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => $action,
+                user_req    => 'add'
+            }
+        );
 
         return $your_self->relocate( $redirect );
     }
@@ -233,7 +238,21 @@ sub add {
 sub edit {
     my ( $self, $your_self, $data ) = @_;
 
-    $your_self->stash->view->template( $self->template() );
+    # Use the specified default template in the config if no
+    # template was specified to the crud module and there is a
+    # default defined.
+    if (
+        ( ! $self->{ignore_default_template} ) and
+        ( $your_self->fish_config( 'default_form_template' ) )
+    ) {
+        $your_self->stash->view->template(
+            $your_self->fish_config( 'default_form_template' )
+        );
+    }
+    else {
+        $your_self->stash->view->template( $self->template );
+    }
+
     $your_self->stash->view->title( 'Edit ' . $self->text_descr() )
             unless $your_self->stash->view->title;
 
@@ -303,32 +322,10 @@ sub edit {
     }
     # Form looks good, make update
     else {
-        
         my $redirect;
-        if ( $params{submit_add_another} ) {
-
-            # move along, we're all done here
-            $redirect = $self->_find_redirect(
-                {
-                    gantry_site => $your_self,
-                    data        => $data,
-                    action      => 'submit_add_another',
-                    user_req    => 'edit'
-                }
-            );            
-
-        }
-        else {
-            # move along, we're all done here
-            $redirect = $self->_find_redirect(
-                {
-                    gantry_site => $your_self,
-                    data        => $data,
-                    action      => 'submit',
-                    user_req    => 'edit'
-                }
-            );            
-        }
+        my $action =    $params{submit_add_another}
+                        ? 'submit_add_another'
+                        : 'submit';
         
         # remove submit button entry
         delete $params{submit};
@@ -344,6 +341,16 @@ sub edit {
         }
 
         $self->edit_action->( $your_self, \%params, $data );
+        
+        # Find redirect.
+        $redirect = $self->_find_redirect(
+            {
+                gantry_site => $your_self,
+                data        => $data,
+                action      => $action,
+                user_req    => 'edit'
+            }
+        );
         
         return $your_self->relocate( $redirect );
     }
@@ -526,6 +533,21 @@ This module still does basically the same things that AutoCRUD does:
         if method is POST:
             add form validation errors
         (re)display form
+
+=head1 CONFIGURATION
+
+The following can be specified in your config to control the behavior
+of the plugin.
+
+=over 4
+
+=item default_form_template
+
+Specify form template to use by default. If nothing is specified
+it defaults to form.tt. If a template is specified during 
+object creation it will override the value specified here.
+
+=back
 
 =head1 METHODS
 

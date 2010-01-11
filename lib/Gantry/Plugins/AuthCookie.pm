@@ -1,7 +1,6 @@
 package Gantry::Plugins::AuthCookie;
 use strict; use warnings;
 
-use Gantry;
 use Gantry::Utils::HTML qw( :all );
 
 use Crypt::CBC;
@@ -64,13 +63,6 @@ sub get_callbacks {
 sub initialize {
     my( $gobj ) = @_;
 
-    # set a test cookie to check later
-    $gobj->set_cookie( {  
-        name     => 'acceptcookies', 
-        value    => 'acceptcookies', 
-        path     => '/',
-    } ); 
-
     $gobj->auth_optional( $gobj->fish_config( 'auth_optional' ) || 'no' );
     $gobj->auth_deny( $gobj->fish_config( 'auth_deny' ) || 'no' );
     $gobj->auth_table( $gobj->fish_config( 'auth_table' ) || 'user' );
@@ -106,7 +98,9 @@ sub initialize {
     );
     
     $gobj->auth_groups( $gobj->fish_config( 'auth_groups' ) || '' );
-    $gobj->auth_secret( $gobj->fish_config( 'auth_secret' ) || 'w3s3cR7' );
+    $gobj->auth_secret(
+        $gobj->fish_config( 'auth_secret' ) || $gobj->gantry_secret()
+    );
 
     if ( $gobj->fish_config( 'test_username' ) 
         || $gobj->fish_config( 'test_user_id' ) ) {
@@ -194,19 +188,35 @@ sub auth_check {
 
         # check auth && redirect if not authed
         if ( ! validate_user( $gobj ) ) {
-            
-            # set to to the login page
-            my $loc = $gobj->location;
-            my $uri = $gobj->uri;
-            
+            my $goto;
+            my $qstring = '';
+            my $req     = $gobj->apache_request();
+            my $loc     = $gobj->location;
+            my $uri     = $gobj->uri;
+            my $crypt   = Gantry::Utils::Crypt->new(
+                { 'secret' => $gobj->auth_secret() }
+            );
+                        
             $uri =~ s/^$loc//;
-            
-            my $goto = '';
-            $goto    = "?url=$uri" if $uri;
+            $goto = $uri || '/';
+           
+            # Add parameters.
+            foreach my $param ( $req->param() ) {
+                $qstring .= sprintf( '&%s=%s', $param, $req->param( $param ) );
+            }
+
+            if ( $qstring ) {            
+                # Change the first & to a ? and add query string to goto.
+                $qstring =~ s/^&/?/o;
+                $goto .= $qstring;
+            }
+
+            # Encrypt goto
+            $goto = $gobj->url_encode( $crypt->encrypt( $goto ) );
 
             $loc =~ s!^/$!!; # fix for root page login redirection
-            
-            $gobj->relocate( $loc . "/login${goto}" );
+
+            $gobj->relocate( $loc . "/login?url=${goto}" );
         }
 
     }
@@ -232,7 +242,7 @@ sub validate_user {
     my $app_rootp = $gobj->app_rootp() || '';
     my $regex     = qr/^${app_rootp}\/(login|static).*/;
     
-    return 1 if $gobj->uri =~ /^$regex|login$/;
+    return 1 if $gobj->uri =~ /^$regex|login|cookiecheck$/;
 
     my $cookie_name = 'auth_cookie';
     eval { $cookie_name = $gobj->auth_cookie_name(); };
@@ -358,7 +368,9 @@ sub validate_user {
     }
     # look up via DBIC
     else {
-        my $sch       = $gobj->get_schema();
+        my $sch =   $gobj->can( 'get_auth_schema' )
+                    ? $gobj->get_auth_schema()
+                    : $gobj->get_schema();
         my $user_row  = $sch->resultset( $gobj->auth_table() )->search( { 
             $gobj->auth_user_field()     => $username,
             $gobj->auth_password_field() => $password,
@@ -519,13 +531,6 @@ sub do_login {
     
     $self->stash->view->template( 'login.tt' );
     $self->stash->view->title( 'Login' );
-
-    # set a test cookie to check later
-    $self->set_cookie( {  
-        name     => 'acceptcookies', 
-        value    => 'acceptcookies', 
-        path     => '/',
-    } ); 
     
     my @errors;
     if ( ! ( @errors = checkvals( $self )  ) ) {
@@ -536,8 +541,12 @@ sub do_login {
         } );
 
         # check for url param then redirect
-        if ( $param{url} ) {            
-            $self->relocate( $self->location . $param{url} );        
+        if ( $param{url} ) {
+            my $crypt   = Gantry::Utils::Crypt->new(
+                { 'secret' => $self->auth_secret() }
+            );
+                    
+            $self->relocate( $self->location . $crypt->decrypt( $param{url} ) );        
         }
 
         # check for ":" separated paths then redirect
@@ -698,10 +707,6 @@ sub checkvals {
         push( @errors, 'Enter your password' );
     }
 
-    #if ( $self->get_cookies( 'acceptcookies' ) ) {
-    #    push( @errors, '<B>You must have cookies enabled.</B>' );
-    #}
-
     if ( ! @errors ) {
         if ( $self->auth_file() ) {
              my $pwfile = Authen::Htpasswd->new(
@@ -812,21 +817,35 @@ sub checkvals {
         }
         else {
             eval {
+                my $sch =   $self->can( 'get_auth_schema' )
+                            ? $self->get_auth_schema()
+                            : $self->get_schema();
                 my $password_field = $self->auth_password_field();
-                
-                my $sch = $self->get_schema();
-                my $row = $sch->resultset( $self->auth_table() )->search( {
-                    $self->auth_user_field()  => $in{username},
-                } )->next;
+                my $row = $sch->resultset( $self->auth_table() )->find( {
+                    $self->auth_user_field()        => $in{username},
+                    $self->auth_password_field()    => $in{password},
+                } );
 
-                if ( $row && $row->$password_field eq $in{password} ) {
+                if ( $row ) {
+                    # Specified user/pass is correct so save the auth row.
                     $self->auth_user_row( $row );
                 }
-                elsif ( $row ) {
-                    push( @errors, "Invalid password" );
-                }
                 else {
-                    push( @errors, 'Invalid user' );
+                    # We didn't get a row back so query again
+                    # using only the user to determine if we have
+                    # a bad user name or bad password. This extra
+                    # step is necessary in the case where we are using
+                    # encrypted passwords.
+                    $row = $sch->resultset( $self->auth_table() )->find( {
+                        $self->auth_user_field() => $in{username},
+                    } );
+                    
+                    unless ( $row ) {
+                        push( @errors, 'Invalid user' );
+                    }
+                    else {
+                        push( @errors, "Invalid password" );
+                    }
                 }
             };
             if ( $@ ) {
@@ -1382,6 +1401,33 @@ accessor for the auth cookie's domain.  By default undef is used, so the
 cookie will be set on the fully qualified domain of the login page.  Import
 this method and define a conf variable of the same name to change the
 domain.
+
+=item auth_ldap
+
+Accessor method for auth_ldap. Tells AuthCookie to use ldap for auth.
+
+=item auth_ldap_binddn
+
+Accessor method for auth_ldap_binddn. The bind dn is the user that is allowed
+to search the directory.
+
+=item auth_ldap_filter
+
+Accessor method for auth_ldap_filter. The ldap search filter is used to map the
+username to the ldap directory attribute used to select the desired entry.
+
+=item auth_ldap_groupdn
+
+Accessor method for auth_ldap_groupdn. Used to set the base for searching for
+user groups in the directory.
+
+=item auth_ldap_hostname
+
+Accessor method for auth_ldap_hostname. This is the hostname of the ldap server.
+
+=item auth_ldap_userdn
+
+Accessor method for auth_ldap_userdn. Not currently used.
 
 =back
 

@@ -3,7 +3,6 @@ package Gantry::Plugins::PageCache;
 use strict; 
 use warnings;
 
-use Gantry;
 use File::Spec;
 
 my %registered_callbacks;

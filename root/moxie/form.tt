@@ -99,7 +99,7 @@
         <fieldset class="form-data">
         <label>[% dta.label %]</label>
         [%- name_display = name _ '_display' %]
-        [%- row.$name_display || row.$name || dta.default_value %]
+        [%- self.unescape_html(row.$name_display) || self.unescape_html(row.$name) || self.unescape_html(dta.default_value) %]
         </fieldset>
 
     [%- ELSIF type == 'textarea' %]
@@ -110,7 +110,7 @@
         [%- form.$type( 
             id => dta.name,
             name => name, 
-            default => (self.params.$name || row.$name || dta.default_value),
+            default => (self.unescape_html(self.params.$name) || self.unescape_html(row.$name) || self.unescape_html(dta.default_value)),
             class => dta.class,
             rows => dta.rows,
             cols => dta.cols
@@ -130,7 +130,7 @@
             id => dta.name,
             name => dta.name, 
             class => dta.class,
-            default => (self.params.$name || row.$name || dta.default_value),
+            default => (self.unescape_html(self.params.$name) || self.unescape_html(row.$name) || self.unescape_html(dta.default_value)),
             size => dta.display_size,
         ) 
         %]
@@ -141,8 +141,8 @@
         [%- FOREACH i IN dta.options %]
             [%- key = i.value %]
             
-            [%-  values.push( i.value ); 
-                labels.$key = i.label;
+            [%-  values.push( self.unescape_html(i.value) ); 
+                labels.$key = self.unescape_html(i.label);
             %]
         [%- END %]
 
@@ -157,7 +157,7 @@
         [% IF param_values.count > 0 %]
             [% val = param_values %]
         [% ELSIF row.$name.defined %]
-            [% val = row.$name  %]
+            [% val = row.$name %]
         [% ELSE %]
             [% val = dta.default_value %]
         [% END %]
@@ -193,11 +193,11 @@
         
          [% val = '' %]
          [% IF $self.params.$name.defined %]
-             [% val = $self.params.$name %]
+             [% val = self.unescape_html($self.params.$name) %]
          [% ELSIF row.$name.defined %]
-             [% val = row.$name %]
+             [% val = self.unescape_html(row.$name) %]
          [% ELSE %]
-             [% val = dta.default_value %]
+             [% val = self.unescape_html(dta.default_value) %]
          [% END %]
         
         [%- form.$type( 

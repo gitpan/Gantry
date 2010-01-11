@@ -59,8 +59,14 @@ sub state_run {
                 case STATE_CACHED_PAGES {
                     $state = cached_pages($self);
                 }
+                case STATE_PRE_ACTION {
+                    $state = pre_action($self, $plugin_callbacks);
+                }
                 case STATE_ACTION {
                     $state = perform_action($self);
+                }
+                case STATE_POST_ACTION {
+                    $state = post_action($self, $plugin_callbacks);
                 }
                 case STATE_SET_HEADERS {
                     $state = set_headers($self);
@@ -176,7 +182,7 @@ sub post_engine_init {
 
     if (defined $plugin_callbacks->{ $self->namespace }->{ post_engine_init }) {
 
-        foreach my $cb (sort
+        foreach my $cb (
             @{ $plugin_callbacks->{ $self->namespace }->{ post_engine_init } }
         ) {
             $cb->( $self );
@@ -195,7 +201,7 @@ sub pre_init {
 
     if (defined $plugin_callbacks->{ $self->namespace }->{ pre_init }) {
 
-        foreach my $cb (sort
+        foreach my $cb (
             @{ $plugin_callbacks->{ $self->namespace }->{ pre_init } }
         ) {
             $cb->( $self, $r_or_cgi );
@@ -229,7 +235,7 @@ sub post_init {
 
     if (defined $plugin_callbacks->{ $self->namespace }->{ post_init }) {
 
-        foreach my $cb (sort 
+        foreach my $cb (
             @{ $plugin_callbacks->{ $self->namespace }->{ post_init } } 
         ) {
             $cb->( $self );
@@ -255,9 +261,29 @@ sub cached_pages {
 
     }
 
+    return STATE_PRE_ACTION;
+
+}
+
+sub pre_action {
+    my ($self, $plugin_callbacks) = @_;
+
+    # Do the plugin callbacks for the 'pre_action' phase
+
+    if (defined $plugin_callbacks->{ $self->namespace }->{ pre_action }) {
+
+        foreach my $cb (
+            @{ $plugin_callbacks->{ $self->namespace }->{ pre_action } } 
+        ) {
+            $cb->( $self );
+        }
+
+    }
+
     return STATE_ACTION;
 
 }
+
 
 sub perform_action {
     my ($self) = @_;
@@ -286,6 +312,25 @@ sub perform_action {
 
     Gantry::Exception::Declined->throw() if ($self->is_status_declined());
 
+    return STATE_POST_ACTION;
+
+}
+
+sub post_action {
+    my ($self, $plugin_callbacks) = @_;
+
+    # Do the plugin callbacks for the 'post_action' phase
+
+    if (defined $plugin_callbacks->{ $self->namespace }->{ post_action }) {
+
+        foreach my $cb (
+            @{ $plugin_callbacks->{ $self->namespace }->{ post_action } } 
+        ) {
+            $cb->( $self );
+        }
+
+    }
+
     return STATE_SET_HEADERS;
 
 }
@@ -309,7 +354,7 @@ sub pre_process {
 
     if (defined $plugin_callbacks->{ $self->namespace }->{ pre_process }) {
 
-        foreach my $cb (sort 
+        foreach my $cb (
             @{ $plugin_callbacks->{ $self->namespace }->{ pre_process } } 
         ) {
             $cb->( $self );
@@ -337,7 +382,7 @@ sub post_process {
 
     if (defined $plugin_callbacks->{ $self->namespace }->{ post_process }) {
 
-        foreach my $cb (sort 
+        foreach my $cb (
             @{ $plugin_callbacks->{ $self->namespace }->{ post_process } } 
         ) {
             $cb->( $self );

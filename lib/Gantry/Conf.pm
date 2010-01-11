@@ -31,6 +31,30 @@ my %dispatch = (
     HTTP            => '_configure_http',
     Default         => '_configure_main_conf',
 );
+our %main_config;
+
+sub import {
+    my ( $class, @options ) = @_;
+    my $cfg;
+
+    foreach (@options) {
+        if ( /^-Config=(.*?)$/ ) {
+            my $file = $1;
+
+            _check_file( $class, $file );
+
+            $cfg = Config::General->new(
+                -ConfigFile         =>  $file,
+                -UseApacheInclude   =>  1,
+                -IncludeGlob        =>  1,
+                -IncludeDirectories =>  1,
+                -IncludeRelative    =>  1,
+            );
+
+            %main_config = $cfg->getall;
+        }
+    }
+}
 
 #------------------------------------------------
 # new 
@@ -77,6 +101,7 @@ sub retrieve {
             $params->{ instance },
             $config_file,
             $params->{ location },
+            $params->{ reload_config },
     ); 
 
     # Return our configuration 
@@ -91,10 +116,11 @@ sub retrieve {
 # /etc/gantry.conf 
 #------------------------------------------------
 sub _load_configuration { 
-    my $self        =   shift; 
-    my $instance    =   shift; 
-    my $file        =   shift; 
-    my $location    =   shift;
+    my $self            =   shift; 
+    my $instance        =   shift; 
+    my $file            =   shift; 
+    my $location        =   shift;
+    my $reload_config   =   shift;
 
     # Make sure our file is there and readable 
     $self->_check_file( $file, 'readonly' ); 
@@ -116,16 +142,19 @@ sub _load_configuration {
     #   -IncludeRelative        to allow including relative files 
     #
     
-    
-    my $cfg         = Config::General->new( 
-                                -ConfigFile         =>  $file,
-                                -UseApacheInclude   =>  1,
-                                -IncludeGlob        =>  1,
-                                -IncludeDirectories =>  1,
-                                -IncludeRelative    =>  1,
-                      );
+    # Retrieve the config if it has not already been loaded
+    # or if a config reload is being forced.
+    if ( (! %main_config) or $reload_config ) {
+        my $cfg         = Config::General->new( 
+                                    -ConfigFile         =>  $file,
+                                    -UseApacheInclude   =>  1,
+                                    -IncludeGlob        =>  1,
+                                    -IncludeDirectories =>  1,
+                                    -IncludeRelative    =>  1,
+                          );
 
-    my %main_config = $cfg->getall; 
+        %main_config = $cfg->getall;
+    }
 
     # Look for the instance 
     if( !$main_config{'instance'}{$instance} ) { 

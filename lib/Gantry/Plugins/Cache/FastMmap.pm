@@ -3,7 +3,6 @@ package Gantry::Plugins::Cache::FastMmap;
 use strict;
 use warnings;
 
-use Gantry;
 use Cache::FastMmap;
 use Gantry::Plugins::Cache;
 
@@ -29,20 +28,36 @@ sub cache_init {
     my $num_pages = $gobj->fish_config('cache_pages') || '256';
     my $page_size = $gobj->fish_config('cache_pagesize') || '256k';
     my $expire_time = $gobj->fish_config('cache_expires') || '1h';
+    my $test_sets = $gobj->fish_config('cache_test_sets') || 0;
     my $share_file = $gobj->fish_config('cache_filename') 
         || '/tmp/gantry.fastMmap.cache';
 
     eval {
+        $cache = Cache::FastMmap->new(
+            num_pages => $num_pages,
+            page_size => $page_size,
+            expire_time => $expire_time,
+            share_file => $share_file,
+            unlink_on_exit => 0
+        );
 
-        $cache = Cache::FastMmap->new(num_pages => $num_pages,
-                                      page_size => $page_size,
-                                      expire_time => $expire_time,
-                                      share_file => $share_file);
+        # If requested, test cache sets to see if they are successful.
+        if ($test_sets) {
+            # Set test.
+            $cache->set('test-ns:test-var', 1);
 
-    }; if ($@) {
+            # Get test.
+            my $data = $cache->get('test-ns:test-var');
 
+            # Die if set failed.
+            unless ($data) {
+                die "Test cache set failed. Please check cache configuration parameters.\n";
+            }
+        }
+    };
+
+    if ($@) {
         die('Unable to use - Gantry::Cache::FastMmap ' . $@ );
-
     }
 
     $cache->purge();
@@ -96,7 +111,7 @@ sub cache_get {
 }
 
 sub cache_set {
-    my ($gobj, $key, $val) = @_;
+    my ($gobj, $key, $val, $expires) = @_;
 
     my $handle = $gobj->cache_handle();
     my $namespace = $gobj->cache_namespace() || '';

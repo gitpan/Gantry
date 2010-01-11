@@ -36,7 +36,7 @@ sub state_run {
 
         if (defined $plugin_callbacks->{ $self->namespace }->{ post_engine_init }) {
             # Do the plugin callbacks for the 'post_engine_init' phase
-            foreach my $cb (sort
+            foreach my $cb (
                 @{ $plugin_callbacks->{ $self->namespace }->{ post_engine_init } }
             ) {
                 $cb->( $self );
@@ -45,7 +45,7 @@ sub state_run {
 
         # Do the plugin callbacks for the 'pre_init' phase 
         if (defined $plugin_callbacks->{ $self->namespace }->{ pre_init }) {
-            foreach my $cb (sort
+            foreach my $cb (
                @{ $plugin_callbacks->{ $self->namespace }->{ pre_init } }
             ) {
                 $cb->( $self, $r_or_cgi );
@@ -62,7 +62,7 @@ sub state_run {
 
         if (defined $plugin_callbacks->{ $self->namespace }->{ post_init }) {
             # Do the plugin callbacks for the 'post_init' phase 
-            foreach my $cb (sort 
+            foreach my $cb ( 
                 @{ $plugin_callbacks->{ $self->namespace }->{ post_init } } 
             ) {
                 $cb->( $self );
@@ -87,6 +87,15 @@ sub state_run {
     
     eval {    
 
+        if (defined $plugin_callbacks->{ $self->namespace }->{ pre_action }) {
+            # Do the plugin callbacks for the 'pre_action' phase 
+            foreach my $cb ( 
+                @{ $plugin_callbacks->{ $self->namespace }->{ pre_action } } 
+            ) {
+                $cb->( $self );
+            }
+        }
+
         # Do action if valid
         if ( $self->can( $self->action() ) ) {  
             $self->do_action( $self->action(), @p );
@@ -106,6 +115,14 @@ sub state_run {
         
         $self->declined( 1 ) if ( $self->is_status_declined( ) );
 
+        if (defined $plugin_callbacks->{ $self->namespace }->{ post_action }) {
+            # Do the plugin callbacks for the 'post_action' phase 
+            foreach my $cb ( 
+                @{ $plugin_callbacks->{ $self->namespace }->{ post_action } } 
+            ) {
+                $cb->( $self );
+            }
+        }
     };
 
     # Return REDIRECT
@@ -129,7 +146,7 @@ sub state_run {
     eval {
         if (defined $plugin_callbacks->{ $self->namespace }->{ pre_process }) {
             # Do the plugin callbacks for the 'pre_process' phase
-            foreach my $cb (sort 
+            foreach my $cb ( 
                 @{ $plugin_callbacks->{ $self->namespace }->{ pre_process } } 
             ) {
                 $cb->( $self );
@@ -140,7 +157,7 @@ sub state_run {
 
         if (defined $plugin_callbacks->{ $self->namespace }->{ post_process }) {
             # Do the plugin callbacks for the 'post_process' phase 
-            foreach my $cb (sort 
+            foreach my $cb ( 
                 @{ $plugin_callbacks->{ $self->namespace }->{ post_process } } 
             ) {
                 $cb->( $self );

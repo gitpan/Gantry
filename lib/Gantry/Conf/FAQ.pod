@@ -8,7 +8,7 @@ Gantry::Conf::FAQ - Frequently Asked Questions regarding Gantry::Conf
 
 There are many reasons why we feel Gantry::Conf is helpful both during
 development and after deployment. The next two entries should hopefully
-answer this quesiton for you as they outline a few common scenarios 
+answer this question for you as they outline a few common scenarios 
 programmers and system administrators often face. 
 
 =item How is Gantry::Conf helpful during development? 

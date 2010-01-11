@@ -3,7 +3,6 @@ package Gantry::Plugins::Cache;
 use strict; 
 use warnings;
 
-use Gantry;
 use File::Spec;
 
 use base 'Exporter';

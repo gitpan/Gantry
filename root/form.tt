@@ -257,13 +257,18 @@ Parameters:
 					
 					[%- IF field.type == 'select' %]
                         [%- IF field.onchange -%]
+                        [%-
+                            IF field.onchange.match('\)');
+                                onchange = field.onchange;
+                            ELSE;
+                                onchange = field.onchange _ '(this)';
+                            END;
+                        -%]
                         <select 
                             id="[% field.name %]" 
                             class="[% field.class %]"
                             name="[% field.name %]"
-                                onchange='javascript:[% field.onchange %](
-                                    this
-                                )' >
+                                onchange='javascript:[% onchange %]' >
                         [%- ELSE %]
 						<select name="[% field.name %]" id="[% field.name %]">
                         [%- END %]

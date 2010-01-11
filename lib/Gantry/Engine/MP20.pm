@@ -54,6 +54,7 @@ use vars qw( @ISA @EXPORT );
     header_in
     header_out
     hostname
+    is_connection_secure
     is_status_declined
     port
     print_output
@@ -68,6 +69,8 @@ use vars qw( @ISA @EXPORT );
     set_req_params
     status_const
     success_code
+    url_encode
+    url_decode
 );
 
 ############################################################
@@ -83,10 +86,6 @@ sub file_upload {
     die "param required" if ! $param;
     
     my $apr = $self->ap_req;
-    my $status = $apr->parse;
-
-    if ( $status ne 'Success' ) { die "upload error: $status" };
-
     my $upload = $apr->upload( $param );
     
     my $filename = $upload->filename;
@@ -158,6 +157,10 @@ sub apache_param_hash {
         $_ =~ s/>/&gt;/g foreach @values;
         $_ =~ s/"/&#34;/g foreach @values;
         $_ =~ s/'/&#39;/g foreach @values;
+        
+        # Trim leading / trailing whitespace.
+        $_ =~ s/^\s+//o foreach @values;
+        $_ =~ s/\s+$//o foreach @values;
 
         $hash->{$p} = ( scalar @values == 1 ) ? shift @values : [ @values ];
     }
@@ -189,12 +192,16 @@ sub apache_uf_param_hash {
 # $self->apache_request( )
 #-------------------------------------------------
 sub apache_request {
-    my( $self, $r ) = @_;
+    my ( $self, $r ) = @_;
 
-    return( 
-        $r ? Apache2::Request->new( $r, POST_MAX => $self->post_max )
-        : Apache2::Request->new( $self->r, POST_MAX => $self->post_max ) );
-    
+    unless ( $self->{__AP_REQ__} ) {
+        $self->{__AP_REQ__} = Apache2::Request->new(
+            $self->r,
+            POST_MAX => ( $self->fish_config( 'post_max' ) || '20000000' )
+        );
+    }
+
+    return $self->{__AP_REQ__};
 } # end: apache_request
 
 #-------------------------------------------------
@@ -523,6 +530,15 @@ sub header_out {
 } # end header_out
 
 #-------------------------------------------------
+# $self->is_connection_secure()
+#-------------------------------------------------
+sub is_connection_secure {
+    my $self = shift;
+
+    return $self->r->subprocess_env('HTTPS') ? 1 : 0;
+} # END is_connection_secure
+
+#-------------------------------------------------
 # $self->is_status_declined( $status )
 #-------------------------------------------------
 sub is_status_declined {
@@ -670,6 +686,26 @@ sub success_code {
 
     return $self->status_const( 'OK' );
 } # END success_code
+
+#-------------------------------------------------
+# $self->url_encode( )
+#-------------------------------------------------
+sub url_encode {
+    my $self = shift;
+    my $value = shift;
+    
+    return APR::Request::encode( $value );
+} # END url_encode
+
+#-------------------------------------------------
+# $self->url_decode( )
+#-------------------------------------------------
+sub url_decode {
+    my $self = shift;
+    my $value = shift;
+    
+    return APR::Request::decode( $value );
+} # END url_decode
 
 # EOF
 1;
@@ -922,6 +958,10 @@ falls back on dir_config.
 
 For internal use.
 
+=item $self->is_connection_secure()
+
+Return whether the current request is being served by an SSL-enabled host.
+
 =item is_status_declined
 
 =item redirect_response
@@ -933,6 +973,18 @@ For internal use.
 =item set_cached_config
 
 =item success_code
+
+=item url_encode
+
+  url_encode($value)
+
+Accepts a value and returns it url encoded.
+
+=item url_decode
+
+  url_decode($value)
+
+Accepts a value and returns it url decoded.
 
 =back
 

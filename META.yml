@@ -1,13 +1,11 @@
 ---
 name: Gantry
-version: 3.54
+version: 3.63
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
-abstract: 'Web application framework for mod_perl, cgi, etc.'
+abstract: Web application framework for mod_perl, cgi, etc.
 license: perl
-resources:
-  license: ~
 requires:
   CGI::Simple: 0
   Config::General: 2.31
@@ -26,14 +24,18 @@ requires:
   Template: 2.0
   Template::Plugin::HTML::SuperForm: 0
   URI: 0
-  perl: 5.8.0
+  perl: 5.008000
 build_requires:
   Test::Exception: 0
   Test::More: 0
+generated_by: Module::Build version 0.2806
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.54
+    version: 3.63
   Gantry::Build:
     file: lib/Gantry/Build.pm
   Gantry::Conf:
@@ -150,8 +152,10 @@ provides:
     file: lib/Gantry/Plugins/SOAP/Doc.pm
   Gantry::Plugins::SOAP::RPC:
     file: lib/Gantry/Plugins/SOAP/RPC.pm
-  Gantry::Plugins::Session:
-    file: lib/Gantry/Plugins/Session.pm
+  Gantry::Plugins::Shibboleth:
+    file: lib/Gantry/Plugins/Shibboleth.pm
+  Gantry::Plugins::Shibboleth::AuthUserObject:
+    file: lib/Gantry/Plugins/Shibboleth.pm
   Gantry::Plugins::Static:
     file: lib/Gantry/Plugins/Static.pm
   Gantry::Plugins::Validate:
@@ -244,7 +248,5 @@ provides:
     file: lib/Gantry/Stash.pm
   view:
     file: lib/Gantry/Stash/View.pm
-generated_by: Module::Build version 0.31
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+resources:
+  license: http://dev.perl.org/licenses/

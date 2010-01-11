@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.54';
+our $VERSION = '3.63';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $DEFAULT_STATE_MACHINE = 'Gantry::State::Default';
 our $CONF;
@@ -293,16 +293,19 @@ sub import {
         
         # Import the proper engine
         if ( /^-Engine=(\S+)/ ) { 
-            $engine = "Gantry::Engine::$1";
-            my $engine_file = File::Spec->catfile( 
-                'Gantry', 'Engine', "${1}.pm" 
-            );
+            unless ( $class->can( 'engine' ) ) {
+                $engine = "Gantry::Engine::$1";
+                my $engine_file = File::Spec->catfile( 
+                    'Gantry', 'Engine', "${1}.pm" 
+                );
 
-            eval {
-                require $engine_file;
-                $engine->import();
-            };
-            if ( $@ ) { die qq/Could not load engine "$engine", "$@"/ }
+                eval {
+                    require $engine_file;
+                    $engine->import();
+                };
+
+                if ( $@ ) { die qq/Could not load engine "$engine", "$@"/ }
+            }
         }
         
         # Load Template Engine
@@ -312,23 +315,28 @@ sub import {
                 'Gantry', 'Template', "${1}.pm" 
             );
 
-            eval {
-                require $tfile;
+            eval qq[
+                package $plugin_namespace;
+                require "$tfile";
                 $tplugin->import();
-            };
+            ];
+
             if ($@) { die qq/Could not load plugin "$tplugin", "$@"/ }
         }
 
 		# Load the desired State Machine
 		elsif ( /^-StateMachine=(\S+)/ ) {
-            $splugin = "Gantry::State::$1";
+	        $splugin = "Gantry::State::$1";
             my $sfile   = File::Spec->catfile( 
                 'Gantry', 'State', "${1}.pm" 
             );
-            eval {
-                require $sfile;
+
+            eval qq[
+                package $plugin_namespace;
+                require "$sfile";
                 $splugin->import();
-            };
+            ];
+
             if ($@) { die qq/Could not load state machine "$splugin", "$@"/ }
 		}
 
@@ -343,6 +351,14 @@ sub import {
         else {
             my @plugin_path;
             my $plugin_file;
+            my $import_list = '';
+            
+            # Check for plugin import list.
+            # Save list and strip it from the plugin.
+            if ( /\=(.*)$/o ) {
+                $import_list = $1;
+                $_ =~ s/=.*$//o;
+            }
             
             $plugin         = sprintf('%s::%s', $plugin_dir, $_);
 			@plugin_path    = split /::/, $plugin . '.pm';
@@ -351,10 +367,12 @@ sub import {
                 @plugin_path
             );
 
-            eval {
-                 require $plugin_file;
-                 $plugin->import();
-            };
+            eval qq[
+                package $plugin_namespace;
+                require "$plugin_file";
+                $plugin->import( qw( $import_list ) );
+            ];
+
             if ($@) { die qq/Could not load plugin "$plugin", "$@"/ }
         
             eval {
@@ -967,9 +985,10 @@ sub post_max {
 sub ap_req {
     my ( $self, $p ) = @_;
 
-    $self->{__AP_REQ__} = $p if ( defined $p );
-    return( $self->{__AP_REQ__} );
-        
+    $self->{__AP_REQ__} = $p
+        if ( ( ! defined $self->{__AP_REQ__} ) and defined $p );
+    
+    return( $self->{__AP_REQ__} );    
 } # end ap_req
 
 #-------------------------------------------------
@@ -1052,6 +1071,15 @@ sub is_post {
     return( $self->method eq 'POST' ? 1 : 0 );
         
 } # end is_post
+
+#-------------------------------------------------
+# $self->gantry_secret()
+#-------------------------------------------------
+sub gantry_secret {
+    my ( $self ) = @_;
+    
+    return $self->fish_config( 'gantry_secret' ) || 'w3s3cR7';
+} # end gantry_secret
 
 #-------------------------------------------------
 # $self->controller_config()
@@ -1189,6 +1217,34 @@ sub serialize_params {
 }
 
 #-------------------------------------------------
+# $self->escape_html($value)
+#-------------------------------------------------
+sub escape_html {
+    my ($self, $value) = @_;
+    
+    $value =~ s/</&lt;/go;
+    $value =~ s/>/&gt;/go;
+    $value =~ s/"/&#34;/go;
+    $value =~ s/'/&#39;/go;
+    
+    return $value;
+}
+
+#-------------------------------------------------
+# $self->unescape_html($value)
+#-------------------------------------------------
+sub unescape_html {
+    my ($self, $value) = @_;
+    
+    $value =~ s/&lt;/</go;
+    $value =~ s/&gt;/>/go;
+    $value =~ s/&#34;/"/go;
+    $value =~ s/&#39;/'/go;
+    
+    return $value;
+}
+
+#-------------------------------------------------
 # $self->_error_page()
 #-------------------------------------------------
 sub _error_page {
@@ -1305,6 +1361,8 @@ contain callback methods.
 Defined phases where callbacks can be assigned.
  pre_init       at the beginning, before pretty much everything
  post_init      just after the main initializtion of the request
+ pre_action     just before the action is processed
+ post_action    just after the action has been processed
  pre_process    just before the template engine is envoked
  post_process   right after the template engine has done its thing
 
@@ -1339,6 +1397,12 @@ Defined phases where callbacks can be assigned.
  before the plugins which register callbacks. In addition, you can
  specify a plugin location with -PluginDir. This allows you to put
  plugins in directories out outside of the default Gantry::Plugins directory.
+ 
+ Plugin callbacks are called in the order in which the plugins are loaded.
+ This gives you some control over the order in which the callbacks will run
+ by controlling the order in which the plugins are specified in the application
+ use statement.
+ 
  Example:
 
      use Some::Gantry::App qw(
@@ -1855,6 +1919,18 @@ of key value pairs.
 Returns a serialized string of request parameters. The default separator is
 '&' 
 
+=item escape_html
+
+  $self->escape_html($value)
+
+Replace any unsafe html characters with entities.
+
+=item unescape_html
+
+  $self->unescape_html($value)
+
+Unescape any html entities in the specified value.
+
 =item protocol
 
  $self->protocol( $ENV{HTTPS} ? 'https://' : 'http://' );
@@ -1882,6 +1958,10 @@ the default custom_error page.
 =item is_post
 
 returns a true value (1) if client request is of post method. 
+
+=item gantry_secret
+
+Returns the currently configured value of gantry_secret or w3s3cR7 otherwise.
 
 =item schema_base_class
 

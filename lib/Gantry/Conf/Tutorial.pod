@@ -219,6 +219,15 @@ conf easily through the C<<Gantry::Conf->retrieve method>>:
         }
     );
 
+When using Gantry::Conf with mod_perl you should specify the
+config file inside of a Perl block or your apache startup file
+as follows:
+
+    use Gantry::Conf qw(-Config=/etc/gantry.conf)
+
+Failure to do so will cause Gantry::Conf to reload its configuration
+on each request.
+
 When calling retrieve, you must provide the parameters by name in a hash
 reference.  The only required key is C<instance>.  Gantry::Conf will look
 for the instance in the C<config_file>.  By default the config_file is

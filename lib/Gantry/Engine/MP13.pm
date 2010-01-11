@@ -10,6 +10,7 @@ use Apache::Request;
 use File::Basename;
 use Gantry::Conf;
 use Gantry::Utils::DBConnHelper::MP13;
+use CGI::Simple::Util ();
 
 use vars qw( @ISA @EXPORT ); 
 
@@ -44,6 +45,7 @@ use vars qw( @ISA @EXPORT );
     header_in
     header_out
     hostname
+    is_connection_secure
     is_status_declined
     log_error
     port
@@ -60,6 +62,8 @@ use vars qw( @ISA @EXPORT );
     status_const
     success_code
     file_upload
+    url_encode
+    url_decode
 );
 
 ############################################################
@@ -154,6 +158,10 @@ sub apache_param_hash {
         $_ =~ s/"/&#34;/g foreach @values;
         $_ =~ s/'/&#39;/g foreach @values;
 
+        # Trim leading / trailing whitespace.
+        $_ =~ s/^\s+//o foreach @values;
+        $_ =~ s/\s+$//o foreach @values;
+
         $hash->{$p} = ( scalar @values == 1 ) ? shift @values : [ @values ];
     }
 
@@ -184,12 +192,16 @@ sub apache_uf_param_hash {
 # $self->apache_request( )
 #-------------------------------------------------
 sub apache_request {
-    my( $self, $r ) = @_;
-    
-    return( 
-        $r ? Apache::Request->new( $r, POST_MAX => $self->post_max )
-        : Apache::Request->new( $self->r, POST_MAX => $self->post_max ) );
-    
+    my ( $self, $r ) = @_;
+
+    unless ( $self->{__AP_REQ__} ) {
+        $self->{__AP_REQ__} = Apache::Request->new(
+            $self->r,
+            POST_MAX => ( $self->fish_config( 'post_max' ) || '20000000' )
+        );
+    }
+
+    return $self->{__AP_REQ__};
 } # end: apache_request
 
 #-------------------------------------------------
@@ -515,6 +527,15 @@ sub header_out {
 } # end header_out
 
 #-------------------------------------------------
+# $self->is_connection_secure()
+#-------------------------------------------------
+sub is_connection_secure {
+    my $self = shift;
+
+    return $self->r->subprocess_env('HTTPS') ? 1 : 0;
+} # END is_connection_secure
+
+#-------------------------------------------------
 # $self->is_status_declined( $status )
 #-------------------------------------------------
 sub is_status_declined {
@@ -659,6 +680,26 @@ sub success_code {
 
     return $self->status_const( 'OK' );
 } # END success_code
+
+#-------------------------------------------------
+# $self->url_encode( )
+#-------------------------------------------------
+sub url_encode {
+    my $self = shift;
+    my $value = shift;
+    
+    return CGI::Simple::Util::escape( $value );
+} # END url_encode
+
+#-------------------------------------------------
+# $self->url_decode( )
+#-------------------------------------------------
+sub url_decode {
+    my $self = shift;
+    my $value = shift;
+    
+    return CGI::Simple::Util::unescape( $value );
+} # END url_decode
 
 # EOF
 1;
@@ -831,6 +872,10 @@ See mod_perl docs.
 
 Change the value of a response header, or create a new one.
 
+=item $self->is_connection_secure()
+
+Return whether the current request is being served by an SSL-enabled host.
+
 =item $self->is_status_declined
 
 Returns a true value if the status is currently DECLINED or false otherwise.
@@ -902,6 +947,18 @@ module provide mnemonic names for the status codes.
 =item $self->success_code
 
 Returns the proper numeric status code for OK.
+
+=item url_encode
+
+  url_encode($value)
+
+Accepts a value and returns it url encoded.
+
+=item url_decode
+
+  url_decode($value)
+
+Accepts a value and returns it url decoded.
 
 =item $self->file_upload
 

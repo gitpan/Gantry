@@ -32,7 +32,7 @@ BEGIN {
     require Gantry::Conf;
 
     # If Gantry::Conf ever decides to export add this:
-    # use Gantry::Conf;
+    #use Gantry::Conf;
 }
 
 #-------------------------------------------------------------------------
@@ -61,7 +61,7 @@ throws_ok
         Gantry::Conf->retrieve(
             {
                 instance    => 'missing',
-                config_file => $bad_gconf
+                config_file => $bad_gconf,
             }
         );
     }
@@ -77,8 +77,9 @@ throws_ok
     {
         Gantry::Conf->retrieve(
             {
-                instance    => 'missing',
-                config_file => $bad_gconf
+                instance        => 'missing',
+                config_file     => $bad_gconf,
+                reload_config   => 1,
             }
         )
     }
@@ -93,8 +94,9 @@ throws_ok
     {
         Gantry::Conf->retrieve(
             {
-                instance    => 'sample',
-                config_file => $bad_gconf
+                instance        => 'sample',
+                config_file     => $bad_gconf,
+                reload_config   => 1,
             }
         );
     }
@@ -110,8 +112,9 @@ throws_ok
     {
         Gantry::Conf->retrieve(
             {
-                instance    => 'sample',
-                config_file => $bad_gconf
+                instance        => 'sample',
+                config_file     => $bad_gconf,
+                reload_config   => 1,
             }
         )
     }
@@ -126,8 +129,9 @@ my $gconf = File::Spec->catfile( qw( t conf flat gantry.conf ) );
 
 my $simple_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'sample',
-        config_file => $gconf
+        instance        => 'sample',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 is_deeply( $simple_conf, { var => 'value', num => 4 }, 'parsed simple conf' );
@@ -140,8 +144,9 @@ $gconf = File::Spec->catfile( qw( t conf flat user.conf ) );
 
 my $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'sample',
-        config_file => $gconf
+        instance        => 'sample',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
@@ -159,8 +164,9 @@ $gconf = File::Spec->catfile( qw( t conf flat user2.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'sample',
-        config_file => $gconf
+        instance        => 'sample',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
@@ -183,9 +189,10 @@ $gconf = File::Spec->catfile( qw( t conf flat user.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'levels',
-        config_file => $gconf,
-        location    => '/'
+        instance        => 'levels',
+        config_file     => $gconf,
+        location        => '/',
+        reload_config   => 1,
     }
 );
 
@@ -205,9 +212,10 @@ is_deeply(
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'levels',
-        config_file => $gconf,
-        location    => '/second'
+        instance        => 'levels',
+        config_file     => $gconf,
+        location        => '/second',
+        reload_config   => 1,
     }
 );
 
@@ -227,9 +235,10 @@ is_deeply(
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'levels',
-        config_file => $gconf,
-        location    => '/second/nested'
+        instance        => 'levels',
+        config_file     => $gconf,
+        location        => '/second/nested',
+        reload_config   => 1,
     }
 );
 
@@ -250,8 +259,9 @@ $gconf = File::Spec->catfile( qw( t conf flat config_in_main_gantry.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'config_in_main_simple',
-        config_file => $gconf,
+        instance        => 'config_in_main_simple',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
@@ -272,8 +282,9 @@ $gconf = File::Spec->catfile( qw( t conf flat config_in_main_gantry.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'config_in_main_with_global',
-        config_file => $gconf,
+        instance        => 'config_in_main_with_global',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
@@ -294,8 +305,9 @@ $gconf = File::Spec->catfile( qw( t conf flat config_in_main_gantry.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'config_in_main_with_shares',
-        config_file => $gconf,
+        instance        => 'config_in_main_with_shares',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
@@ -316,8 +328,9 @@ $gconf = File::Spec->catfile( qw( t conf flat include_test.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'simple_include',
-        config_file => $gconf,
+        instance        => 'simple_include',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
@@ -338,8 +351,9 @@ $gconf = File::Spec->catfile( qw( t conf flat include_test3.conf ) );
 
 $using_conf = Gantry::Conf->retrieve(
     {
-        instance    => 'glob_include',
-        config_file => $gconf,
+        instance        => 'glob_include',
+        config_file     => $gconf,
+        reload_config   => 1,
     }
 );
 
