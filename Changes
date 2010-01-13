@@ -1,5 +1,8 @@
 This file documents the revision history for Perl extension Gantry
 
+3.64 Wed Jan 13 09:30:55 PST 2010
+    - fix session plugin test, reported by Andreas Koenig via RT
+     
 3.63 Wed Dec 05 12:46:00 CDT 2009
     - Fixed perl version in Build.PL to work with newer Module::Build.
       Thanks to Matt We...lol... sorry... almost made it through without

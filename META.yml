@@ -1,6 +1,6 @@
 ---
 name: Gantry
-version: 3.63
+version: 3.64
 author:
   - 'Tim Keefer <tkeefer@gmail.com>'
   - 'Phil Crow <philcrow2000@yahoo.com>'
@@ -9,6 +9,7 @@ license: perl
 requires:
   CGI::Simple: 0
   Config::General: 2.31
+  Crypt::CBC: 0
   DBI: 0
   Data::FormValidator: 0
   Data::UUID: 0
@@ -35,7 +36,7 @@ meta-spec:
 provides:
   Gantry:
     file: lib/Gantry.pm
-    version: 3.63
+    version: 3.64
   Gantry::Build:
     file: lib/Gantry/Build.pm
   Gantry::Conf:

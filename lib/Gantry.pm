@@ -10,7 +10,7 @@ use POSIX qw( strftime );
 ############################################################
 # Variables                                                #
 ############################################################
-our $VERSION = '3.63';
+our $VERSION = '3.64';
 our $DEFAULT_PLUGIN_TEMPLATE = 'Gantry::Template::Default';
 our $DEFAULT_STATE_MACHINE = 'Gantry::State::Default';
 our $CONF;
